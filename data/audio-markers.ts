@@ -1,0 +1,148 @@
+import type { AudioMarker } from "@/types/map"
+
+export const audioMarkers: AudioMarker[] = [
+  // Southern California Desert
+  {
+    id: "desert-wind",
+    name: "Desert Wind at Sunrise",
+    coordinates: [-116.52, 32.68],
+    elevation: 3200,
+    audioUrl: "/audio/desert-wind.mp3",
+    chapter: "southern-california",
+    featured: true,
+  },
+  {
+    id: "coyote-calls",
+    name: "Coyote Pack at Dusk",
+    coordinates: [-116.85, 33.31],
+    elevation: 6000,
+    audioUrl: "/audio/coyote-calls.mp3",
+    chapter: "southern-california",
+    featured: false,
+  },
+  {
+    id: "desert-silence",
+    name: "Deep Desert Silence",
+    coordinates: [-117.18, 34.18],
+    elevation: 6750,
+    audioUrl: "/audio/desert-silence.mp3",
+    chapter: "southern-california",
+    featured: true,
+  },
+
+  // Sierra Nevada
+  {
+    id: "alpine-wind",
+    name: "High Alpine Wind",
+    coordinates: [-118.29, 36.58],
+    elevation: 13000,
+    audioUrl: "/audio/alpine-wind.mp3",
+    chapter: "sierra-nevada",
+    featured: true,
+  },
+  {
+    id: "mountain-streams",
+    name: "Sierra Mountain Stream",
+    coordinates: [-118.68, 37.06],
+    elevation: 8300,
+    audioUrl: "/audio/mountain-streams.mp3",
+    chapter: "sierra-nevada",
+    featured: true,
+  },
+  {
+    id: "granite-echoes",
+    name: "Granite Valley Echoes",
+    coordinates: [-119.18, 38.03],
+    elevation: 8600,
+    audioUrl: "/audio/granite-echoes.mp3",
+    chapter: "sierra-nevada",
+    featured: false,
+  },
+
+  // Northern California
+  {
+    id: "volcanic-winds",
+    name: "Volcanic Peak Winds",
+    coordinates: [-122.31, 41.31],
+    elevation: 10000,
+    audioUrl: "/audio/volcanic-winds.mp3",
+    chapter: "northern-california",
+    featured: true,
+  },
+  {
+    id: "forest-streams",
+    name: "Forest Creek Babble",
+    coordinates: [-121.41, 40.43],
+    elevation: 5200,
+    audioUrl: "/audio/forest-streams.mp3",
+    chapter: "northern-california",
+    featured: false,
+  },
+  {
+    id: "bird-chorus",
+    name: "Dawn Bird Chorus",
+    coordinates: [-122.37, 41.81],
+    elevation: 4100,
+    audioUrl: "/audio/bird-chorus.mp3",
+    chapter: "northern-california",
+    featured: true,
+  },
+
+  // Oregon Cascades
+  {
+    id: "forest-rain",
+    name: "Pacific Northwest Rain",
+    coordinates: [-122.12, 43.07],
+    elevation: 6100,
+    audioUrl: "/audio/forest-rain.mp3",
+    chapter: "oregon-cascades",
+    featured: true,
+  },
+  {
+    id: "lake-lapping",
+    name: "Crater Lake Lapping",
+    coordinates: [-122.11, 42.04],
+    elevation: 6200,
+    audioUrl: "/audio/lake-lapping.mp3",
+    chapter: "oregon-cascades",
+    featured: false,
+  },
+  {
+    id: "owl-calls",
+    name: "Great Horned Owl",
+    coordinates: [-121.78, 44.91],
+    elevation: 3500,
+    audioUrl: "/audio/owl-calls.mp3",
+    chapter: "oregon-cascades",
+    featured: true,
+  },
+
+  // Washington Cascades
+  {
+    id: "glacier-melt",
+    name: "Glacier Meltwater",
+    coordinates: [-121.15, 47.73],
+    elevation: 4100,
+    audioUrl: "/audio/glacier-melt.mp3",
+    chapter: "washington-cascades",
+    featured: true,
+  },
+  {
+    id: "rainforest-ambience",
+    name: "Temperate Rainforest",
+    coordinates: [-120.79, 48.51],
+    elevation: 5200,
+    audioUrl: "/audio/rainforest-ambience.mp3",
+    chapter: "washington-cascades",
+    featured: true,
+  },
+  {
+    id: "mountain-silence",
+    name: "Mountain Peak Silence",
+    coordinates: [-120.78, 49.0],
+    elevation: 7300,
+    audioUrl: "/audio/mountain-silence.mp3",
+    chapter: "washington-cascades",
+    featured: false,
+  },
+]
