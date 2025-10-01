@@ -52,7 +52,12 @@ export function StorytellingScroll({ map, chapters, onChapterChange }: Storytell
 
         {/* Chapter sections */}
         {chapters.map((chapter, index) => (
-          <div key={chapter.id} ref={setChapterRef(index)} className="min-h-screen flex items-center">
+          <div
+            key={chapter.id}
+            ref={setChapterRef(index)}
+            data-chapter-index={index}
+            className="min-h-screen flex items-center"
+          >
             <div className="w-full max-w-2xl mx-auto px-6 pointer-events-auto">
               <div
                 className={`bg-black/80 backdrop-blur-sm rounded-xl p-8 text-white transition-all duration-700 ${

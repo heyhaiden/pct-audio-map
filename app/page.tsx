@@ -6,6 +6,7 @@ import { StorytellingScroll } from "@/components/scroll/storytelling-scroll"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { AudioMarkers } from "@/components/map/audio-markers"
+import { ChapterDropdown } from "@/components/navigation/chapter-dropdown"
 import { pctSegments } from "@/data/pct-segments"
 import { useScrollStory } from "@/hooks/use-scroll-story"
 import type { AudioMarker } from "@/types/map"
@@ -43,6 +44,19 @@ export default function Home() {
             onMarkerClick={handleMarkerClick}
           />
         )}
+      </div>
+
+      <div className="fixed top-0 left-0 right-0 z-30 pointer-events-none">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="pointer-events-auto">
+            <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">Pacific Crest Trail Audio Map</h1>
+            <ChapterDropdown
+              chapters={pctSegments}
+              currentChapter={currentChapter}
+              onChapterSelect={handleChapterChange}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Scrollable storytelling content */}
