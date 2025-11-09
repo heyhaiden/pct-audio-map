@@ -2,12 +2,10 @@
 
 import { useState } from "react"
 import { PCTMap } from "@/components/map/pct-map"
-import { StorytellingScroll } from "@/components/scroll/storytelling-scroll"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { pctSegments } from "@/data/pct-segments"
-import { useScrollStory } from "@/hooks/use-scroll-story"
 import type { AudioMarker } from "@/types/map"
 
 export default function Home() {
@@ -15,12 +13,39 @@ export default function Home() {
   const [currentChapter, setCurrentChapter] = useState(0)
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
 
-  const { scrollProgress } = useScrollStory(pctSegments)
+  const handleScroll = () => {
+    if (typeof window === "undefined") return
+
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+    const scrolled = window.scrollY
+    const progress = Math.max(0, Math.min(1, scrolled / scrollHeight))
+
+    // Map scroll progress to chapters
+    const chapterIndex = Math.floor(progress * pctSegments.length)
+    const clampedIndex = Math.min(chapterIndex, pctSegments.length - 1)
+
+    if (clampedIndex !== currentChapter) {
+      setCurrentChapter(clampedIndex)
+    }
+  }
 
   const handleChapterChange = (chapterIndex: number) => {
     setCurrentChapter(chapterIndex)
     // Close audio player when changing chapters
     setSelectedAudioMarker(null)
+  }
+
+  const handleChapterClick = (chapterIndex: number) => {
+    const progress = chapterIndex / pctSegments.length
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+    const targetScroll = progress * scrollHeight
+
+    window.scrollTo({
+      top: targetScroll,
+      behavior: "smooth",
+    })
+
+    setCurrentChapter(chapterIndex)
   }
 
   const handleMarkerClick = (marker: AudioMarker) => {
@@ -32,7 +57,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative">
+    <main className="relative" onScroll={handleScroll}>
       {/* Fixed map background */}
       <div className="fixed inset-0 z-0">
         <PCTMap onMapLoad={setMap} />
@@ -45,13 +70,15 @@ export default function Home() {
         )}
       </div>
 
-      {/* Scrollable storytelling content */}
-      <div className="relative z-10">
-        <StorytellingScroll map={map} chapters={pctSegments} onChapterChange={handleChapterChange} />
-      </div>
+      <div className="relative z-10" style={{ height: `${pctSegments.length * 800}vh` }} />
 
       {/* Scroll progress indicator */}
-      <ScrollIndicator progress={scrollProgress} currentChapter={currentChapter} totalChapters={pctSegments.length} />
+      <ScrollIndicator
+        progress={currentChapter / pctSegments.length}
+        currentChapter={currentChapter}
+        totalChapters={pctSegments.length}
+        onChapterClick={handleChapterClick}
+      />
 
       {/* Audio player */}
       <AudioPlayer marker={selectedAudioMarker} onClose={handleCloseAudio} />
@@ -63,7 +90,7 @@ export default function Home() {
             <div className="w-4 h-6 border-2 border-white/60 rounded-sm relative">
               <div className="w-1 h-2 bg-white/60 rounded-full absolute top-1 left-1/2 -translate-x-1/2 animate-bounce"></div>
             </div>
-            <span>Scroll to explore • Click audio markers to listen</span>
+            <span>Scroll to fly along the PCT • Click audio markers to listen</span>
           </div>
         </div>
       </div>

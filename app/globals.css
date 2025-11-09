@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -121,5 +121,10 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Hide any remaining Mapbox attribution elements */
+  .mapboxgl-ctrl-attrib,
+  .mapboxgl-ctrl-logo {
+    display: none !important;
   }
 }

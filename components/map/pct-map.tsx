@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
-import { CameraController } from "./camera-controller"
 import { getMapboxToken } from "@/lib/mapbox-config"
+import { useTrailScroll } from "@/hooks/use-trail-scroll"
 
 declare global {
   interface Window {
@@ -19,10 +19,17 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [initialAnimationDone, setInitialAnimationDone] = useState(false)
   const [currentSegment, setCurrentSegment] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
   const [scriptsLoaded, setScriptsLoaded] = useState(false)
+
+  const trailCoordinates = pctTrailGeometry.geometry.coordinates
+  useTrailScroll({
+    map: map.current,
+    trailCoordinates,
+    enabled: initialAnimationDone,
+  })
 
   useEffect(() => {
     const loadMapboxScripts = () => {
@@ -84,13 +91,23 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
 
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
-          style: "mapbox://styles/mapbox/satellite-v9",
+          style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo",
           center: [-118.29, 36.58], // Start in Sierra Nevada
           zoom: 6,
           pitch: 60,
           bearing: 30,
           antialias: true,
-          interactive: false, // Disable interaction for scroll-driven experience
+          interactive: true,
+          // Disable specific interactions to maintain scroll-driven experience
+          dragPan: false,
+          dragRotate: false,
+          scrollZoom: false,
+          boxZoom: false,
+          doubleClickZoom: false,
+          touchZoomRotate: false,
+          touchPitch: false,
+          keyboard: false,
+          attributionControl: false,
         })
 
         console.log("[v0] Map created, waiting for load event...")
@@ -103,14 +120,13 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
           map.current.addSource("mapbox-terrain-rgb", {
             type: "raster-dem",
             url: "mapbox://mapbox.terrain-rgb",
-            tileSize: 512,
-            maxzoom: 14,
+            tileSize: 256, // Reduced from 512 for faster loading
+            maxzoom: 15, // Increased from 14 for better quality when scrolling
           })
 
-          // Enable 3D terrain with initial exaggeration
           map.current.setTerrain({
             source: "mapbox-terrain-rgb",
-            exaggeration: 1.5,
+            exaggeration: 1.2, // Reduced from 1.5 for better performance
           })
 
           map.current.addSource("pct-trail", {
@@ -192,6 +208,29 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
           console.log("[v0] Map setup complete!")
           setMapLoaded(true)
           onMapLoad?.(map.current) // Notify parent component that map is loaded
+
+          setTimeout(() => {
+            console.log("[v0] Starting initial animation to trailhead...")
+            const trailheadCoord = pctTrailGeometry.geometry.coordinates[0]
+
+            map.current!.flyTo({
+              center: trailheadCoord,
+              zoom: 13.5, // Increased from 12 to 13.5 for closer starting view
+              pitch: 70, // Keep same pitch to maintain horizon view
+              bearing: 0, // Face north
+              duration: 6000, // Slower animation
+              easing: (t: number) => {
+                return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+              },
+              essential: true,
+            })
+
+            // Enable scroll control after animation completes
+            setTimeout(() => {
+              console.log("[v0] Initial animation complete. Scroll enabled.")
+              setInitialAnimationDone(true)
+            }, 5500) // Adjusted to match new animation duration
+          }, 1500) // 1.5 second delay before initial animation
         })
 
         map.current.on("error", (e: any) => {
@@ -215,7 +254,7 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
   }, [scriptsLoaded, onMapLoad])
 
   const flyToSegment = (segmentIndex: number) => {
-    if (!map.current || !mapLoaded || isPlaying) return
+    if (!map.current || !mapLoaded) return
 
     const segment = pctSegments[segmentIndex]
     if (!segment) return
@@ -273,67 +312,10 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
         </div>
       )}
 
-      {/* Navigation controls */}
-      {mapLoaded && (
+      {mapLoaded && initialAnimationDone && (
         <div className="absolute top-6 left-6 z-10">
           <div className="bg-black/80 backdrop-blur-sm rounded-lg p-4 text-white max-w-xs">
-            <h1 className="text-xl font-bold mb-4 text-balance">Pacific Crest Trail Audio Journey</h1>
-            <div className="space-y-2">
-              {pctSegments.map((segment, index) => (
-                <button
-                  key={segment.id}
-                  onClick={() => flyToSegment(index)}
-                  disabled={isPlaying}
-                  className={`block w-full text-left px-3 py-2 rounded transition-colors ${
-                    currentSegment === index ? "bg-[#ff6b9d] text-white" : "hover:bg-white/20"
-                  } ${isPlaying ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <div className="font-medium">{segment.title}</div>
-                  <div className="text-xs text-gray-300 mt-1">{segment.description.split(".")[0]}...</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Camera Controller */}
-      {mapLoaded && (
-        <CameraController
-          map={map.current}
-          isPlaying={isPlaying}
-          onPlayStateChange={setIsPlaying}
-          segments={pctSegments}
-        />
-      )}
-
-      {/* Enhanced info panel */}
-      {mapLoaded && (
-        <div className="absolute bottom-6 right-6 z-10">
-          <div className="bg-black/80 backdrop-blur-sm rounded-lg p-4 text-white max-w-sm">
-            <h3 className="font-semibold mb-2 text-[#ff6b9d]">{pctSegments[currentSegment]?.title}</h3>
-            <p className="text-sm text-gray-300 mb-3">{pctSegments[currentSegment]?.description}</p>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <div className="w-2 h-2 bg-[#ff6b9d] rounded-full"></div>
-              <span>2,650 miles • Mexico to Canada</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Trail stats panel */}
-      {mapLoaded && (
-        <div className="absolute top-6 right-6 z-10">
-          <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 text-white text-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-0.5 bg-[#ff6b9d] rounded"></div>
-              <span className="font-medium">Trail Stats</span>
-            </div>
-            <div className="space-y-1 text-xs text-gray-300">
-              <div>Length: 2,650 miles</div>
-              <div>States: CA, OR, WA</div>
-              <div>Elevation: 13,153 ft max</div>
-            </div>
+            <h1 className="text-xl font-bold text-balance">Pacific Crest Trail Audio Journey</h1>
           </div>
         </div>
       )}

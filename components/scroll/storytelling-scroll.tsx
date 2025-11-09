@@ -52,8 +52,13 @@ export function StorytellingScroll({ map, chapters, onChapterChange }: Storytell
 
         {/* Chapter sections */}
         {chapters.map((chapter, index) => (
-          <div key={chapter.id} ref={setChapterRef(index)} className="min-h-screen flex items-center">
-            <div className="w-full max-w-2xl mx-auto px-6 pointer-events-auto">
+          <div
+            key={chapter.id}
+            ref={setChapterRef(index)}
+            data-chapter-index={index}
+            className="min-h-screen flex items-center"
+          >
+            <div className="w-full px-6 pointer-events-auto absolute bottom-12 left-0 max-w-md">
               <div
                 className={`bg-black/80 backdrop-blur-sm rounded-xl p-8 text-white transition-all duration-700 ${
                   currentChapter === index ? "opacity-100 translate-y-0" : "opacity-60 translate-y-4"
@@ -86,23 +91,6 @@ export function StorytellingScroll({ map, chapters, onChapterChange }: Storytell
                     </div>
                   </div>
                 )}
-
-                {/* Chapter navigation */}
-                <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/20">
-                  <div className="text-sm text-gray-400">
-                    {index + 1} of {chapters.length}
-                  </div>
-                  <div className="flex gap-1">
-                    {chapters.map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-2 h-2 rounded-full transition-colors ${
-                          i === currentChapter ? "bg-[#ff6b9d]" : "bg-white/30"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
