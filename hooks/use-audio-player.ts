@@ -43,6 +43,7 @@ export function useAudioPlayer() {
           ...prev,
           duration: audio.duration,
           isLoading: false,
+          error: null, // Clear any previous errors
         }))
       })
 
@@ -138,5 +139,6 @@ export function useAudioPlayer() {
     stop,
     seek,
     setVolume,
+    audioRef, // Expose ref for auto-play
   }
 }

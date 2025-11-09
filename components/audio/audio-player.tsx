@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useAudioPlayer } from "@/hooks/use-audio-player"
 import type { AudioMarker } from "@/types/map"
 
@@ -10,14 +10,46 @@ interface AudioPlayerProps {
 }
 
 export function AudioPlayer({ marker, onClose }: AudioPlayerProps) {
-  const { isPlaying, currentTime, duration, volume, isLoading, error, loadTrack, play, pause, seek, setVolume } =
+  const { isPlaying, currentTime, duration, volume, isLoading, error, loadTrack, play, pause, stop, seek, setVolume, audioRef, currentTrack } =
     useAudioPlayer()
+
+  const hasAutoPlayedRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (marker) {
-      loadTrack(marker.audioUrl)
+      // Stop current audio before loading new one
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+      // Use API endpoint for audio streaming (handles missing files better)
+      const audioUrl = marker.audioUrl.startsWith('http') 
+        ? marker.audioUrl 
+        : `/api/audio/${marker.id}`
+      loadTrack(audioUrl)
+      // Reset auto-play flag when loading new track
+      hasAutoPlayedRef.current = null
     }
-  }, [marker, loadTrack])
+  }, [marker, loadTrack, audioRef])
+
+  // Auto-play when audio is loaded (only once per track)
+  useEffect(() => {
+    if (
+      audioRef.current &&
+      !isLoading &&
+      !error &&
+      duration > 0 &&
+      currentTrack &&
+      hasAutoPlayedRef.current !== currentTrack
+    ) {
+      hasAutoPlayedRef.current = currentTrack
+      play()
+    }
+  }, [duration, isLoading, error, play, audioRef, currentTrack])
+
+  const handleClose = () => {
+    stop()
+    onClose()
+  }
 
   if (!marker) return null
 
@@ -30,16 +62,16 @@ export function AudioPlayer({ marker, onClose }: AudioPlayerProps) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4">
-      <div className="bg-black/90 backdrop-blur-sm rounded-xl p-6 text-white shadow-2xl border border-white/10">
+    <div className="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4">
+      <div className="bg-black/90 backdrop-blur-sm rounded-xl p-4 md:p-6 text-white shadow-2xl border border-white/10">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-3 md:mb-4">
           <div className="flex-1">
-            <h3 className="font-semibold text-lg text-balance">{marker.name}</h3>
-            <p className="text-sm text-gray-400 mt-1">Elevation: {marker.elevation.toLocaleString()} ft</p>
+            <h3 className="font-semibold text-base md:text-lg text-balance">{marker.name}</h3>
+            <p className="text-xs md:text-sm text-gray-400 mt-1">Elevation: {marker.elevation.toLocaleString()} ft</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1 hover:bg-white/10 rounded-full transition-colors"
             aria-label="Close audio player"
           >
@@ -123,8 +155,8 @@ export function AudioPlayer({ marker, onClose }: AudioPlayerProps) {
           </button>
         </div>
 
-        {/* Volume control */}
-        <div className="flex items-center gap-3">
+        {/* Volume control - hidden on mobile */}
+        <div className="hidden md:flex items-center gap-3">
           <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
           </svg>

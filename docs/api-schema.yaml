@@ -1,0 +1,431 @@
+openapi: 3.0.3
+info:
+  title: PCT Audio Map API
+  description: Audio streaming and management API for Pacific Crest Trail audio experience
+  version: 1.0.0
+
+servers:
+  - url: https://your-app.vercel.app/api
+    description: Production
+  - url: http://localhost:3000/api
+    description: Development
+
+paths:
+  /audio/stream/{id}:
+    get:
+      summary: Stream audio file
+      description: Streams audio with range request support for seeking
+      operationId: streamAudio
+      tags:
+        - Audio Streaming
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Audio marker ID
+        - name: Range
+          in: header
+          required: false
+          schema:
+            type: string
+            example: "bytes=0-1023"
+          description: Range header for partial content requests
+      responses:
+        '200':
+          description: Full audio file
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: "audio/mpeg"
+            Content-Length:
+              schema:
+                type: integer
+            Accept-Ranges:
+              schema:
+                type: string
+                example: "bytes"
+            Cache-Control:
+              schema:
+                type: string
+                example: "public, max-age=31536000, immutable"
+            ETag:
+              schema:
+                type: string
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: Partial content (range request)
+          headers:
+            Content-Type:
+              schema:
+                type: string
+            Content-Range:
+              schema:
+                type: string
+                example: "bytes 0-1023/50000"
+            Accept-Ranges:
+              schema:
+                type: string
+                example: "bytes"
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '416':
+          $ref: '#/components/responses/RangeNotSatisfiable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /audio/metadata/{id}:
+    get:
+      summary: Get audio metadata
+      description: Retrieves metadata without downloading the file
+      operationId: getAudioMetadata
+      tags:
+        - Audio Streaming
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audio metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioMetadata'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /audio/list:
+    get:
+      summary: List audio markers
+      description: Lists all available audio markers with metadata
+      operationId: listAudioMarkers
+      tags:
+        - Audio Streaming
+      parameters:
+        - name: chapter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by trail segment
+        - name: featured
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of audio markers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  markers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AudioMetadata'
+                  total:
+                    type: integer
+
+  /admin/audio/upload:
+    post:
+      summary: Upload audio file
+      description: Uploads new audio file to Vercel Blob (requires authentication)
+      operationId: uploadAudio
+      tags:
+        - Audio Management
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - name
+                - coordinates
+                - elevation
+                - chapter
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+                coordinates:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 2
+                  maxItems: 2
+                elevation:
+                  type: number
+                chapter:
+                  type: string
+                featured:
+                  type: boolean
+      responses:
+        '201':
+          description: Audio uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  url:
+                    type: string
+                  metadata:
+                    $ref: '#/components/schemas/AudioMetadata'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/audio/migrate:
+    post:
+      summary: Migrate local files
+      description: Migrates existing public/audio files to Vercel Blob
+      operationId: migrateAudio
+      tags:
+        - Audio Management
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Migration completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  migrated:
+                    type: integer
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        file:
+                          type: string
+                        error:
+                          type: string
+                  urls:
+                    type: object
+                    additionalProperties:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/audio/{id}:
+    delete:
+      summary: Delete audio file
+      description: Deletes audio file from Vercel Blob
+      operationId: deleteAudio
+      tags:
+        - Audio Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Audio deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/audio/{id}/metadata:
+    put:
+      summary: Update audio metadata
+      description: Updates audio marker metadata
+      operationId: updateAudioMetadata
+      tags:
+        - Audio Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                coordinates:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 2
+                  maxItems: 2
+                elevation:
+                  type: number
+                chapter:
+                  type: string
+                featured:
+                  type: boolean
+      responses:
+        '200':
+          description: Metadata updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  metadata:
+                    $ref: '#/components/schemas/AudioMetadata'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Admin API token for protected endpoints
+
+  schemas:
+    AudioMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+          description: CDN URL for direct access
+        duration:
+          type: number
+          description: Duration in seconds
+        size:
+          type: number
+          description: File size in bytes
+        format:
+          type: string
+          enum: [mp3, m4a, ogg]
+        bitrate:
+          type: number
+          description: Bitrate in kbps
+        coordinates:
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+        elevation:
+          type: number
+        chapter:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+        contentType:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Audio file not found"
+            code: "AUDIO_NOT_FOUND"
+
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Invalid file format"
+            code: "INVALID_FORMAT"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Unauthorized"
+            code: "AUTH_REQUIRED"
+
+    PayloadTooLarge:
+      description: File too large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "File too large"
+            code: "FILE_TOO_LARGE"
+
+    RangeNotSatisfiable:
+      description: Range not satisfiable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Range not satisfiable"
+            code: "INVALID_RANGE"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Streaming error"
+            code: "STREAM_ERROR"

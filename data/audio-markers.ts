@@ -3,6 +3,33 @@ import type { AudioMarker } from "@/types/map"
 export const audioMarkers: AudioMarker[] = [
   // Southern California Desert
   {
+    id: "campo-trailhead",
+    name: "Campo Trailhead",
+    coordinates: [-116.470375, 32.600903],
+    elevation: 2900,
+    audioUrl: "/audio/campo-trailhead.mp3",
+    chapter: "southern-california",
+    featured: true,
+  },
+  {
+    id: "hauser-canyon",
+    name: "Hauser Canyon",
+    coordinates: [-116.426306, 32.891528],
+    elevation: 2100,
+    audioUrl: "/audio/hauser-canyon.mp3",
+    chapter: "southern-california",
+    featured: false,
+  },
+  {
+    id: "morena-lake",
+    name: "Lake Morena",
+    coordinates: [-116.440222, 32.896222],
+    elevation: 3000,
+    audioUrl: "/audio/morena-lake.mp3",
+    chapter: "southern-california",
+    featured: false,
+  },
+  {
     id: "desert-wind",
     name: "Desert Wind at Sunrise",
     coordinates: [-116.52, 32.68],

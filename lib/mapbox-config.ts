@@ -11,3 +11,15 @@ export async function getMapboxToken() {
 
   return token
 }
+
+export async function getMapboxStyleUrl() {
+  // Use MAPBOX_STYLE_URL if provided, otherwise fall back to local style
+  const styleUrl = process.env.MAPBOX_STYLE_URL
+  
+  if (styleUrl) {
+    return styleUrl
+  }
+  
+  // Return null to indicate we should use local style
+  return null
+}
