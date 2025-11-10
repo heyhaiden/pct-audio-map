@@ -9,8 +9,47 @@ interface TrailScrollOptions {
   onProgressChange?: (progress: number, coordinates: [number, number]) => void
 }
 
-export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChange }: TrailScrollOptions) {
+interface TrailScrollReturn {
+  scrollProgress: number
+  currentMiles: number
+  totalMiles: number
+}
+
+const PCT_TOTAL_MILES = 2650
+
+function calculateCumulativeDistances(coordinates: number[][]): number[] {
+  const distances = [0]
+  let totalDistance = 0
+
+  for (let i = 1; i < coordinates.length; i++) {
+    const [lng1, lat1] = coordinates[i - 1]
+    const [lng2, lat2] = coordinates[i]
+
+    // Haversine formula for geographic distance
+    const R = 6371 // Earth radius in km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180
+    const dLng = ((lng2 - lng1) * Math.PI) / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    const distance = R * c
+
+    totalDistance += distance
+    distances.push(totalDistance)
+  }
+
+  return distances
+}
+
+export function useTrailScroll({
+  map,
+  trailCoordinates,
+  enabled,
+  onProgressChange,
+}: TrailScrollOptions): TrailScrollReturn {
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [currentMiles, setCurrentMiles] = useState(0)
   const animationFrameRef = useRef<number | null>(null)
   const lastScrollTime = useRef(Date.now())
   const targetProgress = useRef(0)
@@ -21,11 +60,27 @@ export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChang
   const smoothedLat = useRef(0)
   const isInitialized = useRef(false)
   const coordinateHistory = useRef<Array<[number, number]>>([])
+  const cumulativeDistances = useRef<number[]>([])
 
   useEffect(() => {
-    if (!map || !enabled || !trailCoordinates.length) return
+    if (trailCoordinates.length > 0) {
+      cumulativeDistances.current = calculateCumulativeDistances(trailCoordinates)
+    }
+  }, [trailCoordinates])
+
+  useEffect(() => {
+    if (!map || !enabled || !trailCoordinates.length) {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+      isAnimating.current = false
+      return
+    }
 
     const handleScroll = () => {
+      if (!enabled) return
+
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
       const scrolled = window.scrollY
       const progress = Math.max(0, Math.min(1, scrolled / scrollHeight))
@@ -41,7 +96,7 @@ export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChang
     }
 
     const calculateSmoothedBearing = (index: number): number => {
-      const lookAheadDistance = Math.min(50, Math.floor(trailCoordinates.length * 0.02))
+      const lookAheadDistance = Math.min(150, Math.floor(trailCoordinates.length * 0.05))
       const currentIndex = Math.floor(index)
       const futureIndex = Math.min(currentIndex + lookAheadDistance, trailCoordinates.length - 1)
 
@@ -55,19 +110,43 @@ export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChang
 
       let bearing = (Math.atan2(deltaLng, deltaLat) * 180) / Math.PI
 
-      bearing = Math.max(-45, Math.min(45, bearing))
+      bearing = Math.max(-90, Math.min(90, bearing))
 
       return bearing
     }
 
     const animateCamera = () => {
-      const ease = 0.25
+      if (!enabled) {
+        isAnimating.current = false
+        return
+      }
+
+      const ease = 0.35
       currentProgress.current += (targetProgress.current - currentProgress.current) * ease
 
-      const index = currentProgress.current * (trailCoordinates.length - 1)
-      const lowerIndex = Math.floor(index)
-      const upperIndex = Math.ceil(index)
-      const fraction = index - lowerIndex
+      const currentDistanceInMiles = currentProgress.current * PCT_TOTAL_MILES
+      setCurrentMiles(currentDistanceInMiles)
+
+      const distances = cumulativeDistances.current
+      if (distances.length === 0) return
+
+      const totalDistance = distances[distances.length - 1]
+      const targetDistance = currentProgress.current * totalDistance
+
+      let lowerIndex = 0
+      for (let i = 0; i < distances.length - 1; i++) {
+        if (distances[i] <= targetDistance && targetDistance <= distances[i + 1]) {
+          lowerIndex = i
+          break
+        }
+      }
+
+      const upperIndex = Math.min(lowerIndex + 1, trailCoordinates.length - 1)
+      const lowerDistance = distances[lowerIndex]
+      const upperDistance = distances[upperIndex]
+      const segmentDistance = upperDistance - lowerDistance
+
+      const fraction = segmentDistance > 0 ? (targetDistance - lowerDistance) / segmentDistance : 0
 
       if (lowerIndex >= 0 && upperIndex < trailCoordinates.length) {
         const lowerCoord = trailCoordinates[lowerIndex]
@@ -85,7 +164,7 @@ export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChang
         }
 
         coordinateHistory.current.push([targetLng, targetLat])
-        if (coordinateHistory.current.length > 4) {
+        if (coordinateHistory.current.length > 8) {
           coordinateHistory.current.shift()
         }
 
@@ -94,17 +173,17 @@ export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChang
         const avgLat =
           coordinateHistory.current.reduce((sum, coord) => sum + coord[1], 0) / coordinateHistory.current.length
 
-        const positionSmoothing = 0.12
+        const positionSmoothing = 0.06
         smoothedLng.current += (avgLng - smoothedLng.current) * positionSmoothing
         smoothedLat.current += (avgLat - smoothedLat.current) * positionSmoothing
 
-        const targetBearing = calculateSmoothedBearing(index)
-        currentBearing.current += (targetBearing - currentBearing.current) * 0.15
+        const targetBearing = calculateSmoothedBearing(lowerIndex + fraction)
+        currentBearing.current += (targetBearing - currentBearing.current) * 0.08
 
         map.easeTo({
           center: [smoothedLng.current, smoothedLat.current],
-          zoom: 13.5,
-          pitch: 70,
+          zoom: 14.5,
+          pitch: 75,
           bearing: currentBearing.current,
           duration: 0,
           easing: (t: number) => t,
@@ -124,9 +203,15 @@ export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChang
       window.removeEventListener("scroll", handleScroll)
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
       }
+      isAnimating.current = false
     }
   }, [map, trailCoordinates, enabled, onProgressChange])
 
-  return { scrollProgress }
+  return {
+    scrollProgress,
+    currentMiles,
+    totalMiles: PCT_TOTAL_MILES,
+  }
 }

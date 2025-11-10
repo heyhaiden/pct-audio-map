@@ -16,21 +16,20 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
 
   return (
     <div className="fixed right-6 top-1/2 -translate-y-1/2 z-30 hidden md:block">
-      <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-4 py-6 text-white">
+      <div className="bg-black/80 backdrop-blur-sm rounded-xl px-3 py-4 text-white">
         {/* Progress line with dots integrated */}
-        <div className="relative flex flex-col items-center h-64">
+        <div className="relative flex flex-col items-center h-48">
           {/* Progress line background - centered */}
           <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-white/20 rounded-full" />
 
-          {/* Progress fill - centered */}
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#ff6b9d] rounded-full transition-all duration-300 ease-out"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#ff6b9d] rounded-full transition-all duration-300 ease-out"
             style={{ height: `${progress * 100}%` }}
           />
 
-          {/* Chapter dots positioned along the line */}
           {Array.from({ length: totalChapters }, (_, i) => {
-            const dotPosition = totalChapters === 1 ? 50 : (i / (totalChapters - 1)) * 100
+            // Invert the dot position so chapter 0 is at bottom (100%) and last chapter is at top (0%)
+            const dotPosition = totalChapters === 1 ? 50 : ((totalChapters - 1 - i) / (totalChapters - 1)) * 100
             const isActive = i === currentChapter
             const isPast = i < currentChapter
 
@@ -38,7 +37,7 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
               <button
                 key={i}
                 onClick={() => handleDotClick(i)}
-                className={`absolute left-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-2 transition-all duration-300 cursor-pointer z-10 focus:outline-none focus:ring-2 focus:ring-[#ff6b9d] focus:ring-offset-2 focus:ring-offset-black/80 ${
+                className={`absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 transition-all duration-300 cursor-pointer z-10 focus:outline-none focus:ring-2 focus:ring-[#ff6b9d] focus:ring-offset-2 focus:ring-offset-black/80 ${
                   isActive
                     ? "bg-[#ff6b9d] border-[#ff6b9d] scale-125 shadow-lg shadow-[#ff6b9d]/50"
                     : isPast
@@ -53,7 +52,7 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
         </div>
 
         {/* Chapter counter */}
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <div className="text-xs text-gray-400">Chapter</div>
           <div className="text-sm font-bold text-[#ff6b9d]">
             {currentChapter + 1}/{totalChapters}

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { PCTMap } from "@/components/map/pct-map"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
+import { TrailStats } from "@/components/stats/trail-stats"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { pctSegments } from "@/data/pct-segments"
@@ -12,6 +13,8 @@ export default function Home() {
   const [map, setMap] = useState<any>(null)
   const [currentChapter, setCurrentChapter] = useState(0)
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
+  const [currentMiles, setCurrentMiles] = useState(0)
+  const [totalMiles, setTotalMiles] = useState(2650)
 
   const handleScroll = () => {
     if (typeof window === "undefined") return
@@ -56,11 +59,22 @@ export default function Home() {
     setSelectedAudioMarker(null)
   }
 
+  const scrollHeight = typeof window !== "undefined" ? document.documentElement.scrollHeight - window.innerHeight : 1
+  const scrolled = typeof window !== "undefined" ? window.scrollY : 0
+  const scrollProgress = Math.max(0, Math.min(1, scrolled / scrollHeight))
+  const currentSection = pctSegments[currentChapter]?.name || "Southern California"
+
   return (
     <main className="relative" onScroll={handleScroll}>
       {/* Fixed map background */}
       <div className="fixed inset-0 z-0">
-        <PCTMap onMapLoad={setMap} />
+        <PCTMap
+          onMapLoad={setMap}
+          onMilesUpdate={(miles, total) => {
+            setCurrentMiles(miles)
+            setTotalMiles(total)
+          }}
+        />
         {map && (
           <AudioMarkers
             map={map}
@@ -70,7 +84,9 @@ export default function Home() {
         )}
       </div>
 
-      <div className="relative z-10" style={{ height: `${pctSegments.length * 800}vh` }} />
+      <div className="relative z-10" style={{ height: `${pctSegments.length * 1200}vh` }} />
+
+      <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
 
       {/* Scroll progress indicator */}
       <ScrollIndicator

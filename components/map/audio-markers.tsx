@@ -16,8 +16,6 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
   useEffect(() => {
     if (!map || !window.mapboxgl) return
 
-    console.log("[v0] Adding audio markers for chapter:", currentChapter)
-
     const addMarkers = () => {
       try {
         // Clear existing markers
@@ -26,7 +24,6 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
 
         // Filter markers for current chapter
         const chapterMarkers = audioMarkers.filter((marker) => marker.chapter === currentChapter)
-        console.log("[v0] Found audio markers:", chapterMarkers.length)
 
         chapterMarkers.forEach((audioMarker) => {
           // Create marker using the same approach as waypoint markers
@@ -55,14 +52,11 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
           markerElement.style.cursor = "pointer"
           markerElement.addEventListener("click", (e) => {
             e.stopPropagation()
-            console.log("[v0] Audio marker clicked:", audioMarker.name)
             onMarkerClick(audioMarker)
           })
 
           markersRef.current.push(marker)
         })
-
-        console.log("[v0] Audio markers added successfully:", markersRef.current.length)
       } catch (error) {
         console.error("[v0] Failed to add audio markers:", error)
       }

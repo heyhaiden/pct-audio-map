@@ -13,9 +13,10 @@ declare global {
 
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
+  onMilesUpdate?: (currentMiles: number, totalMiles: number) => void
 }
 
-export function PCTMap({ onMapLoad }: PCTMapProps) {
+export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -26,7 +27,7 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
 
   const trailCoordinates = pctTrailGeometry.geometry.coordinates
-  useTrailScroll({
+  const { scrollProgress, currentMiles, totalMiles } = useTrailScroll({
     map: map.current,
     trailCoordinates,
     enabled: initialAnimationDone,
@@ -36,9 +37,13 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
   })
 
   useEffect(() => {
-    const loadMapboxScripts = () => {
-      console.log("[v0] Loading Mapbox scripts...")
+    if (onMilesUpdate && totalMiles > 0) {
+      onMilesUpdate(currentMiles, totalMiles)
+    }
+  }, [currentMiles, totalMiles, onMilesUpdate])
 
+  useEffect(() => {
+    const loadMapboxScripts = () => {
       // Load CSS
       const cssLink = document.createElement("link")
       cssLink.rel = "stylesheet"
@@ -49,7 +54,6 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
       const script = document.createElement("script")
       script.src = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
       script.onload = () => {
-        console.log("[v0] Mapbox scripts loaded successfully")
         setScriptsLoaded(true)
       }
       script.onerror = () => {
@@ -68,22 +72,16 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
 
   useEffect(() => {
     const initializeMap = async () => {
-      console.log("[v0] Initializing map...", { scriptsLoaded, mapboxgl: !!window.mapboxgl })
-
       if (!scriptsLoaded || !window.mapboxgl) {
-        console.log("[v0] Waiting for Mapbox scripts to load...")
         return
       }
 
       try {
         if (!mapContainer.current || map.current) return
 
-        console.log("[v0] Getting Mapbox token...")
-        // Get Mapbox token from server action
         let token: string
         try {
           token = await getMapboxToken()
-          console.log("[v0] Token received:", token ? "✓" : "✗")
         } catch (error) {
           console.error("[v0] Token error:", error)
           setMapboxError("Mapbox access token is required. Please set MAPBOX_ACCESS_TOKEN in your Project Settings.")
@@ -91,18 +89,16 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
         }
 
         window.mapboxgl.accessToken = token
-        console.log("[v0] Creating map...")
 
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo",
-          center: [-118.29, 36.58], // Start in Sierra Nevada
+          center: [-118.29, 36.58],
           zoom: 6,
           pitch: 60,
           bearing: 30,
           antialias: true,
           interactive: true,
-          // Disable specific interactions to maintain scroll-driven experience
           dragPan: false,
           dragRotate: false,
           scrollZoom: false,
@@ -114,23 +110,19 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
           attributionControl: false,
         })
 
-        console.log("[v0] Map created, waiting for load event...")
-
         map.current.on("load", () => {
-          console.log("[v0] Map loaded successfully!")
           if (!map.current) return
 
-          // Add terrain source and layer for 3D visualization
           map.current.addSource("mapbox-terrain-rgb", {
             type: "raster-dem",
             url: "mapbox://mapbox.terrain-rgb",
-            tileSize: 256, // Reduced from 512 for faster loading
-            maxzoom: 15, // Increased from 14 for better quality when scrolling
+            tileSize: 256,
+            maxzoom: 15,
           })
 
           map.current.setTerrain({
             source: "mapbox-terrain-rgb",
-            exaggeration: 1.2, // Reduced from 1.5 for better performance
+            exaggeration: 1.8,
           })
 
           map.current.addSource("pct-trail", {
@@ -191,7 +183,7 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
               type: "Feature",
               geometry: {
                 type: "Point",
-                coordinates: pctTrailGeometry.geometry.coordinates[0], // Start at trailhead
+                coordinates: pctTrailGeometry.geometry.coordinates[0],
               },
             },
           })
@@ -245,20 +237,18 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
               .addTo(map.current!)
           })
 
-          console.log("[v0] Map setup complete!")
           setMapLoaded(true)
-          onMapLoad?.(map.current) // Notify parent component that map is loaded
+          onMapLoad?.(map.current)
 
           setTimeout(() => {
-            console.log("[v0] Starting initial animation to trailhead...")
             const trailheadCoord = pctTrailGeometry.geometry.coordinates[0]
 
             map.current!.flyTo({
               center: trailheadCoord,
-              zoom: 13.5, // Increased from 12 to 13.5 for closer starting view
-              pitch: 70, // Keep same pitch to maintain horizon view
-              bearing: 0, // Face north
-              duration: 6000, // Slower animation
+              zoom: 14.5,
+              pitch: 75,
+              bearing: 0,
+              duration: 6000,
               easing: (t: number) => {
                 return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
               },
@@ -266,10 +256,9 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
             })
 
             setTimeout(() => {
-              console.log("[v0] Initial animation complete. Scroll enabled.")
               setInitialAnimationDone(true)
-            }, 5500) // Adjusted to match new animation duration
-          }, 1500) // 1.5 second delay before initial animation
+            }, 5500)
+          }, 1500)
         })
 
         map.current.on("error", (e: any) => {
@@ -313,7 +302,6 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
     const segment = pctSegments[segmentIndex]
     if (!segment) return
 
-    // Update terrain exaggeration for the segment
     if (segment.terrain) {
       map.current.setTerrain({
         source: "mapbox-terrain-rgb",
@@ -356,10 +344,8 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
 
   return (
     <div className="relative h-full w-full">
-      {/* Map container */}
       <div ref={mapContainer} className="h-full w-full" />
 
-      {/* Loading overlay */}
       {(!scriptsLoaded || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-white text-xl">{!scriptsLoaded ? "Loading Mapbox..." : "Loading PCT Audio Map..."}</div>
@@ -373,8 +359,6 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
           </div>
         </div>
       )}
-
-      {/* Removed pulsing animation */}
     </div>
   )
 }
