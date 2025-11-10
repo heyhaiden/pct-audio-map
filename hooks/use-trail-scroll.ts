@@ -6,9 +6,10 @@ interface TrailScrollOptions {
   map: any
   trailCoordinates: number[][]
   enabled: boolean
+  onProgressChange?: (progress: number, coordinates: [number, number]) => void
 }
 
-export function useTrailScroll({ map, trailCoordinates, enabled }: TrailScrollOptions) {
+export function useTrailScroll({ map, trailCoordinates, enabled, onProgressChange }: TrailScrollOptions) {
   const [scrollProgress, setScrollProgress] = useState(0)
   const animationFrameRef = useRef<number | null>(null)
   const lastScrollTime = useRef(Date.now())
@@ -40,7 +41,7 @@ export function useTrailScroll({ map, trailCoordinates, enabled }: TrailScrollOp
     }
 
     const calculateSmoothedBearing = (index: number): number => {
-      const lookAheadDistance = Math.min(80, Math.floor(trailCoordinates.length * 0.03))
+      const lookAheadDistance = Math.min(50, Math.floor(trailCoordinates.length * 0.02))
       const currentIndex = Math.floor(index)
       const futureIndex = Math.min(currentIndex + lookAheadDistance, trailCoordinates.length - 1)
 
@@ -75,6 +76,8 @@ export function useTrailScroll({ map, trailCoordinates, enabled }: TrailScrollOp
         const targetLng = lowerCoord[0] + (upperCoord[0] - lowerCoord[0]) * fraction
         const targetLat = lowerCoord[1] + (upperCoord[1] - lowerCoord[1]) * fraction
 
+        onProgressChange?.(currentProgress.current, [targetLng, targetLat])
+
         if (!isInitialized.current) {
           smoothedLng.current = targetLng
           smoothedLat.current = targetLat
@@ -82,22 +85,21 @@ export function useTrailScroll({ map, trailCoordinates, enabled }: TrailScrollOp
         }
 
         coordinateHistory.current.push([targetLng, targetLat])
-        if (coordinateHistory.current.length > 10) {
+        if (coordinateHistory.current.length > 4) {
           coordinateHistory.current.shift()
         }
 
-        // Calculate average of recent coordinates for ultra-smooth movement
         const avgLng =
           coordinateHistory.current.reduce((sum, coord) => sum + coord[0], 0) / coordinateHistory.current.length
         const avgLat =
           coordinateHistory.current.reduce((sum, coord) => sum + coord[1], 0) / coordinateHistory.current.length
 
-        const positionSmoothing = 0.04
+        const positionSmoothing = 0.12
         smoothedLng.current += (avgLng - smoothedLng.current) * positionSmoothing
         smoothedLat.current += (avgLat - smoothedLat.current) * positionSmoothing
 
         const targetBearing = calculateSmoothedBearing(index)
-        currentBearing.current += (targetBearing - currentBearing.current) * 0.1
+        currentBearing.current += (targetBearing - currentBearing.current) * 0.15
 
         map.easeTo({
           center: [smoothedLng.current, smoothedLat.current],
@@ -124,7 +126,7 @@ export function useTrailScroll({ map, trailCoordinates, enabled }: TrailScrollOp
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [map, trailCoordinates, enabled])
+  }, [map, trailCoordinates, enabled, onProgressChange])
 
   return { scrollProgress }
 }

@@ -23,12 +23,16 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
   const [currentSegment, setCurrentSegment] = useState(0)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
   const [scriptsLoaded, setScriptsLoaded] = useState(false)
+  const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
 
   const trailCoordinates = pctTrailGeometry.geometry.coordinates
   useTrailScroll({
     map: map.current,
     trailCoordinates,
     enabled: initialAnimationDone,
+    onProgressChange: (progress, coordinates) => {
+      setCurrentPosition(coordinates)
+    },
   })
 
   useEffect(() => {
@@ -181,6 +185,42 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
             },
           })
 
+          map.current.addSource("position-cursor", {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              geometry: {
+                type: "Point",
+                coordinates: pctTrailGeometry.geometry.coordinates[0], // Start at trailhead
+              },
+            },
+          })
+
+          map.current.addLayer({
+            id: "position-cursor-outer",
+            type: "circle",
+            source: "position-cursor",
+            paint: {
+              "circle-radius": 12,
+              "circle-color": "#fbbf24",
+              "circle-opacity": 0.3,
+              "circle-blur": 0.5,
+            },
+          })
+
+          map.current.addLayer({
+            id: "position-cursor-inner",
+            type: "circle",
+            source: "position-cursor",
+            paint: {
+              "circle-radius": 8,
+              "circle-color": "#fbbf24",
+              "circle-opacity": 1,
+              "circle-stroke-width": 3,
+              "circle-stroke-color": "#ffffff",
+            },
+          })
+
           const waypoints = [
             { name: "Campo (Start)", coordinates: [-116.465, 32.599] },
             { name: "Mount Whitney", coordinates: [-118.68, 37.06] },
@@ -225,7 +265,6 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
               essential: true,
             })
 
-            // Enable scroll control after animation completes
             setTimeout(() => {
               console.log("[v0] Initial animation complete. Scroll enabled.")
               setInitialAnimationDone(true)
@@ -252,6 +291,21 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
       }
     }
   }, [scriptsLoaded, onMapLoad])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !currentPosition) return
+
+    const source = map.current.getSource("position-cursor")
+    if (source) {
+      source.setData({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: currentPosition,
+        },
+      })
+    }
+  }, [currentPosition, mapLoaded])
 
   const flyToSegment = (segmentIndex: number) => {
     if (!map.current || !mapLoaded) return
@@ -319,6 +373,8 @@ export function PCTMap({ onMapLoad }: PCTMapProps) {
           </div>
         </div>
       )}
+
+      {/* Removed pulsing animation */}
     </div>
   )
 }
