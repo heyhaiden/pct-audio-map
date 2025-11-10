@@ -61,6 +61,11 @@ export function useTrailScroll({
   const isInitialized = useRef(false)
   const coordinateHistory = useRef<Array<[number, number]>>([])
   const cumulativeDistances = useRef<number[]>([])
+  const onProgressChangeRef = useRef(onProgressChange)
+
+  useEffect(() => {
+    onProgressChangeRef.current = onProgressChange
+  }, [onProgressChange])
 
   useEffect(() => {
     if (trailCoordinates.length > 0) {
@@ -91,7 +96,16 @@ export function useTrailScroll({
 
       if (!isAnimating.current) {
         isAnimating.current = true
-        animateCamera()
+        if ("requestIdleCallback" in window) {
+          ;(window as any).requestIdleCallback(
+            () => {
+              animateCamera()
+            },
+            { timeout: 16 },
+          )
+        } else {
+          animateCamera()
+        }
       }
     }
 
@@ -152,10 +166,12 @@ export function useTrailScroll({
         const lowerCoord = trailCoordinates[lowerIndex]
         const upperCoord = trailCoordinates[upperIndex]
 
+        // Interpolate between points for smooth animation
         const targetLng = lowerCoord[0] + (upperCoord[0] - lowerCoord[0]) * fraction
         const targetLat = lowerCoord[1] + (upperCoord[1] - lowerCoord[1]) * fraction
 
-        onProgressChange?.(currentProgress.current, [targetLng, targetLat])
+        // Update position cursor with smoothly interpolated coordinates
+        onProgressChangeRef.current?.(currentProgress.current, [targetLng, targetLat])
 
         if (!isInitialized.current) {
           smoothedLng.current = targetLng
@@ -164,7 +180,7 @@ export function useTrailScroll({
         }
 
         coordinateHistory.current.push([targetLng, targetLat])
-        if (coordinateHistory.current.length > 8) {
+        if (coordinateHistory.current.length > 2) {
           coordinateHistory.current.shift()
         }
 
@@ -173,7 +189,7 @@ export function useTrailScroll({
         const avgLat =
           coordinateHistory.current.reduce((sum, coord) => sum + coord[1], 0) / coordinateHistory.current.length
 
-        const positionSmoothing = 0.06
+        const positionSmoothing = 0.15
         smoothedLng.current += (avgLng - smoothedLng.current) * positionSmoothing
         smoothedLat.current += (avgLat - smoothedLat.current) * positionSmoothing
 
@@ -207,7 +223,7 @@ export function useTrailScroll({
       }
       isAnimating.current = false
     }
-  }, [map, trailCoordinates, enabled, onProgressChange])
+  }, [map, trailCoordinates, enabled])
 
   return {
     scrollProgress,

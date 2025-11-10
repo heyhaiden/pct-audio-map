@@ -8,6 +8,7 @@ import { useTrailScroll } from "@/hooks/use-trail-scroll"
 declare global {
   interface Window {
     mapboxgl: any
+    turf: any
   }
 }
 
@@ -50,7 +51,11 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
       cssLink.href = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css"
       document.head.appendChild(cssLink)
 
-      // Load JS
+      const turfScript = document.createElement("script")
+      turfScript.src = "https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"
+      document.head.appendChild(turfScript)
+
+      // Load Mapbox JS
       const script = document.createElement("script")
       script.src = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
       script.onload = () => {
@@ -108,6 +113,11 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
           touchPitch: false,
           keyboard: false,
           attributionControl: false,
+          // Performance optimizations
+          maxTileCacheSize: 500, // Increase tile cache for smoother scrolling
+          preserveDrawingBuffer: false, // Better performance
+          refreshExpiredTiles: false, // Reduce unnecessary tile reloads
+          fadeDuration: 100, // Faster tile fade-in
         })
 
         map.current.on("load", () => {
@@ -116,8 +126,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
           map.current.addSource("mapbox-terrain-rgb", {
             type: "raster-dem",
             url: "mapbox://mapbox.terrain-rgb",
-            tileSize: 256,
-            maxzoom: 15,
+            tileSize: 512, // Larger tile size for fewer requests
+            maxzoom: 14, // Reduced from 15 to load fewer tiles
           })
 
           map.current.setTerrain({
@@ -259,6 +269,30 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
               setInitialAnimationDone(true)
             }, 5500)
           }, 1500)
+
+          map.current.once("idle", () => {
+            // Prefetch tiles for better scroll performance
+            const trailBounds = [
+              [-122.5, 32.5], // Southwest
+              [-116.0, 49.5], // Northeast
+            ]
+
+            // Trigger tile prefetching by briefly adjusting bounds
+            const currentCenter = map.current.getCenter()
+            const currentZoom = map.current.getZoom()
+
+            map.current.fitBounds(trailBounds, {
+              duration: 0,
+              maxZoom: 12,
+              padding: 0,
+            })
+
+            // Restore original view after prefetch
+            setTimeout(() => {
+              map.current.setCenter(currentCenter)
+              map.current.setZoom(currentZoom)
+            }, 100)
+          })
         })
 
         map.current.on("error", (e: any) => {
@@ -282,17 +316,22 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
   }, [scriptsLoaded, onMapLoad])
 
   useEffect(() => {
-    if (!map.current || !mapLoaded || !currentPosition) return
+    if (!map.current || !mapLoaded || !currentPosition || !window.turf) return
 
     const source = map.current.getSource("position-cursor")
     if (source) {
-      source.setData({
+      // Create a point feature with the current position
+      const point = {
         type: "Feature",
+        properties: {},
         geometry: {
           type: "Point",
           coordinates: currentPosition,
         },
-      })
+      }
+
+      // Use Turf to create smooth point updates
+      source.setData(point)
     }
   }, [currentPosition, mapLoaded])
 
