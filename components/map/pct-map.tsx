@@ -135,6 +135,39 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
             exaggeration: 1.8,
           })
 
+          // This provides smooth coordinates for the camera to follow without elevation changes
+          const cameraTrackingGeometry = {
+            ...pctTrailGeometry,
+            geometry: {
+              ...pctTrailGeometry.geometry,
+              // Clone coordinates to use for camera tracking
+              coordinates: pctTrailGeometry.geometry.coordinates.map((coord) => [...coord]),
+            },
+          }
+
+          map.current.addSource("camera-tracking-line", {
+            type: "geojson",
+            data: cameraTrackingGeometry,
+            lineMetrics: true,
+          })
+
+          // This layer is invisible - used only for camera tracking
+          map.current.addLayer({
+            id: "camera-tracking-layer",
+            type: "line",
+            source: "camera-tracking-line",
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "#000000",
+              "line-width": 0,
+              "line-opacity": 0, // Invisible
+            },
+          })
+
+          // Visible trail line source - follows terrain
           map.current.addSource("pct-trail", {
             type: "geojson",
             data: pctTrailGeometry,

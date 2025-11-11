@@ -84,7 +84,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="relative z-10" style={{ height: `${pctSegments.length * 1200}vh` }} />
+      <div className="relative z-10" style={{ height: `${pctSegments.length * 2400}vh` }} />
 
       <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
 

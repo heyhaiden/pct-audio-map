@@ -135,8 +135,17 @@ export function useTrailScroll({
         return
       }
 
-      const ease = 0.35
-      currentProgress.current += (targetProgress.current - currentProgress.current) * ease
+      const ease = 0.18
+      const rawDelta = targetProgress.current - currentProgress.current
+
+      const easeInOutCubic = (t: number): number => {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+      }
+
+      const normalizedDelta = Math.sign(rawDelta) * Math.min(Math.abs(rawDelta), 1)
+      const easedDelta = easeInOutCubic(Math.abs(normalizedDelta)) * Math.sign(normalizedDelta)
+
+      currentProgress.current += easedDelta * ease
 
       const currentDistanceInMiles = currentProgress.current * PCT_TOTAL_MILES
       setCurrentMiles(currentDistanceInMiles)
@@ -189,12 +198,13 @@ export function useTrailScroll({
         const avgLat =
           coordinateHistory.current.reduce((sum, coord) => sum + coord[1], 0) / coordinateHistory.current.length
 
-        const positionSmoothing = 0.15
+        const positionSmoothing = 0.25 // Increased from 0.1 for quicker stop
         smoothedLng.current += (avgLng - smoothedLng.current) * positionSmoothing
         smoothedLat.current += (avgLat - smoothedLat.current) * positionSmoothing
 
         const targetBearing = calculateSmoothedBearing(lowerIndex + fraction)
-        currentBearing.current += (targetBearing - currentBearing.current) * 0.08
+        const bearingSmoothing = 0.2 // Increased from 0.05 for quicker bearing changes
+        currentBearing.current += (targetBearing - currentBearing.current) * bearingSmoothing
 
         map.easeTo({
           center: [smoothedLng.current, smoothedLat.current],
