@@ -294,15 +294,15 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
         // Single cinematic fly from overview to trailhead - slow and smooth
         map.current.flyTo({
-          center: [startCoords[0], startCoords[1]],
-          zoom: 14,
+          center: [-116.467, 32.5897], // Updated end point to user-specified coordinates
+          zoom: 9.55,
           pitch: 0,
-          bearing: 0,
+          bearing: -5,
           duration: 8000, // 8 seconds for smooth cinematic feel
           curve: 0.8, // Gentler curve for more natural movement
           easing: (t: number) => {
-            // Custom ease-out cubic for cinematic deceleration
-            return 1 - Math.pow(1 - t, 3)
+            // Ease-in-out: starts slower, accelerates in middle, slows at end
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
           },
           essential: true,
         })
