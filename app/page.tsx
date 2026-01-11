@@ -17,6 +17,7 @@ export default function Home() {
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
+  const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const scrollControlRef = useRef<{
     pauseScrollAnimation: () => void
     resumeScrollAnimation: () => void
@@ -62,7 +63,24 @@ export default function Home() {
   }
 
   const handleCloseAudio = () => {
+    if (map && previousCameraPositionRef.current) {
+      const { center, zoom } = previousCameraPositionRef.current
+
+      map.flyTo({
+        center: center,
+        zoom: zoom,
+        duration: 2000,
+        curve: 1.2,
+        easing: (t: number) => t * (2 - t),
+        essential: true,
+      })
+
+      // Set pending sync coordinates so scroll resumes at the right position
+      scrollControlRef.current?.setPendingSyncCoordinates(center)
+    }
+
     setSelectedAudioMarker(null)
+    previousCameraPositionRef.current = null
   }
 
   const handleNextMarker = () => {
@@ -114,9 +132,14 @@ export default function Home() {
   }
 
   const handleAudioMarkerClick = (marker: AudioMarker) => {
-    setSelectedAudioMarker(marker)
-
     if (map) {
+      const center = map.getCenter()
+      const zoom = map.getZoom()
+      previousCameraPositionRef.current = {
+        center: [center.lng, center.lat] as [number, number],
+        zoom: zoom,
+      }
+
       scrollControlRef.current?.pauseScrollAnimation()
       scrollControlRef.current?.setPendingSyncCoordinates(marker.coordinates)
 
@@ -129,6 +152,8 @@ export default function Home() {
         essential: true,
       })
     }
+
+    setSelectedAudioMarker(marker)
   }
 
   const currentMarkerIndex = selectedAudioMarker ? audioMarkers.findIndex((m) => m.id === selectedAudioMarker.id) : -1
