@@ -15,6 +15,7 @@ interface TrailScrollReturn {
   totalMiles: number
   pauseScrollAnimation: () => void
   resumeScrollAnimation: () => void
+  syncScrollToPosition: (coordinates: [number, number]) => void
 }
 
 const PCT_TOTAL_MILES = 2650
@@ -49,22 +50,82 @@ export function useTrailScroll({
     altitude: 100000,
   })
 
+  const findProgressFromCoordinates = useCallback(
+    (coordinates: [number, number]): number => {
+      if (!cameraPath || cameraPath.length === 0) return 0
+
+      const [lng, lat] = coordinates
+      let closestIndex = 0
+      let closestDistance = Number.POSITIVE_INFINITY
+
+      for (let i = 0; i < cameraPath.length; i++) {
+        const point = cameraPath[i]
+        const distance = Math.sqrt(Math.pow(point.lng - lng, 2) + Math.pow(point.lat - lat, 2))
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestIndex = i
+        }
+      }
+
+      return closestIndex / (cameraPath.length - 1)
+    },
+    [cameraPath],
+  )
+
+  const syncScrollToPosition = useCallback(
+    (coordinates: [number, number]) => {
+      if (typeof window === "undefined" || !cameraPath) return
+
+      const progress = findProgressFromCoordinates(coordinates)
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+      const targetScroll = progress * scrollHeight
+
+      setScrollProgress(progress)
+      setCurrentMiles(progress * PCT_TOTAL_MILES)
+
+      const pathIndex = progress * (cameraPath.length - 1)
+      const lowerIndex = Math.floor(pathIndex)
+      const upperIndex = Math.min(Math.ceil(pathIndex), cameraPath.length - 1)
+      const fraction = pathIndex - lowerIndex
+
+      const lowerPoint = cameraPath[lowerIndex]
+      const upperPoint = cameraPath[upperIndex]
+
+      if (lowerPoint && upperPoint) {
+        cameraStateRef.current.lng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
+        cameraStateRef.current.lat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
+        cameraStateRef.current.bearing = lerpBearing(lowerPoint.bearing, upperPoint.bearing, fraction)
+      }
+
+      window.scrollTo({
+        top: targetScroll,
+        behavior: "instant",
+      })
+    },
+    [cameraPath, findProgressFromCoordinates],
+  )
+
   const pauseScrollAnimation = useCallback(() => {
     if (pauseTimeoutRef.current) {
       clearTimeout(pauseTimeoutRef.current)
     }
     setIsScrollPaused(true)
-    pauseTimeoutRef.current = setTimeout(() => {
-      setIsScrollPaused(false)
-    }, 3000)
   }, [])
 
   const resumeScrollAnimation = useCallback(() => {
     if (pauseTimeoutRef.current) {
       clearTimeout(pauseTimeoutRef.current)
     }
+
+    if (mapRef.current) {
+      const center = mapRef.current.getCenter()
+      if (center) {
+        syncScrollToPosition([center.lng, center.lat])
+      }
+    }
+
     setIsScrollPaused(false)
-  }, [])
+  }, [syncScrollToPosition])
 
   useEffect(() => {
     onProgressChangeRef.current = onProgressChange
@@ -235,5 +296,6 @@ export function useTrailScroll({
     totalMiles: PCT_TOTAL_MILES,
     pauseScrollAnimation,
     resumeScrollAnimation,
+    syncScrollToPosition,
   }
 }

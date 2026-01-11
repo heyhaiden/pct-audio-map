@@ -15,7 +15,11 @@ declare global {
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
   onMilesUpdate?: (currentMiles: number, totalMiles: number) => void
-  onScrollControlReady?: (controls: { pauseScrollAnimation: () => void; resumeScrollAnimation: () => void }) => void
+  onScrollControlReady?: (controls: {
+    pauseScrollAnimation: () => void
+    resumeScrollAnimation: () => void
+    syncScrollToPosition: (coordinates: [number, number]) => void
+  }) => void
 }
 
 export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMapProps) {
@@ -29,7 +33,14 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
 
   const trailCoordinates = pctTrailGeometry.geometry.coordinates
-  const { scrollProgress, currentMiles, totalMiles, pauseScrollAnimation, resumeScrollAnimation } = useTrailScroll({
+  const {
+    scrollProgress,
+    currentMiles,
+    totalMiles,
+    pauseScrollAnimation,
+    resumeScrollAnimation,
+    syncScrollToPosition,
+  } = useTrailScroll({
     map: map.current,
     trailCoordinates,
     enabled: initialAnimationDone,
@@ -267,9 +278,9 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
   useEffect(() => {
     if (initialAnimationDone && onScrollControlReady) {
-      onScrollControlReady({ pauseScrollAnimation, resumeScrollAnimation })
+      onScrollControlReady({ pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition })
     }
-  }, [initialAnimationDone, pauseScrollAnimation, resumeScrollAnimation, onScrollControlReady])
+  }, [initialAnimationDone, pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition, onScrollControlReady])
 
   const flyToSegment = (segmentIndex: number) => {
     if (!map.current || !mapLoaded) return

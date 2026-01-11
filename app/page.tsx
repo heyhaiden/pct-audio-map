@@ -17,7 +17,11 @@ export default function Home() {
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
-  const scrollControlRef = useRef<{ pauseScrollAnimation: () => void; resumeScrollAnimation: () => void } | null>(null)
+  const scrollControlRef = useRef<{
+    pauseScrollAnimation: () => void
+    resumeScrollAnimation: () => void
+    syncScrollToPosition: (coordinates: [number, number]) => void
+  } | null>(null)
 
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
 
@@ -70,6 +74,7 @@ export default function Home() {
 
       if (map) {
         scrollControlRef.current?.pauseScrollAnimation()
+
         map.flyTo({
           center: nextMarker.coordinates,
           zoom: 12,
@@ -78,6 +83,11 @@ export default function Home() {
           easing: (t: number) => t * (2 - t),
           essential: true,
         })
+
+        setTimeout(() => {
+          scrollControlRef.current?.syncScrollToPosition(nextMarker.coordinates)
+          scrollControlRef.current?.resumeScrollAnimation()
+        }, 2600) // Wait for flyTo to complete
       }
     }
   }
@@ -92,6 +102,7 @@ export default function Home() {
 
       if (map) {
         scrollControlRef.current?.pauseScrollAnimation()
+
         map.flyTo({
           center: previousMarker.coordinates,
           zoom: 12,
@@ -100,6 +111,11 @@ export default function Home() {
           easing: (t: number) => t * (2 - t),
           essential: true,
         })
+
+        setTimeout(() => {
+          scrollControlRef.current?.syncScrollToPosition(previousMarker.coordinates)
+          scrollControlRef.current?.resumeScrollAnimation()
+        }, 2600) // Wait for flyTo to complete
       }
     }
   }
