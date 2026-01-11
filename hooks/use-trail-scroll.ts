@@ -17,6 +17,7 @@ interface TrailScrollReturn {
   resumeScrollAnimation: () => void
   syncScrollToPosition: (coordinates: [number, number]) => void
   setPendingSyncCoordinates: (coordinates: [number, number]) => void
+  setBlocked: (blocked: boolean) => void
 }
 
 const PCT_TOTAL_MILES = 2650
@@ -53,6 +54,7 @@ export function useTrailScroll({
   const [isScrollPaused, setIsScrollPaused] = useState(false)
   const pendingSyncRef = useRef<[number, number] | null>(null)
   const cameraPathRef = useRef<{ lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null>(null)
+  const isBlockedRef = useRef(false)
 
   const onProgressChangeRef = useRef(onProgressChange)
   const trailCoordinatesRef = useRef(trailCoordinates)
@@ -153,6 +155,10 @@ export function useTrailScroll({
 
   const setPendingSyncCoordinates = useCallback((coordinates: [number, number]) => {
     pendingSyncRef.current = coordinates
+  }, [])
+
+  const setBlocked = useCallback((blocked: boolean) => {
+    isBlockedRef.current = blocked
   }, [])
 
   useEffect(() => {
@@ -344,8 +350,8 @@ export function useTrailScroll({
     if (!isScrollPaused) return
 
     const handleUserScroll = () => {
-      // Don't resume if we're still paused due to audio being open
-      // The parent component will manage when to actually resume
+      if (isBlockedRef.current) return
+
       if (pendingSyncRef.current) {
         syncScrollToPosition(pendingSyncRef.current)
         pendingSyncRef.current = null
@@ -359,8 +365,7 @@ export function useTrailScroll({
     }
 
     const checkAndResume = (e: Event) => {
-      // If the event was prevented (by audio card being open), don't resume
-      if (e.defaultPrevented) return
+      if (isBlockedRef.current || e.defaultPrevented) return
       handleUserScroll()
     }
 
@@ -381,5 +386,6 @@ export function useTrailScroll({
     resumeScrollAnimation,
     syncScrollToPosition,
     setPendingSyncCoordinates,
+    setBlocked,
   }
 }

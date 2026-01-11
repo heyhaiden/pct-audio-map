@@ -23,6 +23,7 @@ export default function Home() {
     resumeScrollAnimation: () => void
     syncScrollToPosition: (coordinates: [number, number]) => void
     setPendingSyncCoordinates: (coordinates: [number, number]) => void
+    setBlocked: (blocked: boolean) => void
   } | null>(null)
 
   const currentChapter = useMemo(() => {
@@ -163,17 +164,41 @@ export default function Home() {
 
   useEffect(() => {
     if (selectedAudioMarker) {
-      // Prevent scroll when audio card is open
+      // Tell the scroll hook to block any resume attempts
+      scrollControlRef.current?.setBlocked(true)
+
+      // Prevent wheel and touch scroll
       const preventScroll = (e: Event) => {
         e.preventDefault()
+        e.stopPropagation()
       }
 
-      window.addEventListener("wheel", preventScroll, { passive: false })
-      window.addEventListener("touchmove", preventScroll, { passive: false })
+      // Prevent keyboard scroll
+      const preventKeyScroll = (e: KeyboardEvent) => {
+        const scrollKeys = ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]
+        if (scrollKeys.includes(e.key)) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+      }
+
+      // Lock body scroll via CSS as backup
+      document.body.style.overflow = "hidden"
+      document.body.style.touchAction = "none"
+
+      window.addEventListener("wheel", preventScroll, { passive: false, capture: true })
+      window.addEventListener("touchmove", preventScroll, { passive: false, capture: true })
+      window.addEventListener("keydown", preventKeyScroll, { capture: true })
 
       return () => {
-        window.removeEventListener("wheel", preventScroll)
-        window.removeEventListener("touchmove", preventScroll)
+        // Unblock scroll resume when audio card closes
+        scrollControlRef.current?.setBlocked(false)
+
+        document.body.style.overflow = ""
+        document.body.style.touchAction = ""
+        window.removeEventListener("wheel", preventScroll, { capture: true })
+        window.removeEventListener("touchmove", preventScroll, { capture: true })
+        window.removeEventListener("keydown", preventKeyScroll, { capture: true })
       }
     }
   }, [selectedAudioMarker])

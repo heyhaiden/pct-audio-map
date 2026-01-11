@@ -21,6 +21,7 @@ interface PCTMapProps {
     resumeScrollAnimation: () => void
     syncScrollToPosition: (coordinates: [number, number]) => void
     setPendingSyncCoordinates: (coordinates: [number, number]) => void
+    setBlocked: (blocked: boolean) => void
   }) => void
 }
 
@@ -63,6 +64,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
     resumeScrollAnimation,
     syncScrollToPosition,
     setPendingSyncCoordinates,
+    setBlocked,
   } = useTrailScroll({
     map: map.current,
     trailCoordinates,
@@ -78,8 +80,9 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
       resumeScrollAnimation,
       syncScrollToPosition,
       setPendingSyncCoordinates,
+      setBlocked,
     }),
-    [pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition, setPendingSyncCoordinates],
+    [pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition, setPendingSyncCoordinates, setBlocked],
   )
 
   useEffect(() => {
