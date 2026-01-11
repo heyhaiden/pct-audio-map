@@ -200,7 +200,7 @@ export function useTrailScroll({
           })
         }
 
-        const windowSize = 15 // Average over 15 points (~3% of trail)
+        const windowSize = 8 // Average over 8 points (~1.6% of trail)
         for (let i = 0; i < points.length; i++) {
           let sumX = 0
           let sumY = 0
