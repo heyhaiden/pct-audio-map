@@ -344,6 +344,8 @@ export function useTrailScroll({
     if (!isScrollPaused) return
 
     const handleUserScroll = () => {
+      // Don't resume if we're still paused due to audio being open
+      // The parent component will manage when to actually resume
       if (pendingSyncRef.current) {
         syncScrollToPosition(pendingSyncRef.current)
         pendingSyncRef.current = null
@@ -356,12 +358,18 @@ export function useTrailScroll({
       setIsScrollPaused(false)
     }
 
-    window.addEventListener("wheel", handleUserScroll, { once: true, passive: true })
-    window.addEventListener("touchmove", handleUserScroll, { once: true, passive: true })
+    const checkAndResume = (e: Event) => {
+      // If the event was prevented (by audio card being open), don't resume
+      if (e.defaultPrevented) return
+      handleUserScroll()
+    }
+
+    window.addEventListener("wheel", checkAndResume, { once: true, passive: true })
+    window.addEventListener("touchmove", checkAndResume, { once: true, passive: true })
 
     return () => {
-      window.removeEventListener("wheel", handleUserScroll)
-      window.removeEventListener("touchmove", handleUserScroll)
+      window.removeEventListener("wheel", checkAndResume)
+      window.removeEventListener("touchmove", checkAndResume)
     }
   }, [isScrollPaused, syncScrollToPosition])
 

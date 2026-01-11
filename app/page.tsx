@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { PCTMap } from "@/components/map/pct-map"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
@@ -160,6 +160,23 @@ export default function Home() {
   } else if (currentMiles >= 700) {
     currentSection = "Sierra Nevada"
   }
+
+  useEffect(() => {
+    if (selectedAudioMarker) {
+      // Prevent scroll when audio card is open
+      const preventScroll = (e: Event) => {
+        e.preventDefault()
+      }
+
+      window.addEventListener("wheel", preventScroll, { passive: false })
+      window.addEventListener("touchmove", preventScroll, { passive: false })
+
+      return () => {
+        window.removeEventListener("wheel", preventScroll)
+        window.removeEventListener("touchmove", preventScroll)
+      }
+    }
+  }, [selectedAudioMarker])
 
   return (
     <main className="relative">
