@@ -79,11 +79,12 @@ export function AudioPlayer({
               )}
             </button>
 
-            {/* Title */}
+            {/* Title and info */}
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-sm truncate">{marker.name}</h3>
+              {marker.description && <p className="text-xs text-gray-300 truncate">{marker.description}</p>}
               <p className="text-xs text-gray-400">
-                {formatTime(currentTime)} / {formatTime(duration)}
+                {marker.recordingDate} · {formatTime(currentTime)} / {formatTime(duration)}
               </p>
             </div>
           </div>
