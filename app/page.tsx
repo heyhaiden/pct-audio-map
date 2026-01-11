@@ -233,7 +233,14 @@ export default function Home() {
             scrollControlRef.current = controls
           }}
         />
-        {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />}
+        {map && (
+          <AudioMarkers
+            map={map}
+            currentChapter={currentChapterId}
+            onMarkerClick={handleAudioMarkerClick}
+            activeMarkerId={selectedAudioMarker?.id || null}
+          />
+        )}
       </div>
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
