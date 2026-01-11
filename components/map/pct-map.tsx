@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
@@ -50,6 +50,16 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
       setCurrentPosition(coordinates)
     },
   })
+
+  const scrollControls = useMemo(
+    () => ({
+      pauseScrollAnimation,
+      resumeScrollAnimation,
+      syncScrollToPosition,
+      setPendingSyncCoordinates,
+    }),
+    [pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition, setPendingSyncCoordinates],
+  )
 
   useEffect(() => {
     if (onMilesUpdate && totalMiles > 0) {
@@ -278,23 +288,14 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
     }
   }, [currentPosition, mapLoaded])
 
+  const scrollControlReadyCalledRef = useRef(false)
+
   useEffect(() => {
-    if (initialAnimationDone && onScrollControlReady) {
-      onScrollControlReady({
-        pauseScrollAnimation,
-        resumeScrollAnimation,
-        syncScrollToPosition,
-        setPendingSyncCoordinates,
-      })
+    if (initialAnimationDone && onScrollControlReady && !scrollControlReadyCalledRef.current) {
+      scrollControlReadyCalledRef.current = true
+      onScrollControlReady(scrollControls)
     }
-  }, [
-    initialAnimationDone,
-    pauseScrollAnimation,
-    resumeScrollAnimation,
-    syncScrollToPosition,
-    setPendingSyncCoordinates,
-    onScrollControlReady,
-  ])
+  }, [initialAnimationDone, onScrollControlReady, scrollControls])
 
   const flyToSegment = (segmentIndex: number) => {
     if (!map.current || !mapLoaded) return
