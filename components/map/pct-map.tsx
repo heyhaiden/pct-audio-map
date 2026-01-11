@@ -411,6 +411,35 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
   const scrollControlReadyCalledRef = useRef(false)
 
+  useEffect(() => {
+    if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return
+
+    // Wait a moment at the overview position before flying to trailhead
+    const timer = setTimeout(() => {
+      setIntroPhase("flying")
+
+      map.current.flyTo({
+        center: [-116.467, 32.5897],
+        zoom: 9.55,
+        pitch: 0,
+        bearing: -5,
+        duration: 8000,
+        essential: true,
+        easing: (t: number) => {
+          // Ease-in-out cubic for balanced acceleration/deceleration
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        },
+      })
+
+      map.current.once("moveend", () => {
+        setIntroPhase("done")
+        setInitialAnimationDone(true)
+      })
+    }, 2000)
+
+    return () => clearTimeout(timer)
+  }, [introPhase, mapLoaded, debugMode])
+
   if (mapboxError) {
     return (
       <div className="relative h-full w-full">
