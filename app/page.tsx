@@ -21,6 +21,7 @@ export default function Home() {
     pauseScrollAnimation: () => void
     resumeScrollAnimation: () => void
     syncScrollToPosition: (coordinates: [number, number]) => void
+    setPendingSyncCoordinates: (coordinates: [number, number]) => void
   } | null>(null)
 
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
@@ -74,6 +75,7 @@ export default function Home() {
 
       if (map) {
         scrollControlRef.current?.pauseScrollAnimation()
+        scrollControlRef.current?.setPendingSyncCoordinates(nextMarker.coordinates)
 
         map.flyTo({
           center: nextMarker.coordinates,
@@ -83,11 +85,6 @@ export default function Home() {
           easing: (t: number) => t * (2 - t),
           essential: true,
         })
-
-        setTimeout(() => {
-          scrollControlRef.current?.syncScrollToPosition(nextMarker.coordinates)
-          scrollControlRef.current?.resumeScrollAnimation()
-        }, 2600) // Wait for flyTo to complete
       }
     }
   }
@@ -102,6 +99,7 @@ export default function Home() {
 
       if (map) {
         scrollControlRef.current?.pauseScrollAnimation()
+        scrollControlRef.current?.setPendingSyncCoordinates(previousMarker.coordinates)
 
         map.flyTo({
           center: previousMarker.coordinates,
@@ -111,11 +109,6 @@ export default function Home() {
           easing: (t: number) => t * (2 - t),
           essential: true,
         })
-
-        setTimeout(() => {
-          scrollControlRef.current?.syncScrollToPosition(previousMarker.coordinates)
-          scrollControlRef.current?.resumeScrollAnimation()
-        }, 2600) // Wait for flyTo to complete
       }
     }
   }

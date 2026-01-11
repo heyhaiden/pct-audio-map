@@ -19,6 +19,7 @@ interface PCTMapProps {
     pauseScrollAnimation: () => void
     resumeScrollAnimation: () => void
     syncScrollToPosition: (coordinates: [number, number]) => void
+    setPendingSyncCoordinates: (coordinates: [number, number]) => void
   }) => void
 }
 
@@ -40,6 +41,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
     pauseScrollAnimation,
     resumeScrollAnimation,
     syncScrollToPosition,
+    setPendingSyncCoordinates,
   } = useTrailScroll({
     map: map.current,
     trailCoordinates,
@@ -278,9 +280,21 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
   useEffect(() => {
     if (initialAnimationDone && onScrollControlReady) {
-      onScrollControlReady({ pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition })
+      onScrollControlReady({
+        pauseScrollAnimation,
+        resumeScrollAnimation,
+        syncScrollToPosition,
+        setPendingSyncCoordinates,
+      })
     }
-  }, [initialAnimationDone, pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition, onScrollControlReady])
+  }, [
+    initialAnimationDone,
+    pauseScrollAnimation,
+    resumeScrollAnimation,
+    syncScrollToPosition,
+    setPendingSyncCoordinates,
+    onScrollControlReady,
+  ])
 
   const flyToSegment = (segmentIndex: number) => {
     if (!map.current || !mapLoaded) return

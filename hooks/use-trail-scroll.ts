@@ -16,6 +16,7 @@ interface TrailScrollReturn {
   pauseScrollAnimation: () => void
   resumeScrollAnimation: () => void
   syncScrollToPosition: (coordinates: [number, number]) => void
+  setPendingSyncCoordinates: (coordinates: [number, number]) => void
 }
 
 const PCT_TOTAL_MILES = 2650
@@ -36,7 +37,7 @@ export function useTrailScroll({
   const [currentMiles, setCurrentMiles] = useState(0)
   const [cameraPath, setCameraPath] = useState<{ lng: number; lat: number; bearing: number }[] | null>(null)
   const [isScrollPaused, setIsScrollPaused] = useState(false)
-  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingSyncRef = useRef<[number, number] | null>(null)
 
   const onProgressChangeRef = useRef(onProgressChange)
   const trailCoordinatesRef = useRef(trailCoordinates)
@@ -106,26 +107,20 @@ export function useTrailScroll({
   )
 
   const pauseScrollAnimation = useCallback(() => {
-    if (pauseTimeoutRef.current) {
-      clearTimeout(pauseTimeoutRef.current)
-    }
     setIsScrollPaused(true)
   }, [])
 
   const resumeScrollAnimation = useCallback(() => {
-    if (pauseTimeoutRef.current) {
-      clearTimeout(pauseTimeoutRef.current)
+    if (pendingSyncRef.current) {
+      syncScrollToPosition(pendingSyncRef.current)
+      pendingSyncRef.current = null
     }
-
-    if (mapRef.current) {
-      const center = mapRef.current.getCenter()
-      if (center) {
-        syncScrollToPosition([center.lng, center.lat])
-      }
-    }
-
     setIsScrollPaused(false)
   }, [syncScrollToPosition])
+
+  const setPendingSyncCoordinates = useCallback((coordinates: [number, number]) => {
+    pendingSyncRef.current = coordinates
+  }, [])
 
   useEffect(() => {
     onProgressChangeRef.current = onProgressChange
@@ -283,12 +278,29 @@ export function useTrailScroll({
   }, [enabled, cameraPath, isScrollPaused])
 
   useEffect(() => {
-    return () => {
-      if (pauseTimeoutRef.current) {
-        clearTimeout(pauseTimeoutRef.current)
+    if (!isScrollPaused) return
+
+    const handleUserScroll = () => {
+      if (pendingSyncRef.current) {
+        syncScrollToPosition(pendingSyncRef.current)
+        pendingSyncRef.current = null
+      } else if (mapRef.current) {
+        const center = mapRef.current.getCenter()
+        if (center) {
+          syncScrollToPosition([center.lng, center.lat])
+        }
       }
+      setIsScrollPaused(false)
     }
-  }, [])
+
+    window.addEventListener("wheel", handleUserScroll, { once: true, passive: true })
+    window.addEventListener("touchmove", handleUserScroll, { once: true, passive: true })
+
+    return () => {
+      window.removeEventListener("wheel", handleUserScroll)
+      window.removeEventListener("touchmove", handleUserScroll)
+    }
+  }, [isScrollPaused, syncScrollToPosition])
 
   return {
     scrollProgress,
@@ -297,5 +309,6 @@ export function useTrailScroll({
     pauseScrollAnimation,
     resumeScrollAnimation,
     syncScrollToPosition,
+    setPendingSyncCoordinates,
   }
 }
