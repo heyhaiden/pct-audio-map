@@ -29,11 +29,9 @@ export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles
     const milesIntoChapter = currentMiles - range.start
     const progress = milesIntoChapter / chapterLength
 
-    // Fade in during first 10% of chapter
-    const fadeInEnd = 0.1
-    // Stay fully visible until 80% of chapter
-    const fadeOutStart = 0.8
-    // Fade out during last 20%
+    const fadeInEnd = 0.03
+    const fadeOutStart = 0.6
+    // Fade out during last 40%
     const fadeOutEnd = 1.0
 
     if (progress < 0) return 0
