@@ -6,6 +6,7 @@ import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
 import { TrailStats } from "@/components/stats/trail-stats"
 import { AudioPlayer } from "@/components/audio/audio-player"
+import { ChapterCard } from "@/components/chapters/chapter-card"
 import { pctSegments } from "@/data/pct-segments"
 import { audioMarkers } from "@/data/audio-markers"
 import type { AudioMarker } from "@/types/map"
@@ -138,6 +139,13 @@ export default function Home() {
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
 
       <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
+
+      {/* Chapter card on the left side */}
+      <ChapterCard
+        chapter={pctSegments[currentChapter]}
+        chapterIndex={currentChapter}
+        totalChapters={pctSegments.length}
+      />
 
       {/* Scroll progress indicator */}
       <ScrollIndicator
