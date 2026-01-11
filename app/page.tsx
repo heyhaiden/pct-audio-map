@@ -67,13 +67,13 @@ export default function Home() {
       const nextMarker = audioMarkers[currentIndex + 1]
       setSelectedAudioMarker(nextMarker)
 
-      if (map && window.mapboxgl) {
+      if (map) {
         map.flyTo({
           center: nextMarker.coordinates,
           zoom: 12,
-          duration: 2500, // Increased from 1500ms
-          curve: 1.2, // Smoother curve (lower = more direct, higher = more arc)
-          easing: (t: number) => t * (2 - t), // Ease out quad for smooth deceleration
+          duration: 2500,
+          curve: 1.2,
+          easing: (t: number) => t * (2 - t),
           essential: true,
         })
       }
@@ -88,13 +88,13 @@ export default function Home() {
       const previousMarker = audioMarkers[currentIndex - 1]
       setSelectedAudioMarker(previousMarker)
 
-      if (map && window.mapboxgl) {
+      if (map) {
         map.flyTo({
           center: previousMarker.coordinates,
           zoom: 12,
-          duration: 2500, // Increased from 1500ms
-          curve: 1.2, // Smoother curve
-          easing: (t: number) => t * (2 - t), // Ease out quad for smooth deceleration
+          duration: 2500,
+          curve: 1.2,
+          easing: (t: number) => t * (2 - t),
           essential: true,
         })
       }
