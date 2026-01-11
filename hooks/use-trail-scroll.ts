@@ -232,8 +232,17 @@ export function useTrailScroll({
       const targetAltitude = startAltitude - (startAltitude - endAltitude) * rawPhase
 
       const startPitch = 0
-      const endPitch = 60
-      const targetPitch = startPitch + (endPitch - startPitch) * Math.min(rawPhase * 2, 1)
+      const peakPitch = 60
+      let targetPitch: number
+
+      if (rawPhase < 0.9) {
+        // Normal pitch increase from 0 to 60 during first 90%
+        targetPitch = startPitch + (peakPitch - startPitch) * Math.min(rawPhase * 2, 1)
+      } else {
+        // Transition from current pitch back to 0 in the last 10%
+        const endPhase = (rawPhase - 0.9) / 0.1 // 0 to 1 over last 10%
+        targetPitch = peakPitch * (1 - endPhase)
+      }
 
       const lerpFactor = 0.08
       const state = cameraStateRef.current
