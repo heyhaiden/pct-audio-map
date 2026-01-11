@@ -35,6 +35,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   const [scriptsLoaded, setScriptsLoaded] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
   const [trailData, setTrailData] = useState<any>(null)
+  const [debugMode, setDebugMode] = useState(false)
+  const [cameraInfo, setCameraInfo] = useState({ center: [0, 0], zoom: 0, pitch: 0, bearing: 0 })
 
   useEffect(() => {
     fetch("/pct-trail.geojson")
@@ -62,7 +64,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   } = useTrailScroll({
     map: map.current,
     trailCoordinates,
-    enabled: initialAnimationDone && trailData !== null,
+    enabled: initialAnimationDone && trailData !== null && !debugMode,
     onProgressChange: (progress, coordinates) => {
       setCurrentPosition(coordinates)
     },
@@ -282,6 +284,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   useEffect(() => {
     if (!map.current || !mapLoaded || !trailData) return
 
+    if (debugMode) return
+
     if (introPhase === "overview") {
       const timer = setTimeout(() => {
         setIntroPhase("flying")
@@ -340,7 +344,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
       return () => clearTimeout(timer)
     }
-  }, [introPhase, mapLoaded, trailData])
+  }, [introPhase, mapLoaded, trailData, debugMode])
 
   useEffect(() => {
     if (!map.current || !mapLoaded || !currentPosition || !window.turf) return
@@ -366,6 +370,47 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
       onScrollControlReady(scrollControls)
     }
   }, [initialAnimationDone, onScrollControlReady, scrollControls])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    const updateCameraInfo = () => {
+      if (map.current) {
+        setCameraInfo({
+          center: [map.current.getCenter().lng, map.current.getCenter().lat],
+          zoom: map.current.getZoom(),
+          pitch: map.current.getPitch(),
+          bearing: map.current.getBearing(),
+        })
+      }
+    }
+
+    updateCameraInfo()
+    const interval = setInterval(updateCameraInfo, 100)
+    return () => clearInterval(interval)
+  }, [mapLoaded, debugMode])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    if (debugMode) {
+      map.current.dragPan.enable()
+      map.current.scrollZoom.enable()
+      map.current.dragRotate.enable()
+      map.current.touchZoomRotate.enable()
+      map.current.keyboard.enable()
+      map.current.boxZoom.enable()
+      map.current.doubleClickZoom.enable()
+    } else {
+      map.current.dragPan.disable()
+      map.current.scrollZoom.disable()
+      map.current.dragRotate.disable()
+      map.current.touchZoomRotate.disable()
+      map.current.keyboard.disable()
+      map.current.boxZoom.disable()
+      map.current.doubleClickZoom.disable()
+    }
+  }, [debugMode, mapLoaded])
 
   const flyToSegment = (segmentIndex: number) => {
     if (!map.current || !mapLoaded) return
@@ -422,54 +467,51 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
       {mapLoaded && (
         <div className="absolute bottom-6 left-6 z-50 bg-black/90 backdrop-blur-sm rounded-lg p-4 text-white text-xs font-mono max-w-sm">
-          <div className="font-bold mb-2 text-sm">Camera Debug Controls</div>
-          <div className="space-y-1 mb-3">
-            <div>
-              Center: [{map.current?.getCenter().lng.toFixed(4)}, {map.current?.getCenter().lat.toFixed(4)}]
-            </div>
-            <div>Zoom: {map.current?.getZoom().toFixed(2)}</div>
-            <div>Pitch: {map.current?.getPitch().toFixed(1)}</div>
-            <div>Bearing: {map.current?.getBearing().toFixed(1)}</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-bold text-sm">Camera Debug</div>
+            <button
+              onClick={() => setDebugMode(!debugMode)}
+              className={`px-3 py-1.5 rounded text-xs font-sans ${
+                debugMode ? "bg-red-600 hover:bg-red-500" : "bg-blue-600 hover:bg-blue-500"
+              }`}
+            >
+              {debugMode ? "Exit Debug Mode" : "Enter Debug Mode"}
+            </button>
           </div>
-          <div className="text-gray-400 text-[10px] mb-3">
-            Drag to pan • Right-click drag to rotate • Ctrl+drag to pitch • Scroll to zoom
-          </div>
-          <button
-            onClick={() => {
-              if (map.current) {
-                map.current.dragPan.enable()
-                map.current.scrollZoom.enable()
-                map.current.dragRotate.enable()
-                map.current.touchZoomRotate.enable()
-                map.current.keyboard.enable()
-                map.current.boxZoom.enable()
-                map.current.doubleClickZoom.enable()
-              }
-            }}
-            className="bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-xs mr-2 mb-2"
-          >
-            Enable Controls
-          </button>
-          <button
-            onClick={() => {
-              if (map.current) {
-                const config = {
-                  center: [
-                    Number(map.current.getCenter().lng.toFixed(4)),
-                    Number(map.current.getCenter().lat.toFixed(4)),
-                  ],
-                  zoom: Number(map.current.getZoom().toFixed(2)),
-                  pitch: Number(map.current.getPitch().toFixed(1)),
-                  bearing: Number(map.current.getBearing().toFixed(1)),
-                }
-                navigator.clipboard.writeText(JSON.stringify(config, null, 2))
-                alert("Camera config copied to clipboard!")
-              }
-            }}
-            className="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded text-xs flex items-center gap-1 inline-flex"
-          >
-            <Copy className="w-3 h-3" /> Copy Config
-          </button>
+
+          {debugMode && (
+            <>
+              <div className="bg-yellow-600/20 border border-yellow-600/50 rounded px-2 py-1 mb-3 text-yellow-200 text-[10px]">
+                Debug mode active - all automated camera movement disabled
+              </div>
+              <div className="space-y-1 mb-3">
+                <div>
+                  Center: [{cameraInfo.center[0].toFixed(4)}, {cameraInfo.center[1].toFixed(4)}]
+                </div>
+                <div>Zoom: {cameraInfo.zoom.toFixed(2)}</div>
+                <div>Pitch: {cameraInfo.pitch.toFixed(1)}</div>
+                <div>Bearing: {cameraInfo.bearing.toFixed(1)}</div>
+              </div>
+              <div className="text-gray-400 text-[10px] mb-3">
+                Drag to pan • Right-click drag to rotate • Ctrl+drag to pitch • Scroll to zoom
+              </div>
+              <button
+                onClick={() => {
+                  const config = {
+                    center: [Number(cameraInfo.center[0].toFixed(4)), Number(cameraInfo.center[1].toFixed(4))],
+                    zoom: Number(cameraInfo.zoom.toFixed(2)),
+                    pitch: Number(cameraInfo.pitch.toFixed(1)),
+                    bearing: Number(cameraInfo.bearing.toFixed(1)),
+                  }
+                  navigator.clipboard.writeText(JSON.stringify(config, null, 2))
+                  alert("Camera config copied to clipboard!")
+                }}
+                className="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded text-xs flex items-center gap-1 inline-flex font-sans"
+              >
+                <Copy className="w-3 h-3" /> Copy Config
+              </button>
+            </>
+          )}
         </div>
       )}
 
