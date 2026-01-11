@@ -58,10 +58,14 @@ export default function Home() {
       map.flyTo({
         center: center,
         zoom: zoom,
-        duration: 2000,
-        curve: 1.2,
-        easing: (t: number) => t * (2 - t),
+        duration: 2500,
+        curve: 1.42,
+        easing: (t: number) => {
+          // Smooth ease-in-out cubic
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        },
         essential: true,
+        freezeElevation: true,
       })
 
       // Set pending sync coordinates so scroll resumes at the right position
@@ -87,10 +91,14 @@ export default function Home() {
         map.flyTo({
           center: nextMarker.coordinates,
           zoom: 12,
-          duration: 2500,
-          curve: 1.2,
-          easing: (t: number) => t * (2 - t),
+          duration: 3000,
+          curve: 1.42,
+          easing: (t: number) => {
+            // Smooth ease-in-out cubic
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+          },
           essential: true,
+          freezeElevation: true,
         })
       }
     }
@@ -111,10 +119,14 @@ export default function Home() {
         map.flyTo({
           center: previousMarker.coordinates,
           zoom: 12,
-          duration: 2500,
-          curve: 1.2,
-          easing: (t: number) => t * (2 - t),
+          duration: 3000,
+          curve: 1.42,
+          easing: (t: number) => {
+            // Smooth ease-in-out cubic
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+          },
           essential: true,
+          freezeElevation: true,
         })
       }
     }
@@ -135,10 +147,14 @@ export default function Home() {
       map.flyTo({
         center: marker.coordinates,
         zoom: 12,
-        duration: 2500,
-        curve: 1.2,
-        easing: (t: number) => t * (2 - t),
+        duration: 3000,
+        curve: 1.42,
+        easing: (t: number) => {
+          // Smooth ease-in-out cubic
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        },
         essential: true,
+        freezeElevation: true,
       })
     }
 
