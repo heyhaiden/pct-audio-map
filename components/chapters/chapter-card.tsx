@@ -2,14 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import type { PCTChapter } from "@/types/map"
-
-const CHAPTER_MILE_RANGES = [
-  { start: 0, end: 575 }, // Southern California Desert
-  { start: 575, end: 1100 }, // Sierra Nevada Range
-  { start: 1100, end: 1700 }, // Northern California Volcanoes
-  { start: 1700, end: 2250 }, // Oregon Cascades
-  { start: 2250, end: 2650 }, // Washington Cascades
-]
+import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 
 interface ChapterCardProps {
   chapter: PCTChapter

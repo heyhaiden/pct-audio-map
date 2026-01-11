@@ -9,15 +9,8 @@ import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
 import { pctSegments } from "@/data/pct-segments"
 import { audioMarkers } from "@/data/audio-markers"
+import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import type { AudioMarker } from "@/types/map"
-
-const CHAPTER_MILE_RANGES = [
-  { start: 0, end: 700 }, // Southern California Desert (700 mi)
-  { start: 700, end: 1100 }, // Sierra Nevada Range (400 mi)
-  { start: 1100, end: 1700 }, // Northern California Volcanoes (600 mi)
-  { start: 1700, end: 2250 }, // Oregon Cascades (550 mi)
-  { start: 2250, end: 2650 }, // Washington Cascades (400 mi)
-]
 
 export default function Home() {
   const [map, setMap] = useState<any>(null)
