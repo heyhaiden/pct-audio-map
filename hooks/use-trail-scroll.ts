@@ -27,6 +27,18 @@ function lerpBearing(a: number, b: number, t: number): number {
   return (a + diff * t + 360) % 360
 }
 
+function angularDistance(a: number, b: number): number {
+  const diff = ((b - a + 540) % 360) - 180
+  return Math.abs(diff)
+}
+
+function biasTowardNorth(bearing: number, northBias = 0.3): number {
+  // northBias: 0 = no bias, 1 = always north
+  // Allow some deviation but pull toward north
+  const northBearing = 0
+  return lerpBearing(bearing, northBearing, northBias)
+}
+
 export function useTrailScroll({
   map,
   trailCoordinates,
@@ -35,10 +47,12 @@ export function useTrailScroll({
 }: TrailScrollOptions): TrailScrollReturn {
   const [scrollProgress, setScrollProgress] = useState(0)
   const [currentMiles, setCurrentMiles] = useState(0)
-  const [cameraPath, setCameraPath] = useState<{ lng: number; lat: number; bearing: number }[] | null>(null)
+  const [cameraPath, setCameraPath] = useState<
+    { lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null
+  >(null)
   const [isScrollPaused, setIsScrollPaused] = useState(false)
   const pendingSyncRef = useRef<[number, number] | null>(null)
-  const cameraPathRef = useRef<{ lng: number; lat: number; bearing: number }[] | null>(null)
+  const cameraPathRef = useRef<{ lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null>(null)
 
   const onProgressChangeRef = useRef(onProgressChange)
   const trailCoordinatesRef = useRef(trailCoordinates)
@@ -115,7 +129,7 @@ export function useTrailScroll({
     if (lowerPoint && upperPoint) {
       cameraStateRef.current.lng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
       cameraStateRef.current.lat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
-      cameraStateRef.current.bearing = lerpBearing(lowerPoint.bearing, upperPoint.bearing, fraction)
+      cameraStateRef.current.bearing = lerpBearing(lowerPoint.smoothedBearing, upperPoint.smoothedBearing, fraction)
     }
 
     window.scrollTo({
@@ -166,14 +180,15 @@ export function useTrailScroll({
         const line = window.turf.lineString(trailCoordinates)
         const totalLength = window.turf.length(line, { units: "kilometers" })
 
-        const points: { lng: number; lat: number; bearing: number }[] = []
+        const points: { lng: number; lat: number; bearing: number; smoothedBearing: number }[] = []
 
         for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
           const distance = (i / CAMERA_PATH_POINTS) * totalLength
           const point = window.turf.along(line, distance, { units: "kilometers" })
           const coords = point.geometry.coordinates
 
-          const nextDistance = Math.min(distance + totalLength * 0.01, totalLength)
+          // Look further ahead to get smoother bearing (5% of trail instead of 1%)
+          const nextDistance = Math.min(distance + totalLength * 0.05, totalLength)
           const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
           const bearing = window.turf.bearing(point, nextPoint)
 
@@ -181,7 +196,43 @@ export function useTrailScroll({
             lng: coords[0],
             lat: coords[1],
             bearing: bearing,
+            smoothedBearing: bearing, // Will be updated in second pass
           })
+        }
+
+        const windowSize = 15 // Average over 15 points (~3% of trail)
+        for (let i = 0; i < points.length; i++) {
+          let sumX = 0
+          let sumY = 0
+          let count = 0
+
+          for (let j = Math.max(0, i - windowSize); j <= Math.min(points.length - 1, i + windowSize); j++) {
+            // Convert bearing to unit vector and average (handles wrap-around correctly)
+            const rad = (points[j].bearing * Math.PI) / 180
+            sumX += Math.cos(rad)
+            sumY += Math.sin(rad)
+            count++
+          }
+
+          // Convert averaged vector back to bearing
+          const avgBearing = (Math.atan2(sumY / count, sumX / count) * 180) / Math.PI
+
+          // This keeps camera oriented generally northward while allowing some natural movement
+          const northBiasStrength = 0.4
+          points[i].smoothedBearing = biasTowardNorth(avgBearing, northBiasStrength)
+        }
+
+        const maxBearingChangePerPoint = 3 // Max 3 degrees change per point
+        for (let i = 1; i < points.length; i++) {
+          const prevBearing = points[i - 1].smoothedBearing
+          const currentBearing = points[i].smoothedBearing
+          const change = ((currentBearing - prevBearing + 540) % 360) - 180
+
+          if (Math.abs(change) > maxBearingChangePerPoint) {
+            // Clamp the change
+            const clampedChange = Math.sign(change) * maxBearingChangePerPoint
+            points[i].smoothedBearing = (prevBearing + clampedChange + 360) % 360
+          }
         }
 
         setCameraPath(points)
@@ -225,7 +276,7 @@ export function useTrailScroll({
 
       const targetLng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
       const targetLat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
-      const targetBearing = lerpBearing(lowerPoint.bearing, upperPoint.bearing, fraction)
+      const targetBearing = lerpBearing(lowerPoint.smoothedBearing, upperPoint.smoothedBearing, fraction)
 
       const startAltitude = 100000
       const endAltitude = 20000
@@ -246,12 +297,12 @@ export function useTrailScroll({
         targetPitch = peakPitch * (1 - endPhase)
       }
 
-      const lerpFactor = 0.08
+      const lerpFactor = 0.05
       const state = cameraStateRef.current
 
       state.lng += (targetLng - state.lng) * lerpFactor
       state.lat += (targetLat - state.lat) * lerpFactor
-      state.bearing = lerpBearing(state.bearing, targetBearing, lerpFactor)
+      state.bearing = lerpBearing(state.bearing, targetBearing, lerpFactor * 0.6)
       state.pitch += (targetPitch - state.pitch) * lerpFactor
       state.altitude += (targetAltitude - state.altitude) * lerpFactor
 
