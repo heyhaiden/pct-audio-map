@@ -28,25 +28,23 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [initialAnimationDone, setInitialAnimationDone] = useState(false)
+  const [introPhase, setIntroPhase] = useState<"waiting" | "overview" | "flying" | "done">("waiting")
   const [currentSegment, setCurrentSegment] = useState(0)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
   const [scriptsLoaded, setScriptsLoaded] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
   const [trailData, setTrailData] = useState<any>(null)
 
-  // Load the detailed trail GeoJSON
   useEffect(() => {
     fetch("/pct-trail.geojson")
       .then((res) => res.json())
       .then((data) => {
-        // Handle FeatureCollection format - extract first feature
         const feature = data.type === "FeatureCollection" ? data.features[0] : data
         console.log("[v0] Loaded trail data with", feature.geometry.coordinates.length, "points")
         setTrailData(feature)
       })
       .catch((err) => {
         console.error("[v0] Failed to load trail data:", err)
-        // Fallback to the basic trail data
         setTrailData(pctTrailGeometry)
       })
   }, [])
@@ -87,7 +85,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
   useEffect(() => {
     const loadMapboxScripts = () => {
-      // Load CSS
       const cssLink = document.createElement("link")
       cssLink.rel = "stylesheet"
       cssLink.href = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css"
@@ -97,7 +94,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
       turfScript.src = "https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"
       document.head.appendChild(turfScript)
 
-      // Load Mapbox JS
       const script = document.createElement("script")
       script.src = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
       script.onload = () => {
@@ -140,12 +136,12 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo",
-          center: [-116.465, 32.599], // Campo (Southern Terminus)
-          zoom: 11, // Closer zoom to see the trailhead clearly
-          pitch: 0, // 90-degree top-down view
+          center: [-120.5, 40.5], // Approximate center of the entire PCT
+          zoom: 4.5, // Zoomed out to see entire trail
+          pitch: 0, // Top-down view
           bearing: 0,
           antialias: true,
-          interactive: false, // Disable standard interactions for scroll control
+          interactive: false,
           attributionControl: false,
         })
 
@@ -155,8 +151,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
           map.current.addSource("mapbox-terrain-rgb", {
             type: "raster-dem",
             url: "mapbox://mapbox.terrain-rgb",
-            tileSize: 512, // Larger tile size for fewer requests
-            maxzoom: 14, // Reduced from 15 to load fewer tiles
+            tileSize: 512,
+            maxzoom: 14,
           })
 
           map.current.setTerrain({
@@ -164,12 +160,10 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
             exaggeration: 1.8,
           })
 
-          // This provides smooth coordinates for the camera to follow without elevation changes
           const cameraTrackingGeometry = {
             ...trailData,
             geometry: {
               ...trailData.geometry,
-              // Clone coordinates to use for camera tracking
               coordinates: trailData.geometry.coordinates.map((coord: number[]) => [...coord]),
             },
           }
@@ -180,7 +174,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
             lineMetrics: true,
           })
 
-          // This layer is invisible - used only for camera tracking
           map.current.addLayer({
             id: "camera-tracking-layer",
             type: "line",
@@ -192,11 +185,10 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
             paint: {
               "line-color": "#000000",
               "line-width": 0,
-              "line-opacity": 0, // Invisible
+              "line-opacity": 0,
             },
           })
 
-          // Visible trail line source - follows terrain
           map.current.addSource("pct-trail", {
             type: "geojson",
             data: trailData,
@@ -263,7 +255,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
           setMapLoaded(true)
           onMapLoad?.(map.current)
 
-          setInitialAnimationDone(true)
+          setIntroPhase("overview")
         })
 
         map.current.on("error", (e: any) => {
@@ -287,11 +279,42 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   }, [scriptsLoaded, onMapLoad, trailData])
 
   useEffect(() => {
+    if (!map.current || !mapLoaded || !trailData) return
+
+    if (introPhase === "overview") {
+      const timer = setTimeout(() => {
+        setIntroPhase("flying")
+
+        const startCoords = trailData.geometry.coordinates[0]
+
+        map.current.flyTo({
+          center: [startCoords[0], startCoords[1]],
+          zoom: 14,
+          pitch: 0,
+          bearing: 0,
+          duration: 5000,
+          curve: 1.5,
+          easing: (t: number) => {
+            return 1 - Math.pow(1 - t, 3)
+          },
+          essential: true,
+        })
+
+        map.current.once("moveend", () => {
+          setIntroPhase("done")
+          setInitialAnimationDone(true)
+        })
+      }, 2000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [introPhase, mapLoaded, trailData])
+
+  useEffect(() => {
     if (!map.current || !mapLoaded || !currentPosition || !window.turf) return
 
     const source = map.current.getSource("position-cursor")
     if (source) {
-      // Create a point feature with the current position
       const point = {
         type: "Feature",
         properties: {},
@@ -301,7 +324,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
         },
       }
 
-      // Use Turf to create smooth point updates
       source.setData(point)
     }
   }, [currentPosition, mapLoaded])
@@ -320,13 +342,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
     const segment = pctSegments[segmentIndex]
     if (!segment) return
-
-    // if (segment.terrain) {
-    //   map.current.setTerrain({
-    //     source: "mapbox-terrain-rgb",
-    //     exaggeration: segment.terrain.exaggeration,
-    //   })
-    // }
 
     map.current.flyTo({
       center: segment.camera.center,
