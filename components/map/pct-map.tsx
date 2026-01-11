@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
+import { Copy } from "lucide-react"
 
 declare global {
   interface Window {
@@ -416,6 +417,54 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
           <div className="text-white text-xl">
             {!scriptsLoaded ? "Loading Mapbox..." : !trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
           </div>
+        </div>
+      )}
+
+      {mapLoaded && (
+        <div className="absolute bottom-6 left-6 z-50 bg-black/90 backdrop-blur-sm rounded-lg p-4 text-white text-xs font-mono max-w-sm">
+          <div className="font-bold mb-2 text-sm">Camera Debug Controls</div>
+          <div className="space-y-1 mb-3">
+            <div>
+              Center: [{map.current?.getCenter().lng.toFixed(4)}, {map.current?.getCenter().lat.toFixed(4)}]
+            </div>
+            <div>Zoom: {map.current?.getZoom().toFixed(2)}</div>
+            <div>Pitch: {map.current?.getPitch().toFixed(1)}</div>
+            <div>Bearing: {map.current?.getBearing().toFixed(1)}</div>
+          </div>
+          <button
+            onClick={() => {
+              if (map.current) {
+                map.current.dragPan.enable()
+                map.current.scrollZoom.enable()
+                map.current.dragRotate.enable()
+                map.current.touchZoomRotate.enable()
+                map.current.keyboard.enable()
+              }
+            }}
+            className="bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-xs mr-2 mb-2"
+          >
+            Enable Controls
+          </button>
+          <button
+            onClick={() => {
+              if (map.current) {
+                const config = {
+                  center: [
+                    Number(map.current.getCenter().lng.toFixed(4)),
+                    Number(map.current.getCenter().lat.toFixed(4)),
+                  ],
+                  zoom: Number(map.current.getZoom().toFixed(2)),
+                  pitch: Number(map.current.getPitch().toFixed(1)),
+                  bearing: Number(map.current.getBearing().toFixed(1)),
+                }
+                navigator.clipboard.writeText(JSON.stringify(config, null, 2))
+                alert("Camera config copied to clipboard!")
+              }
+            }}
+            className="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded text-xs flex items-center gap-1 inline-flex"
+          >
+            <Copy className="w-3 h-3" /> Copy Config
+          </button>
         </div>
       )}
 
