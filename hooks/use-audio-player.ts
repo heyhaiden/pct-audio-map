@@ -37,6 +37,7 @@ export function useAudioPlayer() {
       const audio = new Audio()
       audio.preload = "metadata"
       audio.volume = state.volume
+      audio.loop = true // Enable looped playback by default
 
       audio.addEventListener("loadedmetadata", () => {
         setState((prev) => ({

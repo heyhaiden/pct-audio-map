@@ -98,26 +98,13 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo",
-          center: [-118.29, 36.58],
-          zoom: 6,
-          pitch: 60,
-          bearing: 30,
+          center: [-116.465, 32.599], // Campo (Southern Terminus)
+          zoom: 11, // Closer zoom to see the trailhead clearly
+          pitch: 0, // 90-degree top-down view
+          bearing: 0,
           antialias: true,
-          interactive: true,
-          dragPan: false,
-          dragRotate: false,
-          scrollZoom: false,
-          boxZoom: false,
-          doubleClickZoom: false,
-          touchZoomRotate: false,
-          touchPitch: false,
-          keyboard: false,
+          interactive: false, // Disable standard interactions for scroll control
           attributionControl: false,
-          // Performance optimizations
-          maxTileCacheSize: 500, // Increase tile cache for smoother scrolling
-          preserveDrawingBuffer: false, // Better performance
-          refreshExpiredTiles: false, // Reduce unnecessary tile reloads
-          fadeDuration: 100, // Faster tile fade-in
         })
 
         map.current.on("load", () => {
@@ -231,101 +218,10 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
             },
           })
 
-          map.current.addLayer({
-            id: "position-cursor-outer",
-            type: "circle",
-            source: "position-cursor",
-            paint: {
-              "circle-radius": 12,
-              "circle-color": "#fbbf24",
-              "circle-opacity": 0.3,
-              "circle-blur": 0.5,
-            },
-          })
-
-          map.current.addLayer({
-            id: "position-cursor-inner",
-            type: "circle",
-            source: "position-cursor",
-            paint: {
-              "circle-radius": 8,
-              "circle-color": "#fbbf24",
-              "circle-opacity": 1,
-              "circle-stroke-width": 3,
-              "circle-stroke-color": "#ffffff",
-            },
-          })
-
-          const waypoints = [
-            { name: "Campo (Start)", coordinates: [-116.465, 32.599] },
-            { name: "Mount Whitney", coordinates: [-118.68, 37.06] },
-            { name: "Tuolumne Meadows", coordinates: [-119.18, 38.03] },
-            { name: "Mount Shasta", coordinates: [-122.31, 41.31] },
-            { name: "Crater Lake", coordinates: [-122.12, 43.07] },
-            { name: "Mount Hood", coordinates: [-121.78, 44.91] },
-            { name: "Manning Park (End)", coordinates: [-120.78, 49.0] },
-          ]
-
-          waypoints.forEach((waypoint, index) => {
-            const marker = new window.mapboxgl.Marker({
-              color: "#ff6b9d",
-              scale: 0.8,
-            })
-              .setLngLat(waypoint.coordinates as [number, number])
-              .setPopup(
-                new window.mapboxgl.Popup({ offset: 25 }).setHTML(
-                  `<div class="text-sm font-semibold">${waypoint.name}</div>`,
-                ),
-              )
-              .addTo(map.current!)
-          })
-
           setMapLoaded(true)
           onMapLoad?.(map.current)
 
-          setTimeout(() => {
-            const trailheadCoord = pctTrailGeometry.geometry.coordinates[0]
-
-            map.current!.flyTo({
-              center: trailheadCoord,
-              zoom: 14.5,
-              pitch: 75,
-              bearing: 0,
-              duration: 6000,
-              easing: (t: number) => {
-                return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
-              },
-              essential: true,
-            })
-
-            setTimeout(() => {
-              setInitialAnimationDone(true)
-            }, 5500)
-          }, 1500)
-
-          map.current.once("idle", () => {
-            // Prefetch tiles for better scroll performance
-            const trailBounds = [
-              [-122.5, 32.5], // Southwest
-              [-116.0, 49.5], // Northeast
-            ]
-
-            // Trigger tile prefetching by briefly adjusting bounds
-            const currentCenter = map.current.getCenter()
-            const currentZoom = map.current.getZoom()
-
-            map.current.fitBounds(trailBounds, {
-              duration: 0,
-              maxZoom: 12,
-              padding: 0,
-            })
-
-            // Restore original view after prefetch
-            setTimeout(() => {
-              map.current.setCenter(currentCenter)
-              map.current.setZoom(currentZoom)
-            }, 100)
-          })
+          setInitialAnimationDone(true)
         })
 
         map.current.on("error", (e: any) => {
@@ -374,12 +270,12 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
     const segment = pctSegments[segmentIndex]
     if (!segment) return
 
-    if (segment.terrain) {
-      map.current.setTerrain({
-        source: "mapbox-terrain-rgb",
-        exaggeration: segment.terrain.exaggeration,
-      })
-    }
+    // if (segment.terrain) {
+    //   map.current.setTerrain({
+    //     source: "mapbox-terrain-rgb",
+    //     exaggeration: segment.terrain.exaggeration,
+    //   })
+    // }
 
     map.current.flyTo({
       center: segment.camera.center,

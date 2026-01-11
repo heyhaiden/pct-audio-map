@@ -26,10 +26,9 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
         const chapterMarkers = audioMarkers.filter((marker) => marker.chapter === currentChapter)
 
         chapterMarkers.forEach((audioMarker) => {
-          // Create marker using the same approach as waypoint markers
           const marker = new window.mapboxgl.Marker({
-            color: audioMarker.featured ? "#ff6b9d" : "#ff6b9dcc",
-            scale: audioMarker.featured ? 1.2 : 0.9,
+            color: "#ff6b9d",
+            scale: 1.0,
           })
             .setLngLat(audioMarker.coordinates)
             .setPopup(
@@ -50,8 +49,11 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
           // Add click handler to the marker element
           const markerElement = marker.getElement()
           markerElement.style.cursor = "pointer"
+          markerElement.style.zIndex = "1000"
+          markerElement.style.pointerEvents = "auto"
           markerElement.addEventListener("click", (e) => {
             e.stopPropagation()
+            console.log("[v0] Audio marker clicked:", audioMarker.name)
             onMarkerClick(audioMarker)
           })
 

@@ -16,30 +16,11 @@ interface TrailScrollReturn {
 }
 
 const PCT_TOTAL_MILES = 2650
+const CAMERA_PATH_POINTS = 500
 
-function calculateCumulativeDistances(coordinates: number[][]): number[] {
-  const distances = [0]
-  let totalDistance = 0
-
-  for (let i = 1; i < coordinates.length; i++) {
-    const [lng1, lat1] = coordinates[i - 1]
-    const [lng2, lat2] = coordinates[i]
-
-    // Haversine formula for geographic distance
-    const R = 6371 // Earth radius in km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLng = ((lng2 - lng1) * Math.PI) / 180
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    const distance = R * c
-
-    totalDistance += distance
-    distances.push(totalDistance)
-  }
-
-  return distances
+function lerpBearing(a: number, b: number, t: number): number {
+  const diff = ((b - a + 540) % 360) - 180
+  return (a + diff * t + 360) % 360
 }
 
 export function useTrailScroll({
@@ -50,190 +31,179 @@ export function useTrailScroll({
 }: TrailScrollOptions): TrailScrollReturn {
   const [scrollProgress, setScrollProgress] = useState(0)
   const [currentMiles, setCurrentMiles] = useState(0)
-  const animationFrameRef = useRef<number | null>(null)
-  const lastScrollTime = useRef(Date.now())
-  const targetProgress = useRef(0)
-  const currentProgress = useRef(0)
-  const isAnimating = useRef(false)
-  const currentBearing = useRef(0)
-  const smoothedLng = useRef(0)
-  const smoothedLat = useRef(0)
-  const isInitialized = useRef(false)
-  const coordinateHistory = useRef<Array<[number, number]>>([])
-  const cumulativeDistances = useRef<number[]>([])
+  const [cameraPath, setCameraPath] = useState<{ lng: number; lat: number; bearing: number }[] | null>(null)
+
   const onProgressChangeRef = useRef(onProgressChange)
+  const trailCoordinatesRef = useRef(trailCoordinates)
+  const mapRef = useRef(map)
+
+  const cameraStateRef = useRef({
+    lng: trailCoordinates[0]?.[0] || -116.465,
+    lat: trailCoordinates[0]?.[1] || 32.599,
+    bearing: 0,
+    pitch: 0,
+    altitude: 100000,
+  })
 
   useEffect(() => {
     onProgressChangeRef.current = onProgressChange
   }, [onProgressChange])
 
   useEffect(() => {
-    if (trailCoordinates.length > 0) {
-      cumulativeDistances.current = calculateCumulativeDistances(trailCoordinates)
-    }
+    trailCoordinatesRef.current = trailCoordinates
   }, [trailCoordinates])
 
   useEffect(() => {
-    if (!map || !enabled || !trailCoordinates.length) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-        animationFrameRef.current = null
-      }
-      isAnimating.current = false
-      return
-    }
+    mapRef.current = map
+  }, [map])
 
-    const handleScroll = () => {
-      if (!enabled) return
+  useEffect(() => {
+    if (!trailCoordinates || trailCoordinates.length < 2) return
 
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
-      const scrolled = window.scrollY
-      const progress = Math.max(0, Math.min(1, scrolled / scrollHeight))
-
-      targetProgress.current = progress
-      setScrollProgress(progress)
-      lastScrollTime.current = Date.now()
-
-      if (!isAnimating.current) {
-        isAnimating.current = true
-        if ("requestIdleCallback" in window) {
-          ;(window as any).requestIdleCallback(
-            () => {
-              animateCamera()
-            },
-            { timeout: 16 },
-          )
-        } else {
-          animateCamera()
-        }
-      }
-    }
-
-    const calculateSmoothedBearing = (index: number): number => {
-      const lookAheadDistance = Math.min(150, Math.floor(trailCoordinates.length * 0.05))
-      const currentIndex = Math.floor(index)
-      const futureIndex = Math.min(currentIndex + lookAheadDistance, trailCoordinates.length - 1)
-
-      if (currentIndex >= trailCoordinates.length - 1) return 0
-
-      const current = trailCoordinates[currentIndex]
-      const future = trailCoordinates[futureIndex]
-
-      const deltaLng = future[0] - current[0]
-      const deltaLat = future[1] - current[1]
-
-      let bearing = (Math.atan2(deltaLng, deltaLat) * 180) / Math.PI
-
-      bearing = Math.max(-90, Math.min(90, bearing))
-
-      return bearing
-    }
-
-    const animateCamera = () => {
-      if (!enabled) {
-        isAnimating.current = false
+    const buildCameraPath = () => {
+      if (typeof window === "undefined" || !window.turf) {
+        // Retry until turf is available
+        console.log("[v0] Waiting for turf.js...")
+        setTimeout(buildCameraPath, 100)
         return
       }
 
-      const ease = 0.18
-      const rawDelta = targetProgress.current - currentProgress.current
+      try {
+        console.log("[v0] Building camera path with", trailCoordinates.length, "coordinates")
 
-      const easeInOutCubic = (t: number): number => {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-      }
+        // Create LineString from trail coordinates
+        const line = window.turf.lineString(trailCoordinates)
+        const totalLength = window.turf.length(line, { units: "kilometers" })
+        console.log("[v0] Trail length:", totalLength, "km")
 
-      const normalizedDelta = Math.sign(rawDelta) * Math.min(Math.abs(rawDelta), 1)
-      const easedDelta = easeInOutCubic(Math.abs(normalizedDelta)) * Math.sign(normalizedDelta)
+        // Sample evenly-spaced points along the line for smooth camera movement
+        const points: { lng: number; lat: number; bearing: number }[] = []
 
-      currentProgress.current += easedDelta * ease
+        for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
+          const distance = (i / CAMERA_PATH_POINTS) * totalLength
+          const point = window.turf.along(line, distance, { units: "kilometers" })
+          const coords = point.geometry.coordinates
 
-      const currentDistanceInMiles = currentProgress.current * PCT_TOTAL_MILES
-      setCurrentMiles(currentDistanceInMiles)
+          // Calculate bearing to next point for smooth direction
+          const nextDistance = Math.min(distance + totalLength * 0.01, totalLength)
+          const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
+          const bearing = window.turf.bearing(point, nextPoint)
 
-      const distances = cumulativeDistances.current
-      if (distances.length === 0) return
-
-      const totalDistance = distances[distances.length - 1]
-      const targetDistance = currentProgress.current * totalDistance
-
-      let lowerIndex = 0
-      for (let i = 0; i < distances.length - 1; i++) {
-        if (distances[i] <= targetDistance && targetDistance <= distances[i + 1]) {
-          lowerIndex = i
-          break
-        }
-      }
-
-      const upperIndex = Math.min(lowerIndex + 1, trailCoordinates.length - 1)
-      const lowerDistance = distances[lowerIndex]
-      const upperDistance = distances[upperIndex]
-      const segmentDistance = upperDistance - lowerDistance
-
-      const fraction = segmentDistance > 0 ? (targetDistance - lowerDistance) / segmentDistance : 0
-
-      if (lowerIndex >= 0 && upperIndex < trailCoordinates.length) {
-        const lowerCoord = trailCoordinates[lowerIndex]
-        const upperCoord = trailCoordinates[upperIndex]
-
-        // Interpolate between points for smooth animation
-        const targetLng = lowerCoord[0] + (upperCoord[0] - lowerCoord[0]) * fraction
-        const targetLat = lowerCoord[1] + (upperCoord[1] - lowerCoord[1]) * fraction
-
-        // Update position cursor with smoothly interpolated coordinates
-        onProgressChangeRef.current?.(currentProgress.current, [targetLng, targetLat])
-
-        if (!isInitialized.current) {
-          smoothedLng.current = targetLng
-          smoothedLat.current = targetLat
-          isInitialized.current = true
+          points.push({
+            lng: coords[0],
+            lat: coords[1],
+            bearing: bearing,
+          })
         }
 
-        coordinateHistory.current.push([targetLng, targetLat])
-        if (coordinateHistory.current.length > 2) {
-          coordinateHistory.current.shift()
-        }
+        console.log("[v0] Camera path built with", points.length, "points")
+        console.log("[v0] First point:", points[0])
+        console.log("[v0] Last point:", points[points.length - 1])
 
-        const avgLng =
-          coordinateHistory.current.reduce((sum, coord) => sum + coord[0], 0) / coordinateHistory.current.length
-        const avgLat =
-          coordinateHistory.current.reduce((sum, coord) => sum + coord[1], 0) / coordinateHistory.current.length
-
-        const positionSmoothing = 0.25 // Increased from 0.1 for quicker stop
-        smoothedLng.current += (avgLng - smoothedLng.current) * positionSmoothing
-        smoothedLat.current += (avgLat - smoothedLat.current) * positionSmoothing
-
-        const targetBearing = calculateSmoothedBearing(lowerIndex + fraction)
-        const bearingSmoothing = 0.2 // Increased from 0.05 for quicker bearing changes
-        currentBearing.current += (targetBearing - currentBearing.current) * bearingSmoothing
-
-        map.easeTo({
-          center: [smoothedLng.current, smoothedLat.current],
-          zoom: 14.5,
-          pitch: 75,
-          bearing: currentBearing.current,
-          duration: 0,
-          easing: (t: number) => t,
-        })
-      }
-
-      if (Math.abs(targetProgress.current - currentProgress.current) > 0.001) {
-        animationFrameRef.current = requestAnimationFrame(animateCamera)
-      } else {
-        isAnimating.current = false
+        setCameraPath(points)
+      } catch (error) {
+        console.error("[v0] Error creating camera path:", error)
       }
     }
 
-    window.addEventListener("scroll", handleScroll, { passive: true })
+    buildCameraPath()
+  }, [trailCoordinates])
+
+  useEffect(() => {
+    if (!enabled || !cameraPath || cameraPath.length === 0) {
+      console.log("[v0] Animation not starting - enabled:", enabled, "cameraPath:", cameraPath?.length || 0)
+      return
+    }
+
+    console.log("[v0] Starting animation loop with camera path of", cameraPath.length, "points")
+
+    let animationFrame: number
+
+    const updateCamera = () => {
+      const currentMap = mapRef.current
+
+      if (!currentMap || !window.mapboxgl) {
+        animationFrame = requestAnimationFrame(updateCamera)
+        return
+      }
+
+      // Calculate scroll progress (0 to 1)
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+      const scrollTop = window.scrollY
+      const rawPhase = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0
+
+      setScrollProgress(rawPhase)
+      setCurrentMiles(rawPhase * PCT_TOTAL_MILES)
+
+      // Get interpolated position along camera path
+      const pathIndex = rawPhase * (cameraPath.length - 1)
+      const lowerIndex = Math.floor(pathIndex)
+      const upperIndex = Math.min(Math.ceil(pathIndex), cameraPath.length - 1)
+      const fraction = pathIndex - lowerIndex
+
+      const lowerPoint = cameraPath[lowerIndex]
+      const upperPoint = cameraPath[upperIndex]
+
+      // Interpolate between points
+      const targetLng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
+      const targetLat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
+      const targetBearing = lerpBearing(lowerPoint.bearing, upperPoint.bearing, fraction)
+
+      // Altitude: start high (100km), end lower (20km)
+      const startAltitude = 100000
+      const endAltitude = 20000
+      const targetAltitude = startAltitude - (startAltitude - endAltitude) * rawPhase
+
+      // Pitch: start at 0 (top-down), increase to 60 (angled)
+      const startPitch = 0
+      const endPitch = 60
+      const targetPitch = startPitch + (endPitch - startPitch) * Math.min(rawPhase * 2, 1)
+
+      // Smooth interpolation
+      const lerpFactor = 0.08
+      const state = cameraStateRef.current
+
+      state.lng += (targetLng - state.lng) * lerpFactor
+      state.lat += (targetLat - state.lat) * lerpFactor
+      state.bearing = lerpBearing(state.bearing, targetBearing, lerpFactor)
+      state.pitch += (targetPitch - state.pitch) * lerpFactor
+      state.altitude += (targetAltitude - state.altitude) * lerpFactor
+
+      onProgressChangeRef.current?.(rawPhase, [state.lng, state.lat])
+
+      // Apply FreeCamera API
+      try {
+        if (typeof currentMap.getFreeCameraOptions !== "function") {
+          animationFrame = requestAnimationFrame(updateCamera)
+          return
+        }
+
+        const camera = currentMap.getFreeCameraOptions()
+
+        camera.position = window.mapboxgl.MercatorCoordinate.fromLngLat(
+          { lng: state.lng, lat: state.lat },
+          state.altitude,
+        )
+
+        camera.setPitchBearing(state.pitch, state.bearing)
+
+        currentMap.setFreeCameraOptions(camera)
+      } catch (error) {
+        console.error("[v0] Camera update error:", error)
+      }
+
+      animationFrame = requestAnimationFrame(updateCamera)
+    }
+
+    // Start the animation loop
+    animationFrame = requestAnimationFrame(updateCamera)
 
     return () => {
-      window.removeEventListener("scroll", handleScroll)
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-        animationFrameRef.current = null
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame)
       }
-      isAnimating.current = false
     }
-  }, [map, trailCoordinates, enabled])
+  }, [enabled, cameraPath])
 
   return {
     scrollProgress,

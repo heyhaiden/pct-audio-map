@@ -16,7 +16,7 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
 
   return (
     <div className="fixed right-6 top-1/2 -translate-y-1/2 z-30 hidden md:block">
-      <div className="bg-black/80 backdrop-blur-sm rounded-xl px-3 py-4 text-white">
+      <div className="bg-black/60 backdrop-blur-xl rounded-xl px-3 py-4 text-white">
         {/* Progress line with dots integrated */}
         <div className="relative flex flex-col items-center h-48">
           {/* Progress line background - centered */}
@@ -37,7 +37,7 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
               <button
                 key={i}
                 onClick={() => handleDotClick(i)}
-                className={`absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 transition-all duration-300 cursor-pointer z-10 focus:outline-none focus:ring-2 focus:ring-[#ff6b9d] focus:ring-offset-2 focus:ring-offset-black/80 ${
+                className={`absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 transition-all duration-300 cursor-pointer z-10 focus:outline-none focus:ring-2 focus:ring-[#ff6b9d] focus:ring-offset-2 focus:ring-offset-black/60 ${
                   isActive
                     ? "bg-[#ff6b9d] border-[#ff6b9d] scale-125 shadow-lg shadow-[#ff6b9d]/50"
                     : isPast

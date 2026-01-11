@@ -12,7 +12,7 @@ export function TrailStats({ currentMiles, totalMiles, currentElevation, current
 
   return (
     <div className="fixed top-6 right-6 z-30 hidden md:block">
-      <div className="bg-black/80 backdrop-blur-sm rounded-xl px-5 py-4 text-white w-[220px]">
+      <div className="bg-black/60 backdrop-blur-xl rounded-xl px-5 py-4 text-white w-[220px]">
         {/* Section name */}
         <div className="text-xs text-gray-400 mb-3 truncate">{currentSection}</div>
 

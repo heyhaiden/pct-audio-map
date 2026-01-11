@@ -23,6 +23,8 @@ export interface AudioMarker {
   audioUrl: string
   chapter: string
   featured: boolean
+  description?: string
+  recordingDate?: string
 }
 
 export interface CameraPosition {
