@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 
 interface TrailScrollOptions {
   map: any
@@ -13,6 +13,8 @@ interface TrailScrollReturn {
   scrollProgress: number
   currentMiles: number
   totalMiles: number
+  pauseScrollAnimation: () => void
+  resumeScrollAnimation: () => void
 }
 
 const PCT_TOTAL_MILES = 2650
@@ -32,6 +34,8 @@ export function useTrailScroll({
   const [scrollProgress, setScrollProgress] = useState(0)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [cameraPath, setCameraPath] = useState<{ lng: number; lat: number; bearing: number }[] | null>(null)
+  const [isScrollPaused, setIsScrollPaused] = useState(false)
+  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const onProgressChangeRef = useRef(onProgressChange)
   const trailCoordinatesRef = useRef(trailCoordinates)
@@ -44,6 +48,23 @@ export function useTrailScroll({
     pitch: 0,
     altitude: 100000,
   })
+
+  const pauseScrollAnimation = useCallback(() => {
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current)
+    }
+    setIsScrollPaused(true)
+    pauseTimeoutRef.current = setTimeout(() => {
+      setIsScrollPaused(false)
+    }, 3000)
+  }, [])
+
+  const resumeScrollAnimation = useCallback(() => {
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current)
+    }
+    setIsScrollPaused(false)
+  }, [])
 
   useEffect(() => {
     onProgressChangeRef.current = onProgressChange
@@ -62,7 +83,6 @@ export function useTrailScroll({
 
     const buildCameraPath = () => {
       if (typeof window === "undefined" || !window.turf) {
-        // Retry until turf is available
         console.log("[v0] Waiting for turf.js...")
         setTimeout(buildCameraPath, 100)
         return
@@ -71,12 +91,10 @@ export function useTrailScroll({
       try {
         console.log("[v0] Building camera path with", trailCoordinates.length, "coordinates")
 
-        // Create LineString from trail coordinates
         const line = window.turf.lineString(trailCoordinates)
         const totalLength = window.turf.length(line, { units: "kilometers" })
         console.log("[v0] Trail length:", totalLength, "km")
 
-        // Sample evenly-spaced points along the line for smooth camera movement
         const points: { lng: number; lat: number; bearing: number }[] = []
 
         for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
@@ -84,7 +102,6 @@ export function useTrailScroll({
           const point = window.turf.along(line, distance, { units: "kilometers" })
           const coords = point.geometry.coordinates
 
-          // Calculate bearing to next point for smooth direction
           const nextDistance = Math.min(distance + totalLength * 0.01, totalLength)
           const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
           const bearing = window.turf.bearing(point, nextPoint)
@@ -110,8 +127,15 @@ export function useTrailScroll({
   }, [trailCoordinates])
 
   useEffect(() => {
-    if (!enabled || !cameraPath || cameraPath.length === 0) {
-      console.log("[v0] Animation not starting - enabled:", enabled, "cameraPath:", cameraPath?.length || 0)
+    if (!enabled || !cameraPath || cameraPath.length === 0 || isScrollPaused) {
+      console.log(
+        "[v0] Animation not starting - enabled:",
+        enabled,
+        "cameraPath:",
+        cameraPath?.length || 0,
+        "paused:",
+        isScrollPaused,
+      )
       return
     }
 
@@ -127,7 +151,6 @@ export function useTrailScroll({
         return
       }
 
-      // Calculate scroll progress (0 to 1)
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
       const scrollTop = window.scrollY
       const rawPhase = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0
@@ -135,7 +158,6 @@ export function useTrailScroll({
       setScrollProgress(rawPhase)
       setCurrentMiles(rawPhase * PCT_TOTAL_MILES)
 
-      // Get interpolated position along camera path
       const pathIndex = rawPhase * (cameraPath.length - 1)
       const lowerIndex = Math.floor(pathIndex)
       const upperIndex = Math.min(Math.ceil(pathIndex), cameraPath.length - 1)
@@ -144,22 +166,18 @@ export function useTrailScroll({
       const lowerPoint = cameraPath[lowerIndex]
       const upperPoint = cameraPath[upperIndex]
 
-      // Interpolate between points
       const targetLng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
       const targetLat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
       const targetBearing = lerpBearing(lowerPoint.bearing, upperPoint.bearing, fraction)
 
-      // Altitude: start high (100km), end lower (20km)
       const startAltitude = 100000
       const endAltitude = 20000
       const targetAltitude = startAltitude - (startAltitude - endAltitude) * rawPhase
 
-      // Pitch: start at 0 (top-down), increase to 60 (angled)
       const startPitch = 0
       const endPitch = 60
       const targetPitch = startPitch + (endPitch - startPitch) * Math.min(rawPhase * 2, 1)
 
-      // Smooth interpolation
       const lerpFactor = 0.08
       const state = cameraStateRef.current
 
@@ -171,7 +189,6 @@ export function useTrailScroll({
 
       onProgressChangeRef.current?.(rawPhase, [state.lng, state.lat])
 
-      // Apply FreeCamera API
       try {
         if (typeof currentMap.getFreeCameraOptions !== "function") {
           animationFrame = requestAnimationFrame(updateCamera)
@@ -195,7 +212,6 @@ export function useTrailScroll({
       animationFrame = requestAnimationFrame(updateCamera)
     }
 
-    // Start the animation loop
     animationFrame = requestAnimationFrame(updateCamera)
 
     return () => {
@@ -203,11 +219,21 @@ export function useTrailScroll({
         cancelAnimationFrame(animationFrame)
       }
     }
-  }, [enabled, cameraPath])
+  }, [enabled, cameraPath, isScrollPaused])
+
+  useEffect(() => {
+    return () => {
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return {
     scrollProgress,
     currentMiles,
     totalMiles: PCT_TOTAL_MILES,
+    pauseScrollAnimation,
+    resumeScrollAnimation,
   }
 }

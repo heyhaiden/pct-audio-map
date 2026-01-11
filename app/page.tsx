@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { PCTMap } from "@/components/map/pct-map"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
@@ -17,6 +17,7 @@ export default function Home() {
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
+  const scrollControlRef = useRef<{ pauseScrollAnimation: () => void; resumeScrollAnimation: () => void } | null>(null)
 
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
 
@@ -68,6 +69,7 @@ export default function Home() {
       setSelectedAudioMarker(nextMarker)
 
       if (map) {
+        scrollControlRef.current?.pauseScrollAnimation()
         map.flyTo({
           center: nextMarker.coordinates,
           zoom: 12,
@@ -89,6 +91,7 @@ export default function Home() {
       setSelectedAudioMarker(previousMarker)
 
       if (map) {
+        scrollControlRef.current?.pauseScrollAnimation()
         map.flyTo({
           center: previousMarker.coordinates,
           zoom: 12,
@@ -131,6 +134,9 @@ export default function Home() {
           onMilesUpdate={(miles, total) => {
             setCurrentMiles(miles)
             setTotalMiles(total)
+          }}
+          onScrollControlReady={(controls) => {
+            scrollControlRef.current = controls
           }}
         />
         {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={setSelectedAudioMarker} />}

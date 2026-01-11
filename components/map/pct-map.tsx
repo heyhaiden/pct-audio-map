@@ -15,9 +15,10 @@ declare global {
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
   onMilesUpdate?: (currentMiles: number, totalMiles: number) => void
+  onScrollControlReady?: (controls: { pauseScrollAnimation: () => void; resumeScrollAnimation: () => void }) => void
 }
 
-export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
+export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -28,7 +29,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
 
   const trailCoordinates = pctTrailGeometry.geometry.coordinates
-  const { scrollProgress, currentMiles, totalMiles } = useTrailScroll({
+  const { scrollProgress, currentMiles, totalMiles, pauseScrollAnimation, resumeScrollAnimation } = useTrailScroll({
     map: map.current,
     trailCoordinates,
     enabled: initialAnimationDone,
@@ -263,6 +264,12 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
       source.setData(point)
     }
   }, [currentPosition, mapLoaded])
+
+  useEffect(() => {
+    if (initialAnimationDone && onScrollControlReady) {
+      onScrollControlReady({ pauseScrollAnimation, resumeScrollAnimation })
+    }
+  }, [initialAnimationDone, pauseScrollAnimation, resumeScrollAnimation, onScrollControlReady])
 
   const flyToSegment = (segmentIndex: number) => {
     if (!map.current || !mapLoaded) return
