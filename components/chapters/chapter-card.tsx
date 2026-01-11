@@ -4,18 +4,18 @@ import { useEffect, useState, useMemo } from "react"
 import type { PCTChapter } from "@/types/map"
 
 const CHAPTER_MILE_RANGES = [
-  { start: 0, end: 700 }, // Southern California Desert
-  { start: 700, end: 1100 }, // Sierra Nevada Range
-  { start: 1100, end: 1700 }, // Northern California Volcanoes
-  { start: 1700, end: 2250 }, // Oregon Cascades
-  { start: 2250, end: 2650 }, // Washington Cascades
+  { start: 0, end: 700 }, // Southern California Desert (700 mi)
+  { start: 700, end: 1100 }, // Sierra Nevada Range (400 mi)
+  { start: 1100, end: 1700 }, // Northern California Volcanoes (600 mi)
+  { start: 1700, end: 2250 }, // Oregon Cascades (550 mi)
+  { start: 2250, end: 2650 }, // Washington Cascades (400 mi)
 ]
 
 interface ChapterCardProps {
   chapter: PCTChapter
   chapterIndex: number
   totalChapters: number
-  currentMiles: number // Add currentMiles prop
+  currentMiles: number
 }
 
 export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles }: ChapterCardProps) {
@@ -26,28 +26,34 @@ export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles
     if (!range) return 0
 
     const milesIntoChapter = currentMiles - range.start
+    const chapterLength = range.end - range.start
 
     const fadeInDistance = 10
-    const visibleUntil = 125
-    const fadeOutDistance = 75
+    const visibleDuration = 125 // Stay fully visible for 125 miles
+    const fadeOutDuration = 75 // Then fade out over 75 miles
 
+    // Not yet in this chapter
     if (milesIntoChapter < 0) return 0
-    if (milesIntoChapter > range.end - range.start) return 0
 
-    // Fade in quickly
+    // Past this chapter entirely
+    if (currentMiles >= range.end) return 0
+
+    // Fade in quickly over first 10 miles
     if (milesIntoChapter < fadeInDistance) {
       return milesIntoChapter / fadeInDistance
     }
 
-    // Fully visible
-    if (milesIntoChapter <= visibleUntil) {
+    // Fully visible for 125 miles after fade in
+    if (milesIntoChapter <= visibleDuration) {
       return 1
     }
 
-    // Fade out gradually over 75 miles after the 125 mile mark
-    const fadeOutProgress = (milesIntoChapter - visibleUntil) / fadeOutDistance
-    if (fadeOutProgress >= 1) return 0
+    const fadeOutStart = visibleDuration
+    const fadeOutEnd = Math.min(fadeOutStart + fadeOutDuration, chapterLength)
 
+    if (milesIntoChapter >= fadeOutEnd) return 0
+
+    const fadeOutProgress = (milesIntoChapter - fadeOutStart) / (fadeOutEnd - fadeOutStart)
     return 1 - fadeOutProgress
   }, [chapterIndex, currentMiles])
 
