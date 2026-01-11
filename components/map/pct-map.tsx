@@ -139,10 +139,10 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo",
-          center: [-120.5, 40.0], // Center on mid-trail
-          zoom: 5.2, // Slightly closer to see trail detail
-          pitch: 45, // Angled view like looking at the trail from the side
-          bearing: -25, // Rotated so south (start) is bottom-right, north (end) is upper-left
+          center: [-118.4102, 38.6467], // Updated starting camera position to user-provided coordinates
+          zoom: 5.49,
+          pitch: 60,
+          bearing: 31,
           antialias: true,
           interactive: false,
           attributionControl: false,
@@ -292,55 +292,26 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
         const startCoords = trailData.geometry.coordinates[0]
 
-        // Stage 1: Slowly pull back bearing and start descending (crane pulling back)
+        // Single cinematic fly from overview to trailhead - slow and smooth
         map.current.flyTo({
-          center: [-119.5, 36.5], // Move toward the southern portion
-          zoom: 7,
-          pitch: 50,
-          bearing: -15,
-          duration: 4000,
-          curve: 1.2,
-          easing: (t: number) => t, // Linear for smooth transition
+          center: [startCoords[0], startCoords[1]],
+          zoom: 14,
+          pitch: 0,
+          bearing: 0,
+          duration: 8000, // 8 seconds for smooth cinematic feel
+          curve: 0.8, // Gentler curve for more natural movement
+          easing: (t: number) => {
+            // Custom ease-out cubic for cinematic deceleration
+            return 1 - Math.pow(1 - t, 3)
+          },
           essential: true,
         })
 
-        // Stage 2: Continue descending toward trailhead
-        setTimeout(() => {
-          map.current.flyTo({
-            center: [-116.8, 33.2], // Closer to Campo area
-            zoom: 10,
-            pitch: 45,
-            bearing: -5,
-            duration: 4000,
-            curve: 1.2,
-            easing: (t: number) => t,
-            essential: true,
-          })
-        }, 4000)
-
-        // Stage 3: Final approach - settle into starting position
-        setTimeout(() => {
-          map.current.flyTo({
-            center: [startCoords[0], startCoords[1]],
-            zoom: 14,
-            pitch: 0,
-            bearing: 0,
-            duration: 3500,
-            curve: 1.0,
-            easing: (t: number) => {
-              // Ease out - slow down as we arrive
-              return 1 - Math.pow(1 - t, 2)
-            },
-            essential: true,
-          })
-
-          // Listen for the final animation to complete
-          map.current.once("moveend", () => {
-            setIntroPhase("done")
-            setInitialAnimationDone(true)
-          })
-        }, 8000)
-      }, 2500) // Longer initial pause to appreciate the overview
+        map.current.once("moveend", () => {
+          setIntroPhase("done")
+          setInitialAnimationDone(true)
+        })
+      }, 2000) // Brief pause to appreciate the overview
 
       return () => clearTimeout(timer)
     }
