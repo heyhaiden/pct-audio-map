@@ -38,7 +38,7 @@ export function AudioPlayer({
       <div className="bg-black/70 backdrop-blur-xl rounded-2xl p-4 text-white shadow-2xl border border-white/20">
         <button
           onClick={onClose}
-          className="absolute top-3 left-3 p-1.5 hover:bg-white/10 rounded-full transition-colors"
+          className="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded-full transition-colors"
           aria-label="Close audio player"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,12 +46,12 @@ export function AudioPlayer({
           </svg>
         </button>
 
-        <div className="text-center mb-4 pt-2">
+        <div className="text-left mb-4 pr-8">
           <h3 className="font-semibold text-base">{marker.name}</h3>
           {marker.description && <p className="text-sm text-gray-300 mt-1 line-clamp-2">{marker.description}</p>}
-          <p className="text-xs text-gray-400 mt-1">{dateOnly}</p>
         </div>
 
+        {/* Play controls - centered */}
         <div className="flex items-center justify-center gap-4">
           {/* Previous marker button */}
           <button
@@ -98,6 +98,18 @@ export function AudioPlayer({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/20">
+          <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+            {dateOnly && <span>{dateOnly}</span>}
+            {marker.elevation && (
+              <>
+                <span className="text-white/30">•</span>
+                <span>{marker.elevation.toLocaleString()} ft</span>
+              </>
+            )}
+          </div>
         </div>
 
         {error && (
