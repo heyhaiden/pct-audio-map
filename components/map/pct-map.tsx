@@ -360,8 +360,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
     }
   }, [currentPosition, mapLoaded])
 
-  const scrollControlReadyCalledRef = useRef(false)
-
   useEffect(() => {
     if (initialAnimationDone && onScrollControlReady && !scrollControlReadyCalledRef.current) {
       scrollControlReadyCalledRef.current = true
@@ -386,6 +384,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
     setCurrentSegment(segmentIndex)
   }
+
+  const scrollControlReadyCalledRef = useRef(false)
 
   if (mapboxError) {
     return (
@@ -431,6 +431,9 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
             <div>Pitch: {map.current?.getPitch().toFixed(1)}</div>
             <div>Bearing: {map.current?.getBearing().toFixed(1)}</div>
           </div>
+          <div className="text-gray-400 text-[10px] mb-3">
+            Drag to pan • Right-click drag to rotate • Ctrl+drag to pitch • Scroll to zoom
+          </div>
           <button
             onClick={() => {
               if (map.current) {
@@ -439,6 +442,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
                 map.current.dragRotate.enable()
                 map.current.touchZoomRotate.enable()
                 map.current.keyboard.enable()
+                map.current.boxZoom.enable()
+                map.current.doubleClickZoom.enable()
               }
             }}
             className="bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-xs mr-2 mb-2"
