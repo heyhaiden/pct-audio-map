@@ -37,6 +37,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   const [trailData, setTrailData] = useState<any>(null)
   const [debugMode, setDebugMode] = useState(false)
   const [cameraInfo, setCameraInfo] = useState({ center: [0, 0], zoom: 0, pitch: 0, bearing: 0 })
+  const [tilesPreloaded, setTilesPreloaded] = useState(false)
+  const preloadingRef = useRef(false)
 
   useEffect(() => {
     fetch("/pct-trail.geojson")
@@ -138,14 +140,17 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
-          style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo",
-          center: [-118.4102, 38.6467], // Updated starting camera position to user-provided coordinates
+          style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo?optimize=true",
+          center: [-118.4102, 38.6467],
           zoom: 5.49,
           pitch: 60,
           bearing: 31,
           antialias: true,
           interactive: false,
           attributionControl: false,
+          fadeDuration: 0,
+          trackResize: true,
+          refreshExpiredTiles: false,
         })
 
         map.current.on("load", () => {
@@ -258,6 +263,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
           setMapLoaded(true)
           onMapLoad?.(map.current)
 
+          preloadTrailTiles()
+
           setIntroPhase("overview")
         })
 
@@ -271,6 +278,43 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
       }
     }
 
+    const preloadTrailTiles = () => {
+      if (!map.current || !trailData || preloadingRef.current) return
+      preloadingRef.current = true
+
+      const coords = trailData.geometry.coordinates
+      const totalPoints = coords.length
+
+      const sampleInterval = Math.floor(totalPoints / 50)
+      const samplePoints: [number, number][] = []
+
+      for (let i = 0; i < totalPoints; i += sampleInterval) {
+        samplePoints.push(coords[i])
+      }
+      samplePoints.push(coords[totalPoints - 1])
+
+      let preloadIndex = 0
+
+      const preloadNext = () => {
+        if (preloadIndex >= samplePoints.length || !map.current) {
+          setTilesPreloaded(true)
+          return
+        }
+
+        const point = samplePoints[preloadIndex]
+
+        try {
+          const screenPoint = map.current.project(point)
+          map.current.queryRenderedFeatures(screenPoint)
+        } catch (e) {}
+
+        preloadIndex++
+        requestAnimationFrame(preloadNext)
+      }
+
+      setTimeout(preloadNext, 500)
+    }
+
     initializeMap()
 
     return () => {
@@ -280,42 +324,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
       }
     }
   }, [scriptsLoaded, onMapLoad, trailData])
-
-  useEffect(() => {
-    if (!map.current || !mapLoaded || !trailData) return
-
-    if (debugMode) return
-
-    if (introPhase === "overview") {
-      const timer = setTimeout(() => {
-        setIntroPhase("flying")
-
-        const startCoords = trailData.geometry.coordinates[0]
-
-        // Single cinematic fly from overview to trailhead - slow and smooth
-        map.current.flyTo({
-          center: [-116.467, 32.5897], // Updated end point to user-specified coordinates
-          zoom: 9.55,
-          pitch: 0,
-          bearing: -5,
-          duration: 8000, // 8 seconds for smooth cinematic feel
-          curve: 0.8, // Gentler curve for more natural movement
-          easing: (t: number) => {
-            // Ease-in-out: starts slower, accelerates in middle, slows at end
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-          },
-          essential: true,
-        })
-
-        map.current.once("moveend", () => {
-          setIntroPhase("done")
-          setInitialAnimationDone(true)
-        })
-      }, 2000) // Brief pause to appreciate the overview
-
-      return () => clearTimeout(timer)
-    }
-  }, [introPhase, mapLoaded, trailData, debugMode])
 
   useEffect(() => {
     if (!map.current || !mapLoaded || !currentPosition || !window.turf) return
