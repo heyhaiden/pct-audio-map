@@ -235,12 +235,14 @@ export function useTrailScroll({
       const peakPitch = 60
       let targetPitch: number
 
-      if (rawPhase < 0.9) {
-        // Normal pitch increase from 0 to 60 during first 90%
+      const endTransitionStart = 1 - 35 / PCT_TOTAL_MILES // ~0.9868
+
+      if (rawPhase < endTransitionStart) {
+        // Normal pitch increase from 0 to 60 during most of the trail
         targetPitch = startPitch + (peakPitch - startPitch) * Math.min(rawPhase * 2, 1)
       } else {
-        // Transition from current pitch back to 0 in the last 10%
-        const endPhase = (rawPhase - 0.9) / 0.1 // 0 to 1 over last 10%
+        // Transition from peak pitch back to 0 in the last 35 miles
+        const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart) // 0 to 1 over last 35 miles
         targetPitch = peakPitch * (1 - endPhase)
       }
 
