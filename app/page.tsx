@@ -203,6 +203,7 @@ export default function Home() {
         chapter={pctSegments[currentChapter]}
         chapterIndex={currentChapter}
         totalChapters={pctSegments.length}
+        currentMiles={currentMiles}
       />
 
       {/* Scroll progress indicator */}
