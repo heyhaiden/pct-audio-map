@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { PCTMap } from "@/components/map/pct-map"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
@@ -11,9 +11,16 @@ import { pctSegments } from "@/data/pct-segments"
 import { audioMarkers } from "@/data/audio-markers"
 import type { AudioMarker } from "@/types/map"
 
+const CHAPTER_MILE_RANGES = [
+  { start: 0, end: 700 }, // Southern California Desert (700 mi)
+  { start: 700, end: 1100 }, // Sierra Nevada Range (400 mi)
+  { start: 1100, end: 1700 }, // Northern California Volcanoes (600 mi)
+  { start: 1700, end: 2250 }, // Oregon Cascades (550 mi)
+  { start: 2250, end: 2650 }, // Washington Cascades (400 mi)
+]
+
 export default function Home() {
   const [map, setMap] = useState<any>(null)
-  const [currentChapter, setCurrentChapter] = useState(0)
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
@@ -25,32 +32,22 @@ export default function Home() {
     setPendingSyncCoordinates: (coordinates: [number, number]) => void
   } | null>(null)
 
+  const currentChapter = useMemo(() => {
+    for (let i = 0; i < CHAPTER_MILE_RANGES.length; i++) {
+      const range = CHAPTER_MILE_RANGES[i]
+      if (currentMiles >= range.start && currentMiles < range.end) {
+        return i
+      }
+    }
+    // If at the very end, return the last chapter
+    return CHAPTER_MILE_RANGES.length - 1
+  }, [currentMiles])
+
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
 
-  const handleScroll = () => {
-    if (typeof window === "undefined") return
-
-    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
-    const scrolled = window.scrollY
-    const progress = Math.max(0, Math.min(1, scrolled / scrollHeight))
-
-    // Map scroll progress to chapters
-    const chapterIndex = Math.floor(progress * pctSegments.length)
-    const clampedIndex = Math.min(chapterIndex, pctSegments.length - 1)
-
-    if (clampedIndex !== currentChapter) {
-      setCurrentChapter(clampedIndex)
-    }
-  }
-
-  const handleChapterChange = (chapterIndex: number) => {
-    setCurrentChapter(chapterIndex)
-    // Close audio player when changing chapters
-    setSelectedAudioMarker(null)
-  }
-
   const handleChapterClick = (chapterIndex: number) => {
-    const progress = chapterIndex / pctSegments.length
+    const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
+    const progress = chapterStartMile / totalMiles
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
@@ -58,8 +55,6 @@ export default function Home() {
       top: targetScroll,
       behavior: "smooth",
     })
-
-    setCurrentChapter(chapterIndex)
   }
 
   const handleCloseAudio = () => {
@@ -160,10 +155,6 @@ export default function Home() {
   const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < audioMarkers.length - 1
   const hasPreviousMarker = currentMarkerIndex > 0
 
-  const scrollHeight = typeof window !== "undefined" ? document.documentElement.scrollHeight - window.innerHeight : 1
-  const scrolled = typeof window !== "undefined" ? window.scrollY : 0
-  const scrollProgress = Math.max(0, Math.min(1, scrolled / scrollHeight))
-
   // Southern California: 0-700 mi, Sierra Nevada: 700-1100 mi, Northern CA: 1100-1700 mi
   // Oregon: 1700-2250 mi, Washington: 2250-2650 mi
   let currentSection = "Southern California"
@@ -178,7 +169,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative" onScroll={handleScroll}>
+    <main className="relative">
       {/* Fixed map background */}
       <div className="fixed inset-0 z-0 pointer-events-auto">
         <PCTMap
@@ -208,7 +199,7 @@ export default function Home() {
 
       {/* Scroll progress indicator */}
       <ScrollIndicator
-        progress={currentChapter / pctSegments.length}
+        progress={currentMiles / totalMiles}
         currentChapter={currentChapter}
         totalChapters={pctSegments.length}
         onChapterClick={handleChapterClick}
