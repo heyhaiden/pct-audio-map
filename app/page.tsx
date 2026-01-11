@@ -160,7 +160,11 @@ export default function Home() {
       )}
 
       {/* Instructions overlay */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+      <div
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ${
+          currentMiles > 10 ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
         <div className="bg-black/60 backdrop-blur-xl rounded-lg px-4 py-2 text-white text-sm">
           <div className="flex items-center gap-2">
             <div className="w-4 h-6 border-2 border-white/60 rounded-sm relative">
