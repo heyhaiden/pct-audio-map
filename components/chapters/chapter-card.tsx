@@ -20,7 +20,7 @@ export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles
 
     const milesIntoChapter = currentMiles - range.start
 
-    const fadeInDistance = 10
+    const fadeInDistance = 15
     const visibleDuration = 75
     const fadeOutDuration = 50
 

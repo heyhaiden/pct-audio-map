@@ -32,8 +32,26 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   const [mapboxError, setMapboxError] = useState<string | null>(null)
   const [scriptsLoaded, setScriptsLoaded] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
+  const [trailData, setTrailData] = useState<any>(null)
 
-  const trailCoordinates = pctTrailGeometry.geometry.coordinates
+  // Load the detailed trail GeoJSON
+  useEffect(() => {
+    fetch("/pct-trail.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        // Handle FeatureCollection format - extract first feature
+        const feature = data.type === "FeatureCollection" ? data.features[0] : data
+        console.log("[v0] Loaded trail data with", feature.geometry.coordinates.length, "points")
+        setTrailData(feature)
+      })
+      .catch((err) => {
+        console.error("[v0] Failed to load trail data:", err)
+        // Fallback to the basic trail data
+        setTrailData(pctTrailGeometry)
+      })
+  }, [])
+
+  const trailCoordinates = trailData?.geometry?.coordinates || []
   const {
     scrollProgress,
     currentMiles,
@@ -45,7 +63,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
   } = useTrailScroll({
     map: map.current,
     trailCoordinates,
-    enabled: initialAnimationDone,
+    enabled: initialAnimationDone && trailData !== null,
     onProgressChange: (progress, coordinates) => {
       setCurrentPosition(coordinates)
     },
@@ -101,7 +119,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
   useEffect(() => {
     const initializeMap = async () => {
-      if (!scriptsLoaded || !window.mapboxgl) {
+      if (!scriptsLoaded || !window.mapboxgl || !trailData) {
         return
       }
 
@@ -148,11 +166,11 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
 
           // This provides smooth coordinates for the camera to follow without elevation changes
           const cameraTrackingGeometry = {
-            ...pctTrailGeometry,
+            ...trailData,
             geometry: {
-              ...pctTrailGeometry.geometry,
+              ...trailData.geometry,
               // Clone coordinates to use for camera tracking
-              coordinates: pctTrailGeometry.geometry.coordinates.map((coord) => [...coord]),
+              coordinates: trailData.geometry.coordinates.map((coord: number[]) => [...coord]),
             },
           }
 
@@ -181,7 +199,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
           // Visible trail line source - follows terrain
           map.current.addSource("pct-trail", {
             type: "geojson",
-            data: pctTrailGeometry,
+            data: trailData,
           })
 
           map.current.addLayer({
@@ -237,7 +255,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
               type: "Feature",
               geometry: {
                 type: "Point",
-                coordinates: pctTrailGeometry.geometry.coordinates[0],
+                coordinates: trailData.geometry.coordinates[0],
               },
             },
           })
@@ -266,7 +284,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
         map.current = null
       }
     }
-  }, [scriptsLoaded, onMapLoad])
+  }, [scriptsLoaded, onMapLoad, trailData])
 
   useEffect(() => {
     if (!map.current || !mapLoaded || !currentPosition || !window.turf) return
@@ -347,9 +365,11 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
     <div className="relative h-full w-full">
       <div ref={mapContainer} className="h-full w-full" />
 
-      {(!scriptsLoaded || !mapLoaded) && (
+      {(!scriptsLoaded || !trailData || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
-          <div className="text-white text-xl">{!scriptsLoaded ? "Loading Mapbox..." : "Loading PCT Audio Map..."}</div>
+          <div className="text-white text-xl">
+            {!scriptsLoaded ? "Loading Mapbox..." : !trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
+          </div>
         </div>
       )}
 
