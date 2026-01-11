@@ -101,7 +101,7 @@ export function AudioPlayer({
         </div>
 
         <div className="mt-4 pt-3 border-t border-white/20">
-          <div className="flex items-center justify-between text-xs text-gray-400">
+          <div className="flex items-center justify-between text-xs text-gray-400 px-4">
             {dateOnly && (
               <span className="flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
