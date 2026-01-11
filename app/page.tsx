@@ -113,6 +113,24 @@ export default function Home() {
     }
   }
 
+  const handleAudioMarkerClick = (marker: AudioMarker) => {
+    setSelectedAudioMarker(marker)
+
+    if (map) {
+      scrollControlRef.current?.pauseScrollAnimation()
+      scrollControlRef.current?.setPendingSyncCoordinates(marker.coordinates)
+
+      map.flyTo({
+        center: marker.coordinates,
+        zoom: 12,
+        duration: 2500,
+        curve: 1.2,
+        easing: (t: number) => t * (2 - t),
+        essential: true,
+      })
+    }
+  }
+
   const currentMarkerIndex = selectedAudioMarker ? audioMarkers.findIndex((m) => m.id === selectedAudioMarker.id) : -1
   const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < audioMarkers.length - 1
   const hasPreviousMarker = currentMarkerIndex > 0
@@ -148,7 +166,7 @@ export default function Home() {
             scrollControlRef.current = controls
           }}
         />
-        {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={setSelectedAudioMarker} />}
+        {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />}
       </div>
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
