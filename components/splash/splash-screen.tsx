@@ -100,12 +100,11 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
             <span>Field recordings</span>
           </div>
 
-          {/* Description - visible on both, shorter on mobile */}
+          {/* Description - full text on both mobile and desktop */}
           <p className="text-sm md:text-lg text-stone-400 leading-relaxed max-w-lg mb-0 md:mb-10 px-2 md:px-0">
-            <span className="md:hidden">Explore ambient soundscapes recorded along 2,650 miles of wilderness.</span>
-            <span className="hidden md:inline">Scroll through an immersive map experience featuring ambient soundscapes 
+            Scroll through an immersive map experience featuring ambient soundscapes 
             recorded along the Pacific Crest Trail. Discover the sonic landscape of 
-            the American West.</span>
+            the American West.
           </p>
 
           {/* CTA Button - desktop only, inline with content */}
