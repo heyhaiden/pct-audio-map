@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Info, Instagram, Twitter, Menu, X, ExternalLink } from "lucide-react"
+import Link from "next/link"
+import { Info, Instagram, Twitter, Menu, X } from "lucide-react"
 
 interface AboutSocialProps {
   className?: string
@@ -69,13 +70,13 @@ export function AboutSocial({ className }: AboutSocialProps) {
               <h3 className="text-sm font-semibold text-white mb-3">PCT Soundscapes</h3>
               
               <div className="space-y-2 mb-4">
-                <a
-                  href="#about"
+                <Link
+                  href="/about"
                   className="flex items-center gap-2 text-sm text-stone-400 hover:text-white transition-colors"
                 >
                   <Info className="w-4 h-4" />
                   About this project
-                </a>
+                </Link>
               </div>
 
               <div className="border-t border-stone-800 pt-3">
@@ -152,20 +153,14 @@ export function AboutSocial({ className }: AboutSocialProps) {
             </p>
 
             <nav className="space-y-4">
-              <a
-                href="#about"
+              <Link
+                href="/about"
                 className="flex items-center justify-between text-stone-300 hover:text-white transition-colors py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 <span>About</span>
-                <ExternalLink className="w-4 h-4" />
-              </a>
-              <a
-                href="#credits"
-                className="flex items-center justify-between text-stone-300 hover:text-white transition-colors py-2"
-              >
-                <span>Credits</span>
-                <ExternalLink className="w-4 h-4" />
-              </a>
+                <Info className="w-4 h-4" />
+              </Link>
             </nav>
 
             <div className="border-t border-stone-800 mt-8 pt-6">
