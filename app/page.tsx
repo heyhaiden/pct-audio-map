@@ -58,12 +58,17 @@ export default function Home() {
   }
 
   const handleCloseAudio = () => {
-    if (map && previousCameraPositionRef.current) {
-      const { center, zoom } = previousCameraPositionRef.current
+    if (map && selectedAudioMarker) {
+      // Use the current marker's position (where we are NOW) instead of where we entered
+      // This ensures we sync to the closest scroll position after navigating through markers
+      const currentCoords = selectedAudioMarker.coordinates
+      const targetZoom = previousCameraPositionRef.current?.zoom || 9.55
 
       map.flyTo({
-        center: center,
-        zoom: zoom,
+        center: currentCoords,
+        zoom: targetZoom,
+        pitch: 0,
+        bearing: -5,
         duration: 2500,
         curve: 1.42,
         easing: (t: number) => {
@@ -74,8 +79,8 @@ export default function Home() {
         freezeElevation: true,
       })
 
-      // Set pending sync coordinates so scroll resumes at the right position
-      scrollControlRef.current?.setPendingSyncCoordinates(center)
+      // Set pending sync coordinates to current marker so scroll resumes here
+      scrollControlRef.current?.setPendingSyncCoordinates(currentCoords)
     }
 
     setSelectedAudioMarker(null)
