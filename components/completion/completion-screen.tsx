@@ -33,7 +33,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
       }`}
     >
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-amber-950/20 via-transparent to-stone-950" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#ff6b9d]/10 via-transparent to-stone-950" />
 
       {/* Content */}
       <div
@@ -43,8 +43,8 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
       >
         {/* Monument icon */}
         <div className="mb-8">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center">
-            <Mountain className="w-10 h-10 md:w-12 md:h-12 text-amber-500" />
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#ff6b9d]/10 border-2 border-[#ff6b9d]/40 flex items-center justify-center">
+            <Mountain className="w-10 h-10 md:w-12 md:h-12 text-[#ff6b9d]" />
           </div>
         </div>
 
@@ -53,7 +53,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
           Journey Complete
         </h1>
 
-        <p className="text-lg md:text-xl text-amber-500/80 mb-2 font-light">
+        <p className="text-lg md:text-xl text-[#ff6b9d]/80 mb-2 font-light">
           Monument 78, Manning Park
         </p>
 
@@ -89,7 +89,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <button
             onClick={onRestart}
-            className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-stone-950 font-medium rounded-full transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
           >
             <RefreshCcw className="w-4 h-4" />
             Start Over
@@ -125,7 +125,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
         }`}
       >
         <p className="text-xs text-stone-600">
-          PCT Soundscapes - Field recordings collected 2024
+          PCT Soundscapes - Field recordings collected 2025
         </p>
       </div>
     </div>
