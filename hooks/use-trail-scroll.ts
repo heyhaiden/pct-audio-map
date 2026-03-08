@@ -148,6 +148,30 @@ export function useTrailScroll({
 
   const resumeScrollAnimation = useCallback(() => {
     const pending = pendingSyncRef.current
+    
+    // Sync camera state from actual map position before resuming
+    // This prevents jarring jumps when transitioning back to scroll control
+    const currentMap = mapRef.current
+    if (currentMap) {
+      try {
+        const camera = currentMap.getFreeCameraOptions()
+        if (camera && camera.position) {
+          const lngLat = camera.position.toLngLat()
+          cameraStateRef.current.lng = lngLat.lng
+          cameraStateRef.current.lat = lngLat.lat
+          cameraStateRef.current.altitude = camera.position.toAltitude()
+          cameraStateRef.current.pitch = currentMap.getPitch()
+          cameraStateRef.current.bearing = currentMap.getBearing()
+        }
+      } catch (e) {
+        const center = currentMap.getCenter()
+        cameraStateRef.current.lng = center.lng
+        cameraStateRef.current.lat = center.lat
+        cameraStateRef.current.pitch = currentMap.getPitch()
+        cameraStateRef.current.bearing = currentMap.getBearing()
+      }
+    }
+    
     if (pending) {
       syncScrollToPosition(pending)
       pendingSyncRef.current = null
@@ -379,11 +403,33 @@ export function useTrailScroll({
     const handleUserScroll = () => {
       if (isBlockedRef.current) return
 
+      // Sync camera state from actual map position first
+      const currentMap = mapRef.current
+      if (currentMap) {
+        try {
+          const camera = currentMap.getFreeCameraOptions()
+          if (camera && camera.position) {
+            const lngLat = camera.position.toLngLat()
+            cameraStateRef.current.lng = lngLat.lng
+            cameraStateRef.current.lat = lngLat.lat
+            cameraStateRef.current.altitude = camera.position.toAltitude()
+            cameraStateRef.current.pitch = currentMap.getPitch()
+            cameraStateRef.current.bearing = currentMap.getBearing()
+          }
+        } catch (e) {
+          const center = currentMap.getCenter()
+          cameraStateRef.current.lng = center.lng
+          cameraStateRef.current.lat = center.lat
+          cameraStateRef.current.pitch = currentMap.getPitch()
+          cameraStateRef.current.bearing = currentMap.getBearing()
+        }
+      }
+
       if (pendingSyncRef.current) {
         syncScrollToPosition(pendingSyncRef.current)
         pendingSyncRef.current = null
-      } else if (mapRef.current) {
-        const center = mapRef.current.getCenter()
+      } else if (currentMap) {
+        const center = currentMap.getCenter()
         if (center) {
           syncScrollToPosition([center.lng, center.lat])
         }
