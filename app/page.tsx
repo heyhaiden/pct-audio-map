@@ -26,6 +26,7 @@ export default function Home() {
   const [showSplash, setShowSplash] = useState(true)
   const [journeyStarted, setJourneyStarted] = useState(false)
   const [showCompletion, setShowCompletion] = useState(false)
+  const [hasScrolled, setHasScrolled] = useState(false)
   const lastChapterRef = useRef(0)
   const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const scrollControlRef = useRef<{
@@ -87,6 +88,16 @@ export default function Home() {
       setShowCompletion(true)
     }
   }, [currentMiles, totalMiles, journeyStarted, showCompletion])
+
+  // Detect first scroll to hide instructions immediately
+  useEffect(() => {
+    if (hasScrolled) return
+    const handleScroll = () => {
+      setHasScrolled(true)
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true, once: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [hasScrolled])
 
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
@@ -359,8 +370,8 @@ export default function Home() {
 
       {/* Instructions overlay - desktop */}
       <div
-        className={`hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
-          !introComplete || !journeyStarted ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
+        className={`hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
+          !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
         }`}
       >
         <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
@@ -375,8 +386,8 @@ export default function Home() {
 
       {/* Instructions overlay - mobile */}
       <div
-        className={`md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
-          !introComplete || !journeyStarted ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
+        className={`md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
+          !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
         }`}
       >
         <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
