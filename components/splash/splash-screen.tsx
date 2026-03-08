@@ -73,21 +73,21 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         backgroundSize: '200px 200px'
       }} />
 
-      {/* Content - centered on desktop, positioned higher on mobile */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center md:justify-center px-6">
-        <div className="flex flex-col items-center text-center max-w-2xl -mt-20 md:mt-0">
+      {/* Content - upper section on mobile, centered on desktop */}
+      <div className="relative z-10 flex flex-col items-center px-6 pt-16 md:pt-0 md:flex-1 md:justify-center">
+        <div className="flex flex-col items-center text-center max-w-2xl">
           {/* Abstract trail icon */}
-          <div className="mb-6 md:mb-8">
-            <AbstractTrailIcon className="w-12 h-20 md:w-20 md:h-36" />
+          <div className="mb-4 md:mb-8">
+            <AbstractTrailIcon className="w-10 h-16 md:w-20 md:h-36" />
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-2 md:mb-4">
+          <h1 className="text-2xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-2 md:mb-4">
             <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base md:text-xl text-stone-400 mb-4 md:mb-3 font-light">
+          <p className="text-sm md:text-xl text-stone-400 mb-4 md:mb-3 font-light">
             An Audio Journey Along the Pacific Crest Trail
           </p>
 
@@ -100,17 +100,18 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
             <span>Field recordings</span>
           </div>
 
-          {/* Description - shorter on mobile */}
-          <p className="text-sm md:text-lg text-stone-400 leading-relaxed max-w-lg hidden md:block md:mb-12">
-            Scroll through an immersive map experience featuring ambient soundscapes 
+          {/* Description - visible on both mobile and desktop */}
+          <p className="text-xs md:text-lg text-stone-400 leading-relaxed max-w-lg mb-0 md:mb-12 px-2 md:px-0">
+            <span className="hidden md:inline">Scroll through an immersive map experience featuring ambient soundscapes 
             recorded along the Pacific Crest Trail. Discover the sonic landscape of 
-            the American West.
+            the American West.</span>
+            <span className="md:hidden">Explore ambient soundscapes recorded along 2,650 miles of wilderness, from Mexico to Canada.</span>
           </p>
         </div>
       </div>
 
-      {/* CTA Button - fixed at bottom on mobile */}
-      <div className="relative z-10 flex flex-col items-center pb-20 md:pb-0 md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:mt-48">
+      {/* CTA Button - fixed position near bottom on mobile */}
+      <div className="relative z-10 flex flex-col items-center pb-24 md:pb-0 md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:mt-48">
         <button
           onClick={handleEnter}
           className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"
