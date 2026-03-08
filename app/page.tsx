@@ -17,6 +17,7 @@ export default function Home() {
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
+  const [introComplete, setIntroComplete] = useState(false)
   const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const scrollControlRef = useRef<{
     pauseScrollAnimation: () => void
@@ -43,6 +44,10 @@ export default function Home() {
   const handleMilesUpdate = useCallback((miles: number, total: number) => {
     setCurrentMiles(miles)
     setTotalMiles(total)
+  }, [])
+
+  const handleIntroComplete = useCallback(() => {
+    setIntroComplete(true)
   }, [])
 
   const handleChapterClick = (chapterIndex: number) => {
@@ -240,29 +245,36 @@ export default function Home() {
           onScrollControlReady={(controls) => {
             scrollControlRef.current = controls
           }}
+          onIntroComplete={handleIntroComplete}
         />
         {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />}
       </div>
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
 
-      <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
+      <div className={`transition-opacity duration-1000 ease-out ${introComplete ? 'opacity-100' : 'opacity-0'}`}>
+        <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
+      </div>
 
       {/* Chapter card on the left side */}
-      <ChapterCard
-        chapter={pctSegments[currentChapter]}
-        chapterIndex={currentChapter}
-        totalChapters={pctSegments.length}
-        currentMiles={currentMiles}
-      />
+      <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete ? 'opacity-100' : 'opacity-0'}`}>
+        <ChapterCard
+          chapter={pctSegments[currentChapter]}
+          chapterIndex={currentChapter}
+          totalChapters={pctSegments.length}
+          currentMiles={currentMiles}
+        />
+      </div>
 
       {/* Scroll progress indicator */}
-      <ScrollIndicator
-        progress={currentMiles / totalMiles}
-        currentChapter={currentChapter}
-        totalChapters={pctSegments.length}
-        onChapterClick={handleChapterClick}
-      />
+      <div className={`transition-opacity duration-1000 ease-out delay-300 ${introComplete ? 'opacity-100' : 'opacity-0'}`}>
+        <ScrollIndicator
+          progress={currentMiles / totalMiles}
+          currentChapter={currentChapter}
+          totalChapters={pctSegments.length}
+          onChapterClick={handleChapterClick}
+        />
+      </div>
 
       {/* Audio player */}
       {selectedAudioMarker && (
@@ -278,8 +290,8 @@ export default function Home() {
 
       {/* Instructions overlay */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ${
-          currentMiles > 10 ? "opacity-0 pointer-events-none" : "opacity-100"
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
+          !introComplete ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
         }`}
       >
         <div className="bg-black/60 backdrop-blur-xl rounded-lg px-4 py-2 text-white text-sm">
