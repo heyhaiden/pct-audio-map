@@ -41,70 +41,14 @@ export function AboutSocial({ className }: AboutSocialProps) {
 
   return (
     <>
-      {/* Desktop: Hover zone in bottom-left */}
-      <div className={`hidden md:block fixed bottom-6 left-6 z-40 ${className}`}>
-        <div
-          className="relative"
-          onMouseEnter={() => setIsExpanded(true)}
-          onMouseLeave={() => setIsExpanded(false)}
+      {/* Desktop: About link in top-right header */}
+      <div className={`hidden md:block fixed top-6 right-6 z-40 ${className}`}>
+        <Link
+          href="/about"
+          className="px-4 py-2 rounded-full bg-stone-900/80 backdrop-blur-md border border-stone-800/50 text-sm text-stone-400 hover:text-white hover:bg-stone-800/80 transition-all duration-300"
         >
-          {/* Trigger button */}
-          <button
-            className={`w-10 h-10 rounded-full bg-stone-900/80 backdrop-blur-md border border-stone-800/50 flex items-center justify-center transition-all duration-300 hover:bg-stone-800/80 ${
-              isExpanded ? "opacity-0 scale-90" : "opacity-100 scale-100"
-            }`}
-            aria-label="About and social links"
-          >
-            <Info className="w-4 h-4 text-stone-400" />
-          </button>
-
-          {/* Expanded panel */}
-          <div
-            className={`absolute bottom-0 left-0 bg-stone-900/95 backdrop-blur-md rounded-xl border border-stone-800/50 overflow-hidden transition-all duration-300 ${
-              isExpanded
-                ? "opacity-100 translate-y-0 pointer-events-auto"
-                : "opacity-0 translate-y-2 pointer-events-none"
-            }`}
-          >
-            <div className="p-4 min-w-[200px]">
-              <h3 className="text-sm font-semibold text-white mb-3">PCT Soundscapes</h3>
-              
-              <div className="space-y-2 mb-4">
-                <Link
-                  href="/about"
-                  className="flex items-center gap-2 text-sm text-stone-400 hover:text-white transition-colors"
-                >
-                  <Info className="w-4 h-4" />
-                  About this project
-                </Link>
-              </div>
-
-              <div className="border-t border-stone-800 pt-3">
-                <p className="text-xs text-stone-500 mb-2">Follow</p>
-                <div className="flex items-center gap-2">
-                  <a
-                    href="https://instagram.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-stone-800/50 flex items-center justify-center text-stone-400 hover:text-white hover:bg-stone-700/50 transition-colors"
-                    aria-label="Instagram"
-                  >
-                    <Instagram className="w-4 h-4" />
-                  </a>
-                  <a
-                    href="https://twitter.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-stone-800/50 flex items-center justify-center text-stone-400 hover:text-white hover:bg-stone-700/50 transition-colors"
-                    aria-label="Twitter"
-                  >
-                    <Twitter className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          About
+        </Link>
       </div>
 
       {/* Mobile: Menu button in top-right - fades while scrolling */}
