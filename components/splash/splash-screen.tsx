@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Link from "next/link"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -172,7 +173,13 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
       </div>
 
       {/* Footer credits */}
-      <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center">
+      <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center space-y-2">
+        <Link 
+          href="/about" 
+          className="text-xs text-stone-500 hover:text-[#ff6b9d] transition-colors"
+        >
+          About this project
+        </Link>
         <p className="text-xs text-stone-600">
           Recordings collected 2025
         </p>
