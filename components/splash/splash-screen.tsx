@@ -128,21 +128,21 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         backgroundSize: '200px 200px'
       }} />
 
-      {/* Content - upper portion on mobile, centered on desktop */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-start pt-20 md:pt-0 md:justify-center px-6">
+      {/* Content - centered vertically on mobile, centered on desktop */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
         <div className="flex flex-col items-center text-center max-w-2xl">
           {/* Abstract trail icon */}
-          <div className="mb-5 md:mb-8">
-            <AbstractTrailIcon className="w-14 h-24 md:w-20 md:h-36" />
+          <div className="mb-6 md:mb-8">
+            <AbstractTrailIcon className="w-12 h-20 md:w-20 md:h-36" />
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-2 md:mb-4">
+          <h1 className="text-3xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-3 md:mb-4">
             <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base md:text-xl text-stone-400 mb-4 md:mb-3 font-light">
+          <p className="text-lg md:text-xl text-stone-300 mb-5 md:mb-3 font-light">
             An Audio Journey Along the Pacific Crest Trail
           </p>
 
@@ -156,7 +156,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
           </div>
 
           {/* Description - full text on both mobile and desktop */}
-          <p className="text-sm md:text-lg text-stone-400 leading-relaxed max-w-lg mb-0 md:mb-10 px-2 md:px-0">
+          <p className="text-base md:text-lg text-stone-400 leading-relaxed max-w-lg mb-8 md:mb-10 px-4 md:px-0">
             Scroll through an immersive map experience featuring ambient soundscapes 
             recorded along the Pacific Crest Trail. Discover the sonic landscape of 
             the American West.
@@ -180,11 +180,11 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         </div>
       </div>
 
-      {/* Mobile CTA - positioned lower for thumb access */}
-      <div className="md:hidden relative z-10 flex flex-col items-center gap-3 pb-28">
+      {/* Mobile CTA - positioned in content flow with better spacing */}
+      <div className="md:hidden relative z-10 flex flex-col items-center gap-4 pb-16">
         <button
           onClick={handleEnter}
-          className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 active:scale-95"
+          className="px-10 py-3.5 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 active:scale-95 text-base"
         >
           Begin Journey
         </button>
@@ -196,8 +196,8 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         </Link>
       </div>
 
-      {/* Footer credits */}
-      <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center">
+      {/* Footer credits - hidden on mobile to avoid overlap */}
+      <div className="hidden md:block absolute bottom-8 left-0 right-0 text-center">
         <p className="text-xs text-stone-600">
           Recordings collected 2025
         </p>
