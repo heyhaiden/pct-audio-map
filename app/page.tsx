@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo, useEffect } from "react"
+import { useState, useRef, useMemo, useEffect, useCallback } from "react"
 import { PCTMap } from "@/components/map/pct-map"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
@@ -38,6 +38,12 @@ export default function Home() {
   }, [currentMiles])
 
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
+
+  // Stable callback to prevent infinite re-renders
+  const handleMilesUpdate = useCallback((miles: number, total: number) => {
+    setCurrentMiles(miles)
+    setTotalMiles(total)
+  }, [])
 
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
@@ -225,10 +231,7 @@ export default function Home() {
       <div className="fixed inset-0 z-0 pointer-events-auto">
         <PCTMap
           onMapLoad={setMap}
-          onMilesUpdate={(miles, total) => {
-            setCurrentMiles(miles)
-            setTotalMiles(total)
-          }}
+          onMilesUpdate={handleMilesUpdate}
           onScrollControlReady={(controls) => {
             scrollControlRef.current = controls
           }}

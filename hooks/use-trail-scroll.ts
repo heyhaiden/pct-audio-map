@@ -60,12 +60,14 @@ export function useTrailScroll({
   const trailCoordinatesRef = useRef(trailCoordinates)
   const mapRef = useRef(map)
 
+  // Initialize camera state to match intro animation end position
+  // This ensures seamless handoff from intro to scroll-driven camera
   const cameraStateRef = useRef({
-    lng: trailCoordinates[0]?.[0] || -116.465,
-    lat: trailCoordinates[0]?.[1] || 32.599,
-    bearing: 0,
-    pitch: 0,
-    altitude: 100000,
+    lng: -116.467,  // Matches intro end position
+    lat: 32.5897,   // Matches intro end position
+    bearing: -5,    // Matches intro end bearing
+    pitch: 0,       // Matches intro end pitch
+    altitude: 50000, // Approximate altitude for zoom 9.55
   })
 
   useEffect(() => {
@@ -284,8 +286,10 @@ export function useTrailScroll({
       const targetLat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
       const targetBearing = lerpBearing(lowerPoint.smoothedBearing, upperPoint.smoothedBearing, fraction)
 
-      const startAltitude = 100000
-      const endAltitude = 20000
+      // Start altitude matches intro animation end (zoom ~9.55 = ~50000m altitude)
+      // Gradually decrease to end altitude as we progress through trail
+      const startAltitude = 50000
+      const endAltitude = 15000
       const targetAltitude = startAltitude - (startAltitude - endAltitude) * rawPhase
 
       const startPitch = 0
