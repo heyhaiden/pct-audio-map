@@ -15,7 +15,7 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
   }
 
   return (
-    <div className="fixed right-6 top-1/2 -translate-y-1/2 z-30 hidden md:block">
+    <div className="fixed left-6 top-1/2 -translate-y-1/2 z-30 hidden md:block">
       <div className="bg-black/60 backdrop-blur-xl rounded-xl px-3 py-4 text-white">
         {/* Progress line with dots integrated */}
         <div className="relative flex flex-col items-center h-48">

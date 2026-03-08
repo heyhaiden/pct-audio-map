@@ -9,9 +9,10 @@ interface ChapterCardProps {
   chapterIndex: number
   totalChapters: number
   currentMiles: number
+  forceVisible?: boolean
 }
 
-export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles }: ChapterCardProps) {
+export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles, forceVisible = false }: ChapterCardProps) {
   const [hasEntered, setHasEntered] = useState(false)
 
   const opacity = useMemo(() => {
@@ -57,16 +58,16 @@ export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles
     return () => clearTimeout(timer)
   }, [chapter.id])
 
-  const finalOpacity = hasEntered ? opacity : 0
+  const finalOpacity = forceVisible ? 1 : (hasEntered ? opacity : 0)
   const isVisible = finalOpacity > 0.01
 
   return (
-    <div className="fixed left-6 top-1/2 -translate-y-1/2 z-30 hidden md:block pointer-events-none">
+    <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 hidden md:block pointer-events-none">
       <div
         className={`bg-black/60 backdrop-blur-xl rounded-xl px-5 py-5 text-white max-w-xs transition-all duration-500`}
         style={{
           opacity: finalOpacity,
-          transform: isVisible ? "translateX(0)" : "translateX(-16px)",
+          transform: isVisible ? "translateY(0)" : "translateY(16px)",
         }}
       >
         <div className="flex items-center gap-2 mb-3">

@@ -27,6 +27,7 @@ export default function Home() {
   const [journeyStarted, setJourneyStarted] = useState(false)
   const [showCompletion, setShowCompletion] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
+  const [forceChapterVisible, setForceChapterVisible] = useState(false)
   const lastChapterRef = useRef(0)
   const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const scrollControlRef = useRef<{
@@ -110,10 +111,18 @@ export default function Home() {
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
+    // Force chapter card to be visible at 100% opacity
+    setForceChapterVisible(true)
+    
     window.scrollTo({
       top: targetScroll,
       behavior: "smooth",
     })
+
+    // Reset force visible after the scroll animation completes
+    setTimeout(() => {
+      setForceChapterVisible(false)
+    }, 2000)
   }
 
   const handleCloseAudio = () => {
@@ -337,13 +346,14 @@ export default function Home() {
         />
       )}
 
-      {/* Desktop chapter card on the left side */}
+      {/* Desktop chapter card - centered */}
       <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
         <ChapterCard
           chapter={pctSegments[currentChapter]}
           chapterIndex={currentChapter}
           totalChapters={pctSegments.length}
           currentMiles={currentMiles}
+          forceVisible={forceChapterVisible}
         />
       </div>
 
