@@ -132,6 +132,11 @@ export default function Home() {
       const currentCoords = selectedAudioMarker.coordinates
       const targetZoom = previousCameraPositionRef.current?.zoom || 9.55
 
+      // Set pending sync coordinates BEFORE starting the flyTo
+      // and keep scroll blocked until animation completes
+      scrollControlRef.current?.setPendingSyncCoordinates(currentCoords)
+      scrollControlRef.current?.setBlocked(true)
+
       map.flyTo({
         center: currentCoords,
         zoom: targetZoom,
@@ -147,8 +152,11 @@ export default function Home() {
         freezeElevation: true,
       })
 
-      // Set pending sync coordinates to current marker so scroll resumes here
-      scrollControlRef.current?.setPendingSyncCoordinates(currentCoords)
+      // Wait for flyTo to complete before unblocking and resuming scroll
+      map.once("moveend", () => {
+        scrollControlRef.current?.setBlocked(false)
+        scrollControlRef.current?.resumeScrollAnimation()
+      })
     }
 
     setSelectedAudioMarker(null)
