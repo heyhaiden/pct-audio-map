@@ -115,7 +115,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
           href="/about"
           className="px-4 py-2 rounded-full bg-stone-900/60 backdrop-blur-sm border border-stone-800/40 text-xs md:text-sm text-stone-400 hover:text-white hover:bg-stone-800/60 transition-all duration-300"
         >
-          About
+          About this Project
         </Link>
       </div>
 
