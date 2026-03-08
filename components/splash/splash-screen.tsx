@@ -128,21 +128,21 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         backgroundSize: '200px 200px'
       }} />
 
-      {/* Content - centered vertically on mobile, centered on desktop */}
+      {/* Content - centered vertically on both mobile and desktop */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
         <div className="flex flex-col items-center text-center max-w-2xl">
           {/* Abstract trail icon */}
-          <div className="mb-6 md:mb-8">
-            <AbstractTrailIcon className="w-12 h-20 md:w-20 md:h-36" />
+          <div className="mb-8 md:mb-8">
+            <AbstractTrailIcon className="w-16 h-28 md:w-20 md:h-36" />
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-3 md:mb-4">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-4 md:mb-4">
             <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-stone-300 mb-5 md:mb-3 font-light">
+          <p className="text-lg md:text-xl text-stone-300 mb-0 md:mb-3 font-light">
             An Audio Journey Along the Pacific Crest Trail
           </p>
 
@@ -155,8 +155,8 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
             <span>Field recordings</span>
           </div>
 
-          {/* Description - full text on both mobile and desktop */}
-          <p className="text-base md:text-lg text-stone-400 leading-relaxed max-w-lg mb-8 md:mb-10 px-4 md:px-0">
+          {/* Description - desktop only */}
+          <p className="hidden md:block text-lg text-stone-400 leading-relaxed max-w-lg mb-10">
             Scroll through an immersive map experience featuring ambient soundscapes 
             recorded along the Pacific Crest Trail. Discover the sonic landscape of 
             the American West.
@@ -177,23 +177,23 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
               About this project
             </Link>
           </div>
-        </div>
-      </div>
 
-      {/* Mobile CTA - positioned in content flow with better spacing */}
-      <div className="md:hidden relative z-10 flex flex-col items-center gap-4 pb-16">
-        <button
-          onClick={handleEnter}
-          className="px-10 py-3.5 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 active:scale-95 text-base"
-        >
-          Begin Journey
-        </button>
-        <Link
-          href="/about"
-          className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"
-        >
-          About this project
-        </Link>
+          {/* Mobile CTA - inline with content for better centering */}
+          <div className="md:hidden flex flex-col items-center gap-4 mt-10">
+            <button
+              onClick={handleEnter}
+              className="px-10 py-3.5 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 active:scale-95 text-base"
+            >
+              Begin Journey
+            </button>
+            <Link
+              href="/about"
+              className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"
+            >
+              About this project
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Footer credits - hidden on mobile to avoid overlap */}
