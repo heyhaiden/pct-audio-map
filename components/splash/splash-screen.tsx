@@ -48,14 +48,7 @@ function AbstractTrailIcon({ className }: { className?: string }) {
 export function SplashScreen({ onEnter }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
-  const [isEntering, setIsEntering] = useState(true)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-
-  // Entrance animation
-  useEffect(() => {
-    const timer = setTimeout(() => setIsEntering(false), 50)
-    return () => clearTimeout(timer)
-  }, [])
 
   // Lock scroll when splash is visible
   useEffect(() => {
@@ -123,7 +116,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
   return (
     <div
       className={`fixed inset-0 z-[100] flex flex-col bg-stone-950 transition-all duration-700 ease-out ${
-        isExiting ? "opacity-0 scale-105" : isEntering ? "opacity-0" : "opacity-100 scale-100"
+        isExiting ? "opacity-0 scale-105" : "opacity-100 scale-100"
       }`}
     >
       {/* Background gradient overlay */}
