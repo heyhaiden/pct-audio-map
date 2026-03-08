@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -47,8 +47,52 @@ function AbstractTrailIcon({ className }: { className?: string }) {
 export function SplashScreen({ onEnter }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Initialize and play ambient wind audio
+  useEffect(() => {
+    const audio = new Audio("/audio/ambient-wind.mp3")
+    audio.loop = true
+    audio.volume = 0.15 // Light ambient volume
+    audioRef.current = audio
+    
+    // Play audio (may be blocked by browser autoplay policy)
+    const playAudio = async () => {
+      try {
+        await audio.play()
+      } catch {
+        // Autoplay blocked - add click listener to start on first interaction
+        const startOnInteraction = () => {
+          audio.play().catch(() => {})
+          document.removeEventListener("click", startOnInteraction)
+          document.removeEventListener("touchstart", startOnInteraction)
+        }
+        document.addEventListener("click", startOnInteraction, { once: true })
+        document.addEventListener("touchstart", startOnInteraction, { once: true })
+      }
+    }
+    playAudio()
+
+    return () => {
+      audio.pause()
+      audio.src = ""
+    }
+  }, [])
 
   const handleEnter = () => {
+    // Fade out audio
+    if (audioRef.current) {
+      const audio = audioRef.current
+      const fadeOut = setInterval(() => {
+        if (audio.volume > 0.02) {
+          audio.volume = Math.max(0, audio.volume - 0.02)
+        } else {
+          clearInterval(fadeOut)
+          audio.pause()
+        }
+      }, 50)
+    }
+    
     setIsExiting(true)
     setTimeout(() => {
       setIsVisible(false)
