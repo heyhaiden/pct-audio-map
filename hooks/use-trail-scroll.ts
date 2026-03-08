@@ -40,6 +40,37 @@ function biasTowardNorth(bearing: number, northBias = 0.3): number {
   return lerpBearing(bearing, northBearing, northBias)
 }
 
+// Calculate perpendicular offset based on trail direction to keep trail centered
+// When trail heads east, offset camera west (and vice versa)
+function calculateDirectionalOffset(
+  bearing: number,
+  altitude: number
+): { lngOffset: number; latOffset: number } {
+  // Convert bearing to radians
+  const bearingRad = (bearing * Math.PI) / 180
+  
+  // Calculate how much the trail deviates from north (0 or 360)
+  // Normalize bearing to -180 to 180 range
+  const normalizedBearing = ((bearing + 180) % 360) - 180
+  
+  // East-west deviation factor: 0 when heading north/south, 1 when heading east/west
+  const ewDeviation = Math.abs(Math.sin(bearingRad))
+  
+  // Offset strength scales with altitude (more offset when zoomed out)
+  // and with how much the trail deviates from north
+  const baseOffset = 0.015 // Base offset in degrees (~1.5km at equator)
+  const altitudeFactor = Math.min(altitude / 50000, 1.5) // Scale with altitude
+  const offsetStrength = baseOffset * altitudeFactor * ewDeviation
+  
+  // Offset perpendicular to trail direction (opposite side of where trail is heading)
+  // If heading east (bearing ~90), offset camera west (negative lng)
+  // If heading west (bearing ~270/-90), offset camera east (positive lng)
+  const lngOffset = -Math.sin(bearingRad) * offsetStrength
+  const latOffset = -Math.cos(bearingRad) * offsetStrength * 0.3 // Less lat offset
+  
+  return { lngOffset, latOffset }
+}
+
 export function useTrailScroll({
   map,
   trailCoordinates,
@@ -306,29 +337,49 @@ export function useTrailScroll({
       const lowerPoint = cameraPath[lowerIndex]
       const upperPoint = cameraPath[upperIndex]
 
-      const targetLng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
-      const targetLat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
+      const baseLng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
+      const baseLat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
       const targetBearing = lerpBearing(lowerPoint.smoothedBearing, upperPoint.smoothedBearing, fraction)
 
       // Start altitude matches intro animation end (zoom ~9.55 = ~50000m altitude)
       // Gradually decrease to end altitude as we progress through trail
       const startAltitude = 50000
       const endAltitude = 15000
-      const targetAltitude = startAltitude - (startAltitude - endAltitude) * rawPhase
+      
+      // End transition zone - last 50 miles for smoother pullback
+      const endTransitionStart = 1 - 50 / PCT_TOTAL_MILES // ~0.981
+      
+      let targetAltitude: number
+      if (rawPhase < endTransitionStart) {
+        // Normal altitude decrease during most of the trail
+        targetAltitude = startAltitude - (startAltitude - endAltitude) * (rawPhase / endTransitionStart)
+      } else {
+        // Pull back (increase altitude) in the last 50 miles for cinematic arrival
+        const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart)
+        const pullbackAltitude = 35000 // Pull back to this altitude at the end
+        // Smooth ease-out curve for pullback
+        const easedPhase = 1 - Math.pow(1 - endPhase, 2)
+        targetAltitude = endAltitude + (pullbackAltitude - endAltitude) * easedPhase
+      }
+
+      // Calculate directional offset to keep trail centered when heading east/west
+      const { lngOffset, latOffset } = calculateDirectionalOffset(targetBearing, targetAltitude)
+      const targetLng = baseLng + lngOffset
+      const targetLat = baseLat + latOffset
 
       const startPitch = 0
       const peakPitch = 60
       let targetPitch: number
 
-      const endTransitionStart = 1 - 35 / PCT_TOTAL_MILES // ~0.9868
-
       if (rawPhase < endTransitionStart) {
         // Normal pitch increase from 0 to 60 during most of the trail
         targetPitch = startPitch + (peakPitch - startPitch) * Math.min(rawPhase * 2, 1)
       } else {
-        // Transition from peak pitch back to 0 in the last 35 miles
-        const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart) // 0 to 1 over last 35 miles
-        targetPitch = peakPitch * (1 - endPhase)
+        // Transition from peak pitch back to 0 in the last 50 miles
+        const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart)
+        // Smooth ease-out curve for pitch reduction
+        const easedPhase = 1 - Math.pow(1 - endPhase, 2)
+        targetPitch = peakPitch * (1 - easedPhase)
       }
 
       // On first frame, sync camera state from current map position to avoid jump
