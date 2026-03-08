@@ -60,7 +60,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-end md:justify-center pb-24 md:pb-0 bg-stone-950 transition-all duration-800 ease-out ${
+      className={`fixed inset-0 z-[100] flex flex-col bg-stone-950 transition-all duration-800 ease-out ${
         isExiting ? "opacity-0 scale-105" : "opacity-100 scale-100"
       }`}
     >
@@ -73,41 +73,44 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         backgroundSize: '200px 200px'
       }} />
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-2xl">
-        {/* Abstract trail icon */}
-        <div className="mb-6 md:mb-8">
-          <AbstractTrailIcon className="w-12 h-20 md:w-20 md:h-36" />
+      {/* Content - centered on desktop, positioned higher on mobile */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center md:justify-center px-6">
+        <div className="flex flex-col items-center text-center max-w-2xl -mt-20 md:mt-0">
+          {/* Abstract trail icon */}
+          <div className="mb-6 md:mb-8">
+            <AbstractTrailIcon className="w-12 h-20 md:w-20 md:h-36" />
+          </div>
+
+          {/* Title */}
+          <h1 className="text-3xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-2 md:mb-4">
+            <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-base md:text-xl text-stone-400 mb-4 md:mb-3 font-light">
+            An Audio Journey Along the Pacific Crest Trail
+          </p>
+
+          {/* Trail stats - hidden on mobile */}
+          <div className="hidden md:flex items-center gap-6 text-sm text-stone-500 mb-12 flex-wrap justify-center">
+            <span>2,650 miles</span>
+            <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
+            <span>Mexico to Canada</span>
+            <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
+            <span>Field recordings</span>
+          </div>
+
+          {/* Description - shorter on mobile */}
+          <p className="text-sm md:text-lg text-stone-400 leading-relaxed max-w-lg hidden md:block md:mb-12">
+            Scroll through an immersive map experience featuring ambient soundscapes 
+            recorded along the Pacific Crest Trail. Discover the sonic landscape of 
+            the American West.
+          </p>
         </div>
+      </div>
 
-        {/* Title */}
-        <h1 className="text-3xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-2 md:mb-4">
-          <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-base md:text-xl text-stone-400 mb-6 md:mb-3 font-light">
-          An Audio Journey Along the Pacific Crest Trail
-        </p>
-
-        {/* Trail stats - hidden on mobile */}
-        <div className="hidden md:flex items-center gap-6 text-sm text-stone-500 mb-12 flex-wrap justify-center">
-          <span>2,650 miles</span>
-          <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
-          <span>Mexico to Canada</span>
-          <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
-          <span>Field recordings</span>
-        </div>
-
-        {/* Description - shorter on mobile */}
-        <p className="text-sm md:text-lg text-stone-400 mb-8 md:mb-12 leading-relaxed max-w-lg">
-          <span className="hidden md:inline">Scroll through an immersive map experience featuring ambient soundscapes 
-          recorded along the Pacific Crest Trail. Discover the sonic landscape of 
-          the American West.</span>
-          <span className="md:hidden">Explore ambient soundscapes recorded along 2,650 miles of the Pacific Crest Trail.</span>
-        </p>
-
-        {/* CTA Button */}
+      {/* CTA Button - fixed at bottom on mobile */}
+      <div className="relative z-10 flex flex-col items-center pb-20 md:pb-0 md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:mt-48">
         <button
           onClick={handleEnter}
           className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"

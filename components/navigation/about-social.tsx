@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Info, Instagram, Twitter, Menu, X, ExternalLink } from "lucide-react"
 
 interface AboutSocialProps {
@@ -10,6 +10,33 @@ interface AboutSocialProps {
 export function AboutSocial({ className }: AboutSocialProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Track scroll velocity to hide menu button while scrolling
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolling(true)
+      
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+      
+      // Set timeout to detect when scrolling stops
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false)
+      }, 150) // 150ms after last scroll event = stopped
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <>
@@ -79,11 +106,15 @@ export function AboutSocial({ className }: AboutSocialProps) {
         </div>
       </div>
 
-      {/* Mobile: Menu button in top-right */}
-      <div className="md:hidden fixed top-3 right-3 z-50">
+      {/* Mobile: Menu button in top-right - fades while scrolling */}
+      <div 
+        className={`md:hidden fixed top-3 right-3 z-50 transition-opacity duration-200 ${
+          isScrolling && !isMobileMenuOpen ? "opacity-0" : "opacity-100"
+        }`}
+      >
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="w-9 h-9 rounded-full bg-stone-900/90 backdrop-blur-md border border-stone-800/50 flex items-center justify-center"
+          className="w-9 h-9 rounded-full bg-stone-900/80 backdrop-blur-md border border-stone-800/40 flex items-center justify-center"
           aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
         >
           {isMobileMenuOpen ? (
