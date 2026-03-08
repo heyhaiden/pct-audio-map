@@ -25,9 +25,10 @@ interface PCTMapProps {
   }) => void
   onIntroComplete?: () => void
   startIntro?: boolean
+  hideLoading?: boolean
 }
 
-export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntroComplete, startIntro = false }: PCTMapProps) {
+export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntroComplete, startIntro = false, hideLoading = false }: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -480,7 +481,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
     <div className="relative h-full w-full">
       <div ref={mapContainer} className="h-full w-full" />
 
-      {(!scriptsLoaded || !trailData || !mapLoaded) && (
+      {!hideLoading && (!scriptsLoaded || !trailData || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-white text-xl">
             {!scriptsLoaded ? "Loading Mapbox..." : !trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}

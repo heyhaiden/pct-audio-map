@@ -311,6 +311,7 @@ export default function Home() {
           }}
           onIntroComplete={handleIntroComplete}
           startIntro={journeyStarted}
+          hideLoading={showSplash}
         />
         {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />}
       </div>
