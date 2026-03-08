@@ -8,11 +8,10 @@ interface AudioMarkersProps {
   map: any
   currentChapter: string
   onMarkerClick: (marker: AudioMarker) => void
-  activeMarkerId?: string | null
 }
 
-export function AudioMarkers({ map, currentChapter, onMarkerClick, activeMarkerId }: AudioMarkersProps) {
-  const markersRef = useRef<Map<string, any>>(new Map())
+export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarkersProps) {
+  const markersRef = useRef<any[]>([])
 
   useEffect(() => {
     if (!map || !window.mapboxgl) return
@@ -21,16 +20,15 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick, activeMarkerI
       try {
         // Clear existing markers
         markersRef.current.forEach((marker) => marker.remove())
-        markersRef.current.clear()
+        markersRef.current = []
 
         // Filter markers for current chapter
         const chapterMarkers = audioMarkers.filter((marker) => marker.chapter === currentChapter)
 
         chapterMarkers.forEach((audioMarker) => {
-          const isActive = activeMarkerId === audioMarker.id
           const marker = new window.mapboxgl.Marker({
             color: "#ff6b9d",
-            scale: isActive ? 1.2 : 1.0,
+            scale: 1.0,
           })
             .setLngLat(audioMarker.coordinates)
             .setPopup(
@@ -51,16 +49,15 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick, activeMarkerI
           // Add click handler to the marker element
           const markerElement = marker.getElement()
           markerElement.style.cursor = "pointer"
-          markerElement.style.zIndex = isActive ? "1001" : "1000"
+          markerElement.style.zIndex = "1000"
           markerElement.style.pointerEvents = "auto"
-          markerElement.style.transition = "transform 0.3s ease-in-out"
           markerElement.addEventListener("click", (e) => {
             e.stopPropagation()
             console.log("[v0] Audio marker clicked:", audioMarker.name)
             onMarkerClick(audioMarker)
           })
 
-          markersRef.current.set(audioMarker.id, marker)
+          markersRef.current.push(marker)
         })
       } catch (error) {
         console.error("[v0] Failed to add audio markers:", error)
@@ -71,9 +68,9 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick, activeMarkerI
 
     return () => {
       markersRef.current.forEach((marker) => marker.remove())
-      markersRef.current.clear()
+      markersRef.current = []
     }
-  }, [map, currentChapter, onMarkerClick, activeMarkerId])
+  }, [map, currentChapter, onMarkerClick])
 
   return null
 }

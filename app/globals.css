@@ -122,7 +122,6 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Hide any remaining Mapbox attribution elements */
   .mapboxgl-ctrl-attrib,
   .mapboxgl-ctrl-logo {
     display: none !important;
