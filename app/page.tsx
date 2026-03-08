@@ -61,6 +61,11 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    // Reset to beginning
+    setCurrentMiles(0)
+    setHasScrolled(false)
+    window.scrollTo({ top: 0, behavior: "instant" })
+    
     setShowSplash(false)
     setJourneyStarted(true)
   }, [])
