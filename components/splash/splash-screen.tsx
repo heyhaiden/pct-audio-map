@@ -109,6 +109,16 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         isExiting ? "opacity-0 scale-105" : "opacity-100 scale-100"
       }`}
     >
+      {/* Header - About link in top right */}
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
+        <Link
+          href="/about"
+          className="px-4 py-2 rounded-full bg-stone-900/60 backdrop-blur-sm border border-stone-800/40 text-xs md:text-sm text-stone-400 hover:text-white hover:bg-stone-800/60 transition-all duration-300"
+        >
+          About
+        </Link>
+      </div>
+
       {/* Background gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-stone-950 via-stone-900/50 to-stone-950" />
       
@@ -173,13 +183,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
       </div>
 
       {/* Footer credits */}
-      <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center space-y-2">
-        <Link 
-          href="/about" 
-          className="text-xs text-stone-500 hover:text-[#ff6b9d] transition-colors"
-        >
-          About this project
-        </Link>
+      <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center">
         <p className="text-xs text-stone-600">
           Recordings collected 2025
         </p>
