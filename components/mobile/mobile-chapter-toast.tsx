@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
+import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import type { PCTSegment } from "@/data/pct-segments"
 
 interface MobileChapterToastProps {
@@ -10,56 +11,57 @@ interface MobileChapterToastProps {
 }
 
 export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: MobileChapterToastProps) {
-  const [isVisible, setIsVisible] = useState(false)
-  const [lastChapterIndex, setLastChapterIndex] = useState(chapterIndex)
+  // Calculate visibility based on miles (same logic as desktop chapter card)
+  const opacity = useMemo(() => {
+    const range = CHAPTER_MILE_RANGES[chapterIndex]
+    if (!range) return 0
 
-  useEffect(() => {
-    // Show toast when chapter changes
-    if (chapterIndex !== lastChapterIndex) {
-      setIsVisible(true)
-      setLastChapterIndex(chapterIndex)
+    const milesIntoChapter = currentMiles - range.start
 
-      // Auto-dismiss after 4 seconds
-      const timer = setTimeout(() => {
-        setIsVisible(false)
-      }, 4000)
+    const fadeInDistance = 5
+    const visibleDuration = 30
+    const fadeOutDuration = 15
+    const totalDisplayWindow = fadeInDistance + visibleDuration + fadeOutDuration
 
-      return () => clearTimeout(timer)
+    if (milesIntoChapter < 0) return 0
+    if (milesIntoChapter >= totalDisplayWindow) return 0
+
+    if (milesIntoChapter < fadeInDistance) {
+      return milesIntoChapter / fadeInDistance
     }
-  }, [chapterIndex, lastChapterIndex])
 
-  // Also show at the start of each chapter (first 5 miles)
-  useEffect(() => {
-    const milesIntoChapter = currentMiles - (chapter.startMile || 0)
-    if (milesIntoChapter >= 0 && milesIntoChapter < 5 && !isVisible) {
-      setIsVisible(true)
-      const timer = setTimeout(() => {
-        setIsVisible(false)
-      }, 4000)
-      return () => clearTimeout(timer)
+    if (milesIntoChapter < fadeInDistance + visibleDuration) {
+      return 1
     }
-  }, [currentMiles, chapter.startMile, isVisible])
+
+    const fadeOutProgress = (milesIntoChapter - fadeInDistance - visibleDuration) / fadeOutDuration
+    return Math.max(0, 1 - fadeOutProgress)
+  }, [chapterIndex, currentMiles])
+
+  if (opacity <= 0) return null
 
   return (
     <div
-      className={`md:hidden fixed top-16 left-4 right-4 z-30 transition-all duration-500 ease-out ${
-        isVisible
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 -translate-y-4 pointer-events-none"
-      }`}
+      className="md:hidden fixed top-14 left-3 right-3 z-30 transition-opacity duration-300"
+      style={{ opacity }}
     >
       <div className="bg-stone-900/95 backdrop-blur-md rounded-xl border border-stone-800/50 p-4">
-        <div className="flex items-start gap-3">
-          {/* Chapter number badge */}
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-            <span className="text-xs font-semibold text-amber-500">{chapterIndex + 1}</span>
+        {/* Chapter header */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded-full bg-[#ff6b9d]/20 border border-[#ff6b9d]/40 flex items-center justify-center">
+            <span className="text-[10px] font-semibold text-[#ff6b9d]">{chapterIndex + 1}</span>
           </div>
+          <h3 className="text-sm font-semibold text-white">{chapter.title}</h3>
+        </div>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-white truncate">{chapter.title}</h3>
-            <p className="text-xs text-stone-400 line-clamp-2 mt-1">{chapter.description}</p>
-          </div>
+        {/* Full description */}
+        <p className="text-xs text-stone-400 leading-relaxed">{chapter.description}</p>
+
+        {/* Mile range */}
+        <div className="mt-3 pt-2 border-t border-stone-800/50">
+          <p className="text-[10px] text-stone-500">
+            Miles {chapter.startMile?.toLocaleString()} – {chapter.endMile?.toLocaleString()}
+          </p>
         </div>
       </div>
     </div>

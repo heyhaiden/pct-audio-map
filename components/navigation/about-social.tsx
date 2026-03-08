@@ -79,15 +79,15 @@ export function AboutSocial({ className }: AboutSocialProps) {
         </div>
       </div>
 
-      {/* Mobile: Menu button in bottom-right */}
-      <div className="md:hidden fixed bottom-6 right-4 z-50">
+      {/* Mobile: Menu button in top-right */}
+      <div className="md:hidden fixed top-3 right-3 z-50">
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="w-10 h-10 rounded-full bg-stone-900/90 backdrop-blur-md border border-stone-800/50 flex items-center justify-center shadow-lg"
+          className="w-9 h-9 rounded-full bg-stone-900/90 backdrop-blur-md border border-stone-800/50 flex items-center justify-center"
           aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
         >
           {isMobileMenuOpen ? (
-            <X className="w-5 h-5 text-white" />
+            <X className="w-4 h-4 text-white" />
           ) : (
             <Menu className="w-4 h-4 text-stone-400" />
           )}
