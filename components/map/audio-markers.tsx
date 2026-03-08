@@ -12,6 +12,9 @@ interface AudioMarkersProps {
 
 export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarkersProps) {
   const markersRef = useRef<any[]>([])
+  // Use ref for callback to avoid recreating markers when callback changes
+  const onMarkerClickRef = useRef(onMarkerClick)
+  onMarkerClickRef.current = onMarkerClick
 
   useEffect(() => {
     if (!map || !window.mapboxgl) return
@@ -29,6 +32,7 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
           const marker = new window.mapboxgl.Marker({
             color: "#ff6b9d",
             scale: 1.0,
+            anchor: "bottom", // Anchor at bottom for more stable positioning
           })
             .setLngLat(audioMarker.coordinates)
             .setPopup(
@@ -51,10 +55,11 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
           markerElement.style.cursor = "pointer"
           markerElement.style.zIndex = "1000"
           markerElement.style.pointerEvents = "auto"
+          // Use will-change for GPU acceleration and reduce jitter
+          markerElement.style.willChange = "transform"
           markerElement.addEventListener("click", (e) => {
             e.stopPropagation()
-            console.log("[v0] Audio marker clicked:", audioMarker.name)
-            onMarkerClick(audioMarker)
+            onMarkerClickRef.current(audioMarker)
           })
 
           markersRef.current.push(marker)
@@ -70,7 +75,7 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
     }
-  }, [map, currentChapter, onMarkerClick])
+  }, [map, currentChapter]) // Removed onMarkerClick - using ref instead
 
   return null
 }
