@@ -50,6 +50,16 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
   const [isExiting, setIsExiting] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Lock scroll when splash is visible
+  useEffect(() => {
+    if (isVisible) {
+      document.body.style.overflow = "hidden"
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isVisible])
+
   // Initialize and play ambient wind audio
   useEffect(() => {
     const audio = new Audio("/audio/ambient-wind.mp3")
@@ -162,7 +172,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
             </button>
             <Link
               href="/about"
-              className="px-6 py-2 text-sm text-stone-400 hover:text-white transition-colors"
+              className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"
             >
               About this project
             </Link>
@@ -180,7 +190,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         </button>
         <Link
           href="/about"
-          className="px-6 py-2 text-sm text-stone-400 hover:text-white transition-colors"
+          className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"
         >
           About this project
         </Link>
