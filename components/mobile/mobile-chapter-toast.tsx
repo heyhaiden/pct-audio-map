@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect, useRef } from "react"
+import { useMemo } from "react"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import type { PCTSegment } from "@/data/pct-segments"
 
@@ -11,25 +11,8 @@ interface MobileChapterToastProps {
 }
 
 export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: MobileChapterToastProps) {
-  const [isScrolling, setIsScrolling] = useState(false)
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Track scroll to fade while scrolling
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolling(true)
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
-      scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 200)
-    }
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
-    }
-  }, [])
-
-  // Calculate visibility based on miles - shorter duration for mobile
-  const mileOpacity = useMemo(() => {
+  // Calculate visibility based on miles - shorter duration for mobile (no scroll fade)
+  const opacity = useMemo(() => {
     const range = CHAPTER_MILE_RANGES[chapterIndex]
     if (!range) return 0
 
@@ -55,15 +38,12 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
     return Math.max(0, 1 - fadeOutProgress)
   }, [chapterIndex, currentMiles])
 
-  // Combine mile opacity with scroll fade
-  const finalOpacity = isScrolling ? mileOpacity * 0.2 : mileOpacity
-
-  if (mileOpacity <= 0) return null
+  if (opacity <= 0) return null
 
   return (
     <div
       className="md:hidden fixed top-1/2 left-4 right-4 -translate-y-1/2 z-30 transition-opacity duration-300"
-      style={{ opacity: finalOpacity }}
+      style={{ opacity }}
     >
       <div className="bg-stone-900/90 backdrop-blur-md rounded-xl border border-stone-800/50 p-4">
         {/* Chapter header */}

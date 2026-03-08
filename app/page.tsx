@@ -375,7 +375,7 @@ export default function Home() {
 
       {/* Instructions overlay - mobile */}
       <div
-        className={`md:hidden fixed bottom-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
+        className={`md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
           !introComplete || !journeyStarted ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
         }`}
       >
