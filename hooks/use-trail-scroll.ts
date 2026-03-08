@@ -60,15 +60,15 @@ export function useTrailScroll({
   const trailCoordinatesRef = useRef(trailCoordinates)
   const mapRef = useRef(map)
 
-  // Initialize camera state to match intro animation end position
-  // This ensures seamless handoff from intro to scroll-driven camera
+  // Initialize camera state - will be synced from map after intro completes
   const cameraStateRef = useRef({
-    lng: -116.467,  // Matches intro end position
-    lat: 32.5897,   // Matches intro end position
-    bearing: -5,    // Matches intro end bearing
-    pitch: 0,       // Matches intro end pitch
-    altitude: 50000, // Approximate altitude for zoom 9.55
+    lng: -116.467,
+    lat: 32.5897,
+    bearing: -5,
+    pitch: 0,
+    altitude: 80000, // Higher starting altitude for zoom 9.55
   })
+  const hasInitializedFromMap = useRef(false)
 
   useEffect(() => {
     cameraPathRef.current = cameraPath
@@ -305,6 +305,29 @@ export function useTrailScroll({
         // Transition from peak pitch back to 0 in the last 35 miles
         const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart) // 0 to 1 over last 35 miles
         targetPitch = peakPitch * (1 - endPhase)
+      }
+
+      // On first frame, sync camera state from current map position to avoid jump
+      if (!hasInitializedFromMap.current && currentMap) {
+        try {
+          const camera = currentMap.getFreeCameraOptions()
+          if (camera && camera.position) {
+            const lngLat = camera.position.toLngLat()
+            cameraStateRef.current.lng = lngLat.lng
+            cameraStateRef.current.lat = lngLat.lat
+            cameraStateRef.current.altitude = camera.position.toAltitude()
+            cameraStateRef.current.pitch = currentMap.getPitch()
+            cameraStateRef.current.bearing = currentMap.getBearing()
+          }
+        } catch (e) {
+          // Fallback: use standard getters
+          const center = currentMap.getCenter()
+          cameraStateRef.current.lng = center.lng
+          cameraStateRef.current.lat = center.lat
+          cameraStateRef.current.pitch = currentMap.getPitch()
+          cameraStateRef.current.bearing = currentMap.getBearing()
+        }
+        hasInitializedFromMap.current = true
       }
 
       const lerpFactor = 0.05

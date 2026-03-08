@@ -435,8 +435,11 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady }: PCTMa
       })
 
       map.current.once("moveend", () => {
-        setIntroPhase("done")
-        setInitialAnimationDone(true)
+        // Small delay to ensure camera is fully settled before handoff
+        setTimeout(() => {
+          setIntroPhase("done")
+          setInitialAnimationDone(true)
+        }, 100)
       })
     }, 2000)
 
