@@ -294,6 +294,7 @@ export default function Home() {
             scrollControlRef.current = controls
           }}
           onIntroComplete={handleIntroComplete}
+          startIntro={journeyStarted}
         />
         {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />}
       </div>

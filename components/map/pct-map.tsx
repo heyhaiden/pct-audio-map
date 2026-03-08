@@ -24,9 +24,10 @@ interface PCTMapProps {
     setBlocked: (blocked: boolean) => void
   }) => void
   onIntroComplete?: () => void
+  startIntro?: boolean
 }
 
-export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntroComplete }: PCTMapProps) {
+export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntroComplete, startIntro = false }: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -268,8 +269,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
           onMapLoad?.(map.current)
 
           preloadTrailTiles()
-
-          setIntroPhase("overview")
+          // Keep at "waiting" until startIntro is true
         })
 
         map.current.on("error", (e: any) => {
@@ -414,6 +414,13 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
   }
 
   const scrollControlReadyCalledRef = useRef(false)
+
+  // Start intro animation when startIntro becomes true
+  useEffect(() => {
+    if (startIntro && introPhase === "waiting" && mapLoaded && map.current) {
+      setIntroPhase("overview")
+    }
+  }, [startIntro, introPhase, mapLoaded])
 
   useEffect(() => {
     if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return

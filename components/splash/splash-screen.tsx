@@ -1,10 +1,47 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ChevronDown, Volume2 } from "lucide-react"
+import { useState } from "react"
 
 interface SplashScreenProps {
   onEnter: () => void
+}
+
+// Abstract minimalist trail line SVG
+function AbstractTrailIcon({ className }: { className?: string }) {
+  return (
+    <svg 
+      viewBox="0 0 120 200" 
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Main trail line - abstract serpentine path from bottom to top */}
+      <path
+        d="M60 195 
+           C45 180, 75 165, 55 150
+           C35 135, 80 120, 65 105
+           C50 90, 85 75, 60 60
+           C35 45, 75 30, 55 15
+           L58 5"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        fill="none"
+        className="text-[#ff6b9d]"
+      />
+      {/* Subtle parallel accent line */}
+      <path
+        d="M65 190
+           C50 175, 80 162, 60 147
+           C40 132, 85 117, 70 102"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+        fill="none"
+        className="text-[#ff6b9d]/30"
+      />
+    </svg>
+  )
 }
 
 export function SplashScreen({ onEnter }: SplashScreenProps) {
@@ -31,23 +68,21 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
       <div className="absolute inset-0 bg-gradient-to-b from-stone-950 via-stone-900/50 to-stone-950" />
       
       {/* Subtle topographic pattern overlay */}
-      <div className="absolute inset-0 opacity-5" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' fill='none' stroke='%23fff' stroke-width='0.5'/%3E%3Cpath d='M0 60 Q25 40 50 60 T100 60' fill='none' stroke='%23fff' stroke-width='0.5'/%3E%3Cpath d='M0 70 Q25 50 50 70 T100 70' fill='none' stroke='%23fff' stroke-width='0.5'/%3E%3C/svg%3E")`,
+      <div className="absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 60 Q25 40 50 60 T100 60' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 70 Q25 50 50 70 T100 70' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3C/svg%3E")`,
         backgroundSize: '200px 200px'
       }} />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-2xl">
-        {/* Trail marker icon */}
+        {/* Abstract trail icon */}
         <div className="mb-8">
-          <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-amber-500/60 flex items-center justify-center">
-            <Volume2 className="w-8 h-8 md:w-10 md:h-10 text-amber-500" />
-          </div>
+          <AbstractTrailIcon className="w-16 h-28 md:w-20 md:h-36" />
         </div>
 
         {/* Title */}
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-4">
-          <span className="font-semibold">PCT</span> Soundscapes
+          <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
         </h1>
 
         {/* Subtitle */}
@@ -56,11 +91,11 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         </p>
 
         {/* Trail stats */}
-        <div className="flex items-center gap-6 text-sm text-stone-500 mb-12">
+        <div className="flex items-center gap-4 md:gap-6 text-sm text-stone-500 mb-12 flex-wrap justify-center">
           <span>2,650 miles</span>
-          <span className="w-1 h-1 rounded-full bg-stone-600" />
+          <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
           <span>Mexico to Canada</span>
-          <span className="w-1 h-1 rounded-full bg-stone-600" />
+          <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
           <span>Field recordings</span>
         </div>
 
@@ -74,12 +109,9 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         {/* CTA Button */}
         <button
           onClick={handleEnter}
-          className="group flex flex-col items-center gap-3 transition-all duration-300 hover:scale-105"
+          className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"
         >
-          <span className="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-stone-950 font-medium rounded-full transition-colors duration-200">
-            Begin Journey
-          </span>
-          <ChevronDown className="w-5 h-5 text-stone-500 animate-bounce" />
+          Begin Journey
         </button>
       </div>
 
