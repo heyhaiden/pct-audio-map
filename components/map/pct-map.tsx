@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
-import { Copy } from "lucide-react"
+
 
 declare global {
   interface Window {
@@ -481,49 +481,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
         </div>
       )}
 
-      {/* Camera debug panel - hidden by default, enable via console: window.__enableCameraDebug = true */}
-      {mapLoaded && debugMode && (
-        <div className="absolute bottom-6 left-6 z-50 bg-black/90 backdrop-blur-sm rounded-lg p-4 text-white text-xs font-mono max-w-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-bold text-sm">Camera Debug</div>
-            <button
-              onClick={() => setDebugMode(false)}
-              className="bg-red-600 hover:bg-red-500 px-3 py-1.5 rounded text-xs font-sans"
-            >
-              Exit Debug Mode
-            </button>
-          </div>
-          <div className="bg-yellow-600/20 border border-yellow-600/50 rounded px-2 py-1 mb-3 text-yellow-200 text-[10px]">
-            Debug mode active - all automated camera movement disabled
-          </div>
-          <div className="space-y-1 mb-3">
-            <div>
-              Center: [{cameraInfo.center[0].toFixed(4)}, {cameraInfo.center[1].toFixed(4)}]
-            </div>
-            <div>Zoom: {cameraInfo.zoom.toFixed(2)}</div>
-            <div>Pitch: {cameraInfo.pitch.toFixed(1)}</div>
-            <div>Bearing: {cameraInfo.bearing.toFixed(1)}</div>
-          </div>
-          <div className="text-gray-400 text-[10px] mb-3">
-            Drag to pan • Right-click drag to rotate • Ctrl+drag to pitch • Scroll to zoom
-          </div>
-          <button
-            onClick={() => {
-              const config = {
-                center: [Number(cameraInfo.center[0].toFixed(4)), Number(cameraInfo.center[1].toFixed(4))],
-                zoom: Number(cameraInfo.zoom.toFixed(2)),
-                pitch: Number(cameraInfo.pitch.toFixed(1)),
-                bearing: Number(cameraInfo.bearing.toFixed(1)),
-              }
-              navigator.clipboard.writeText(JSON.stringify(config, null, 2))
-              alert("Camera config copied to clipboard!")
-            }}
-            className="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded text-xs flex items-center gap-1 inline-flex font-sans"
-          >
-            <Copy className="w-3 h-3" /> Copy Config
-          </button>
-        </div>
-      )}
+
 
 
     </div>

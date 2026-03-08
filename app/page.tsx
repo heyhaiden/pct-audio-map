@@ -7,6 +7,11 @@ import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
 import { TrailStats } from "@/components/stats/trail-stats"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
+import { SplashScreen } from "@/components/splash/splash-screen"
+import { MobileStatsBar } from "@/components/mobile/mobile-stats-bar"
+import { MobileChapterToast } from "@/components/mobile/mobile-chapter-toast"
+import { AboutSocial } from "@/components/navigation/about-social"
+import { CompletionScreen } from "@/components/completion/completion-screen"
 import { pctSegments } from "@/data/pct-segments"
 import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
@@ -18,6 +23,10 @@ export default function Home() {
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
   const [introComplete, setIntroComplete] = useState(false)
+  const [showSplash, setShowSplash] = useState(true)
+  const [journeyStarted, setJourneyStarted] = useState(false)
+  const [showCompletion, setShowCompletion] = useState(false)
+  const lastChapterRef = useRef(0)
   const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const scrollControlRef = useRef<{
     pauseScrollAnimation: () => void
@@ -49,6 +58,35 @@ export default function Home() {
   const handleIntroComplete = useCallback(() => {
     setIntroComplete(true)
   }, [])
+
+  const handleSplashEnter = useCallback(() => {
+    setShowSplash(false)
+    setJourneyStarted(true)
+  }, [])
+
+  const handleRestart = useCallback(() => {
+    setShowCompletion(false)
+    setCurrentMiles(0)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [])
+
+  // Vibration on chapter change
+  useEffect(() => {
+    if (currentChapter !== lastChapterRef.current && journeyStarted) {
+      lastChapterRef.current = currentChapter
+      // Trigger haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
+    }
+  }, [currentChapter, journeyStarted])
+
+  // Check for journey completion
+  useEffect(() => {
+    if (currentMiles >= totalMiles - 10 && journeyStarted && !showCompletion) {
+      setShowCompletion(true)
+    }
+  }, [currentMiles, totalMiles, journeyStarted, showCompletion])
 
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
@@ -237,6 +275,16 @@ export default function Home() {
 
   return (
     <main className="relative">
+      {/* Splash screen */}
+      {showSplash && <SplashScreen onEnter={handleSplashEnter} />}
+
+      {/* Completion screen */}
+      <CompletionScreen 
+        isVisible={showCompletion} 
+        totalMiles={totalMiles} 
+        onRestart={handleRestart} 
+      />
+
       {/* Fixed map background */}
       <div className="fixed inset-0 z-0 pointer-events-auto">
         <PCTMap
@@ -252,12 +300,27 @@ export default function Home() {
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
 
-      <div className={`transition-opacity duration-1000 ease-out ${introComplete ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Desktop stats */}
+      <div className={`transition-opacity duration-1000 ease-out ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
         <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
       </div>
 
-      {/* Chapter card on the left side */}
-      <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Mobile stats bar */}
+      <div className={`transition-opacity duration-700 ease-out ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
+        <MobileStatsBar currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
+      </div>
+
+      {/* Mobile chapter toast */}
+      {introComplete && journeyStarted && (
+        <MobileChapterToast
+          chapter={pctSegments[currentChapter]}
+          chapterIndex={currentChapter}
+          currentMiles={currentMiles}
+        />
+      )}
+
+      {/* Desktop chapter card on the left side */}
+      <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
         <ChapterCard
           chapter={pctSegments[currentChapter]}
           chapterIndex={currentChapter}
@@ -267,13 +330,18 @@ export default function Home() {
       </div>
 
       {/* Scroll progress indicator */}
-      <div className={`transition-opacity duration-1000 ease-out delay-300 ${introComplete ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`transition-opacity duration-1000 ease-out delay-300 ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
         <ScrollIndicator
           progress={currentMiles / totalMiles}
           currentChapter={currentChapter}
           totalChapters={pctSegments.length}
           onChapterClick={handleChapterClick}
         />
+      </div>
+
+      {/* About and social links */}
+      <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
+        <AboutSocial />
       </div>
 
       {/* Audio player */}
@@ -288,18 +356,34 @@ export default function Home() {
         />
       )}
 
-      {/* Instructions overlay */}
+      {/* Instructions overlay - desktop */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-700 ease-out ${
-          !introComplete || currentMiles > 10 ? "opacity-0 pointer-events-none" : "opacity-100"
+        className={`hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
+          !introComplete || !journeyStarted ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
         }`}
       >
-        <div className="bg-black/60 backdrop-blur-xl rounded-lg px-4 py-2 text-white text-sm">
+        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-4 py-2 text-white text-sm border border-stone-800/50">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-6 border-2 border-white/60 rounded-sm relative">
-              <div className="w-1 h-2 bg-white/60 rounded-full absolute top-1 left-1/2 -translate-x-1/2 animate-bounce"></div>
+            <div className="w-4 h-6 border-2 border-stone-500 rounded-sm relative">
+              <div className="w-1 h-2 bg-stone-400 rounded-full absolute top-1 left-1/2 -translate-x-1/2 animate-bounce"></div>
             </div>
-            <span>Scroll to fly along the PCT</span>
+            <span className="text-stone-300">Scroll to fly along the trail</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Instructions overlay - mobile */}
+      <div
+        className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
+          !introComplete || !journeyStarted ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-4 py-2 text-white text-sm border border-stone-800/50">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-6 border-2 border-stone-500 rounded-sm relative">
+              <div className="w-1 h-2 bg-stone-400 rounded-full absolute top-1 left-1/2 -translate-x-1/2 animate-bounce"></div>
+            </div>
+            <span className="text-stone-300">Swipe up to explore</span>
           </div>
         </div>
       </div>

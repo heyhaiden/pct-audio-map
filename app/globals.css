@@ -127,3 +127,25 @@
     display: none !important;
   }
 }
+
+/* Safe area insets for mobile notches and home indicators */
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Audio marker popup styling */
+.audio-marker-popup .mapboxgl-popup-content {
+  background: rgba(23, 23, 23, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(68, 64, 60, 0.5);
+  border-radius: 12px;
+  padding: 0;
+}
+
+.audio-marker-popup .mapboxgl-popup-tip {
+  border-top-color: rgba(23, 23, 23, 0.95);
+}
