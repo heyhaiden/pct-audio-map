@@ -109,16 +109,6 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         isExiting ? "opacity-0 scale-105" : "opacity-100 scale-100"
       }`}
     >
-      {/* Header - About link in top right */}
-      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-20">
-        <Link
-          href="/about"
-          className="inline-block px-4 py-2 rounded-full bg-stone-900/60 backdrop-blur-sm border border-stone-800/40 text-xs md:text-sm text-stone-400 hover:text-white hover:bg-stone-800/60 transition-all duration-300"
-        >
-          About
-        </Link>
-      </div>
-
       {/* Background gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-stone-950 via-stone-900/50 to-stone-950" />
       
@@ -162,24 +152,38 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
             the American West.
           </p>
 
-          {/* CTA Button - desktop only, inline with content */}
-          <button
-            onClick={handleEnter}
-            className="hidden md:block px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"
-          >
-            Begin Journey
-          </button>
+          {/* CTA Buttons - desktop only, inline with content */}
+          <div className="hidden md:flex flex-col items-center gap-3">
+            <button
+              onClick={handleEnter}
+              className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"
+            >
+              Begin Journey
+            </button>
+            <Link
+              href="/about"
+              className="px-6 py-2 text-sm text-stone-400 hover:text-white transition-colors"
+            >
+              About this project
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Mobile CTA - positioned lower for thumb access */}
-      <div className="md:hidden relative z-10 flex justify-center pb-28">
+      <div className="md:hidden relative z-10 flex flex-col items-center gap-3 pb-28">
         <button
           onClick={handleEnter}
           className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 active:scale-95"
         >
           Begin Journey
         </button>
+        <Link
+          href="/about"
+          className="px-6 py-2 text-sm text-stone-400 hover:text-white transition-colors"
+        >
+          About this project
+        </Link>
       </div>
 
       {/* Footer credits */}
