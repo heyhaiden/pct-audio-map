@@ -16,7 +16,7 @@ export const pctSegments: PCTChapter[] = [
     terrain: {
       exaggeration: 1.2,
     },
-    audioMarkers: ["desert-wind", "coyote-calls", "desert-silence"],
+    audioMarkers: ["marker-1", "marker-6", "marker-14", "marker-19", "marker-23", "marker-28", "marker-29"],
   },
   {
     id: "sierra-nevada",
@@ -33,7 +33,7 @@ export const pctSegments: PCTChapter[] = [
     terrain: {
       exaggeration: 2.0,
     },
-    audioMarkers: ["alpine-wind", "mountain-streams", "granite-echoes"],
+    audioMarkers: ["alpine-wind", "mountain-streams", "granite-echoes"], // These IDs match audio-markers.ts
   },
   {
     id: "northern-california",
@@ -50,7 +50,7 @@ export const pctSegments: PCTChapter[] = [
     terrain: {
       exaggeration: 1.6,
     },
-    audioMarkers: ["volcanic-winds", "forest-streams", "bird-chorus"],
+    audioMarkers: ["volcanic-winds", "forest-streams", "bird-chorus"], // These IDs match audio-markers.ts
   },
   {
     id: "oregon-cascades",
@@ -67,7 +67,7 @@ export const pctSegments: PCTChapter[] = [
     terrain: {
       exaggeration: 1.4,
     },
-    audioMarkers: ["forest-rain", "lake-lapping", "owl-calls"],
+    audioMarkers: ["forest-rain", "lake-lapping", "owl-calls"], // These IDs match audio-markers.ts
   },
   {
     id: "washington-cascades",
@@ -84,7 +84,7 @@ export const pctSegments: PCTChapter[] = [
     terrain: {
       exaggeration: 1.8,
     },
-    audioMarkers: ["glacier-melt", "rainforest-ambience", "mountain-silence"],
+    audioMarkers: ["glacier-melt", "rainforest-ambience", "mountain-silence"], // These IDs match audio-markers.ts
   },
 ]
 
