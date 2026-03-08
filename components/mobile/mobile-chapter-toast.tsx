@@ -19,8 +19,8 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
     const milesIntoChapter = currentMiles - range.start
 
     const fadeInDistance = 3
-    const visibleDuration = 12
-    const fadeOutDuration = 6
+    const visibleDuration = 20
+    const fadeOutDuration = 12
     const totalDisplayWindow = fadeInDistance + visibleDuration + fadeOutDuration
 
     if (milesIntoChapter < 0) return 0

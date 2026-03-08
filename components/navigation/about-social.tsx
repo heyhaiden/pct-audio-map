@@ -23,10 +23,10 @@ export function AboutSocial({ className }: AboutSocialProps) {
         clearTimeout(scrollTimeoutRef.current)
       }
       
-      // Set timeout to detect when scrolling stops
+      // Set timeout to detect when scrolling stops (same as mileage counter)
       scrollTimeoutRef.current = setTimeout(() => {
         setIsScrolling(false)
-      }, 150) // 150ms after last scroll event = stopped
+      }, 200) // 200ms after last scroll event = stopped
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
