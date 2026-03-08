@@ -290,8 +290,8 @@ export default function Home() {
 
       {/* Instructions overlay */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
-          !introComplete ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-700 ease-out ${
+          !introComplete || currentMiles > 10 ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
       >
         <div className="bg-black/60 backdrop-blur-xl rounded-lg px-4 py-2 text-white text-sm">
