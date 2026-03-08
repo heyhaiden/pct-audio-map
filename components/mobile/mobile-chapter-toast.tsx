@@ -14,26 +14,17 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
   const [isScrolling, setIsScrolling] = useState(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Track scroll to fade out while scrolling
+  // Track scroll to fade while scrolling
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolling(true)
-      
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
-      
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false)
-      }, 200)
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+      scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 200)
     }
-
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => {
       window.removeEventListener("scroll", handleScroll)
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
     }
   }, [])
 
@@ -45,8 +36,8 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
     const milesIntoChapter = currentMiles - range.start
 
     const fadeInDistance = 3
-    const visibleDuration = 15
-    const fadeOutDuration = 8
+    const visibleDuration = 12
+    const fadeOutDuration = 6
     const totalDisplayWindow = fadeInDistance + visibleDuration + fadeOutDuration
 
     if (milesIntoChapter < 0) return 0
@@ -64,8 +55,8 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
     return Math.max(0, 1 - fadeOutProgress)
   }, [chapterIndex, currentMiles])
 
-  // Combine mile-based opacity with scroll state
-  const finalOpacity = isScrolling ? mileOpacity * 0.3 : mileOpacity
+  // Combine mile opacity with scroll fade
+  const finalOpacity = isScrolling ? mileOpacity * 0.2 : mileOpacity
 
   if (mileOpacity <= 0) return null
 

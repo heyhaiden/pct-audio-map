@@ -13,26 +13,17 @@ export function MobileStatsBar({ currentMiles, totalMiles, currentSection }: Mob
   const [isScrolling, setIsScrolling] = useState(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Track scroll to fade out while scrolling
+  // Track scroll to fade while scrolling
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolling(true)
-      
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
-      
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false)
-      }, 200)
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+      scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 200)
     }
-
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => {
       window.removeEventListener("scroll", handleScroll)
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
     }
   }, [])
 
@@ -52,7 +43,7 @@ export function MobileStatsBar({ currentMiles, totalMiles, currentSection }: Mob
       {/* Miles counter - subtle floating pill at bottom left, fades while scrolling */}
       <div 
         className={`md:hidden fixed bottom-4 left-3 z-30 transition-opacity duration-300 ${
-          isScrolling ? "opacity-30" : "opacity-100"
+          isScrolling ? "opacity-20" : "opacity-100"
         }`}
       >
         <div className="bg-stone-950/70 backdrop-blur-sm rounded-full px-3 py-1.5 border border-stone-800/30">

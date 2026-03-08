@@ -73,8 +73,8 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
         backgroundSize: '200px 200px'
       }} />
 
-      {/* Content - upper section on mobile, centered on desktop */}
-      <div className="relative z-10 flex flex-col items-center px-6 pt-16 md:pt-0 md:flex-1 md:justify-center">
+      {/* Content - centered on both desktop and mobile */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
         <div className="flex flex-col items-center text-center max-w-2xl">
           {/* Abstract trail icon */}
           <div className="mb-4 md:mb-8">
@@ -87,12 +87,12 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-sm md:text-xl text-stone-400 mb-4 md:mb-3 font-light">
+          <p className="text-sm md:text-xl text-stone-400 mb-3 md:mb-3 font-light">
             An Audio Journey Along the Pacific Crest Trail
           </p>
 
           {/* Trail stats - hidden on mobile */}
-          <div className="hidden md:flex items-center gap-6 text-sm text-stone-500 mb-12 flex-wrap justify-center">
+          <div className="hidden md:flex items-center gap-6 text-sm text-stone-500 mb-8 flex-wrap justify-center">
             <span>2,650 miles</span>
             <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
             <span>Mexico to Canada</span>
@@ -100,24 +100,22 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
             <span>Field recordings</span>
           </div>
 
-          {/* Description - visible on both mobile and desktop */}
-          <p className="text-xs md:text-lg text-stone-400 leading-relaxed max-w-lg mb-0 md:mb-12 px-2 md:px-0">
+          {/* Description - visible on both, shorter on mobile */}
+          <p className="text-xs md:text-lg text-stone-400 leading-relaxed max-w-lg mb-8 md:mb-10 px-4 md:px-0">
+            <span className="md:hidden">Explore ambient soundscapes recorded along 2,650 miles of wilderness.</span>
             <span className="hidden md:inline">Scroll through an immersive map experience featuring ambient soundscapes 
             recorded along the Pacific Crest Trail. Discover the sonic landscape of 
             the American West.</span>
-            <span className="md:hidden">Explore ambient soundscapes recorded along 2,650 miles of wilderness, from Mexico to Canada.</span>
           </p>
-        </div>
-      </div>
 
-      {/* CTA Button - fixed position near bottom on mobile */}
-      <div className="relative z-10 flex flex-col items-center pb-24 md:pb-0 md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:mt-48">
-        <button
-          onClick={handleEnter}
-          className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"
-        >
-          Begin Journey
-        </button>
+          {/* CTA Button - inline with content */}
+          <button
+            onClick={handleEnter}
+            className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"
+          >
+            Begin Journey
+          </button>
+        </div>
       </div>
 
       {/* Footer credits */}
