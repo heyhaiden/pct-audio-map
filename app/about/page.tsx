@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, Mail, ExternalLink, Instagram, Twitter } from "lucide-react"
+import { ArrowLeft, Mail, ExternalLink, Linkedin, Globe } from "lucide-react"
 
 // Abstract minimalist trail line SVG (same as splash)
 function AbstractTrailIcon({ className }: { className?: string }) {
@@ -51,18 +51,14 @@ export default function AboutPage() {
       <div className="relative z-10">
         {/* Header */}
         <header className="sticky top-0 bg-stone-950/80 backdrop-blur-md border-b border-stone-800/50 z-50">
-          <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="max-w-4xl mx-auto px-6 py-4">
             <Link 
               href="/"
-              className="flex items-center gap-2 text-stone-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="text-sm">Back to Map</span>
             </Link>
-            <div className="flex items-center gap-1">
-              <AbstractTrailIcon className="w-5 h-8" />
-              <span className="text-sm font-medium text-white">PCT Soundscapes</span>
-            </div>
           </div>
         </header>
 
@@ -121,12 +117,32 @@ export default function AboutPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-1">The Hiker</h3>
                 <p className="text-sm text-[#ff6b9d] mb-4">Field Recording & Trail Documentation</p>
-                <p className="text-stone-400 text-sm leading-relaxed">
+                <p className="text-stone-400 text-sm leading-relaxed mb-4">
                   Thru-hiked the PCT in 2025, carrying recording equipment alongside the usual 
                   backpacking gear. With a background in environmental science and a passion for 
                   acoustic ecology, she captured the soundscapes that form the heart of this project. 
                   Her journey covered all 2,650 miles from Campo to Manning Park over five months.
                 </p>
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://linkedin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-stone-800/50 border border-stone-700/50 flex items-center justify-center text-stone-400 hover:text-[#ff6b9d] hover:border-[#ff6b9d]/30 transition-all"
+                    aria-label="LinkedIn"
+                  >
+                    <Linkedin className="w-4 h-4" />
+                  </a>
+                  <a
+                    href="https://example.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-stone-800/50 border border-stone-700/50 flex items-center justify-center text-stone-400 hover:text-[#ff6b9d] hover:border-[#ff6b9d]/30 transition-all"
+                    aria-label="Website"
+                  >
+                    <Globe className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
 
               {/* Developer */}
@@ -136,12 +152,32 @@ export default function AboutPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-1">The Developer</h3>
                 <p className="text-sm text-[#ff6b9d] mb-4">Design & Development</p>
-                <p className="text-stone-400 text-sm leading-relaxed">
+                <p className="text-stone-400 text-sm leading-relaxed mb-4">
                   Designed and built the interactive experience you're exploring now. With expertise 
                   in web development and a love for maps and data visualization, he transformed hours 
                   of field recordings into an immersive scroll-driven journey. An aspiring 
                   thru-hiker himself, this project is a love letter to the trail.
                 </p>
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://linkedin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-stone-800/50 border border-stone-700/50 flex items-center justify-center text-stone-400 hover:text-[#ff6b9d] hover:border-[#ff6b9d]/30 transition-all"
+                    aria-label="LinkedIn"
+                  >
+                    <Linkedin className="w-4 h-4" />
+                  </a>
+                  <a
+                    href="https://example.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-stone-800/50 border border-stone-700/50 flex items-center justify-center text-stone-400 hover:text-[#ff6b9d] hover:border-[#ff6b9d]/30 transition-all"
+                    aria-label="Website"
+                  >
+                    <Globe className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
             </div>
           </section>
@@ -262,36 +298,13 @@ export default function AboutPage() {
               we'd love to hear from you.
             </p>
             
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <a
-                href="mailto:hello@pctsoundscapes.com"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
-              >
-                <Mail className="w-4 h-4" />
-                Contact Us
-              </a>
-              
-              <div className="flex items-center gap-3">
-                <a
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full bg-stone-800/50 border border-stone-700/50 flex items-center justify-center text-stone-400 hover:text-[#ff6b9d] hover:border-[#ff6b9d]/30 transition-all"
-                  aria-label="Instagram"
-                >
-                  <Instagram className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full bg-stone-800/50 border border-stone-700/50 flex items-center justify-center text-stone-400 hover:text-[#ff6b9d] hover:border-[#ff6b9d]/30 transition-all"
-                  aria-label="Twitter"
-                >
-                  <Twitter className="w-5 h-5" />
-                </a>
-              </div>
-            </div>
+            <a
+              href="mailto:hello@pctsoundscapes.com"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+              Contact Us
+            </a>
           </section>
         </main>
 
