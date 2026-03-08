@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 
 interface TrailScrollOptions {
   map: any
@@ -13,33 +13,31 @@ interface TrailScrollReturn {
   scrollProgress: number
   currentMiles: number
   totalMiles: number
+  pauseScrollAnimation: () => void
+  resumeScrollAnimation: () => void
+  syncScrollToPosition: (coordinates: [number, number]) => void
+  setPendingSyncCoordinates: (coordinates: [number, number]) => void
+  setBlocked: (blocked: boolean) => void
 }
 
 const PCT_TOTAL_MILES = 2650
+const CAMERA_PATH_POINTS = 500
 
-function calculateCumulativeDistances(coordinates: number[][]): number[] {
-  const distances = [0]
-  let totalDistance = 0
+function lerpBearing(a: number, b: number, t: number): number {
+  const diff = ((b - a + 540) % 360) - 180
+  return (a + diff * t + 360) % 360
+}
 
-  for (let i = 1; i < coordinates.length; i++) {
-    const [lng1, lat1] = coordinates[i - 1]
-    const [lng2, lat2] = coordinates[i]
+function angularDistance(a: number, b: number): number {
+  const diff = ((b - a + 540) % 360) - 180
+  return Math.abs(diff)
+}
 
-    // Haversine formula for geographic distance
-    const R = 6371 // Earth radius in km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLng = ((lng2 - lng1) * Math.PI) / 180
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    const distance = R * c
-
-    totalDistance += distance
-    distances.push(totalDistance)
-  }
-
-  return distances
+function biasTowardNorth(bearing: number, northBias = 0.3): number {
+  // northBias: 0 = no bias, 1 = always north
+  // Allow some deviation but pull toward north
+  const northBearing = 0
+  return lerpBearing(bearing, northBearing, northBias)
 }
 
 export function useTrailScroll({
@@ -50,194 +48,417 @@ export function useTrailScroll({
 }: TrailScrollOptions): TrailScrollReturn {
   const [scrollProgress, setScrollProgress] = useState(0)
   const [currentMiles, setCurrentMiles] = useState(0)
-  const animationFrameRef = useRef<number | null>(null)
-  const lastScrollTime = useRef(Date.now())
-  const targetProgress = useRef(0)
-  const currentProgress = useRef(0)
-  const isAnimating = useRef(false)
-  const currentBearing = useRef(0)
-  const smoothedLng = useRef(0)
-  const smoothedLat = useRef(0)
-  const isInitialized = useRef(false)
-  const coordinateHistory = useRef<Array<[number, number]>>([])
-  const cumulativeDistances = useRef<number[]>([])
+  const [cameraPath, setCameraPath] = useState<
+    { lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null
+  >(null)
+  const [isScrollPaused, setIsScrollPaused] = useState(false)
+  const pendingSyncRef = useRef<[number, number] | null>(null)
+  const cameraPathRef = useRef<{ lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null>(null)
+  const isBlockedRef = useRef(false)
+
   const onProgressChangeRef = useRef(onProgressChange)
+  const trailCoordinatesRef = useRef(trailCoordinates)
+  const mapRef = useRef(map)
+
+  // Initialize camera state - will be synced from map after intro completes
+  const cameraStateRef = useRef({
+    lng: -116.467,
+    lat: 32.5897,
+    bearing: -5,
+    pitch: 0,
+    altitude: 80000, // Higher starting altitude for zoom 9.55
+  })
+  const hasInitializedFromMap = useRef(false)
+
+  useEffect(() => {
+    cameraPathRef.current = cameraPath
+  }, [cameraPath])
+
+  const findProgressFromCoordinates = useCallback((coordinates: [number, number]): number => {
+    const path = cameraPathRef.current
+    if (!path || path.length === 0) return 0
+
+    const [lng, lat] = coordinates
+    let closestIndex = 0
+    let closestDistance = Number.POSITIVE_INFINITY
+
+    for (let i = 0; i < path.length; i++) {
+      const point = path[i]
+      const distance = Math.sqrt(Math.pow(point.lng - lng, 2) + Math.pow(point.lat - lat, 2))
+      if (distance < closestDistance) {
+        closestDistance = distance
+        closestIndex = i
+      }
+    }
+
+    return closestIndex / (path.length - 1)
+  }, [])
+
+  const syncScrollToPosition = useCallback((coordinates: [number, number]) => {
+    if (typeof window === "undefined") return
+    const path = cameraPathRef.current
+    if (!path) return
+
+    const progress = (() => {
+      const [lng, lat] = coordinates
+      let closestIndex = 0
+      let closestDistance = Number.POSITIVE_INFINITY
+
+      for (let i = 0; i < path.length; i++) {
+        const point = path[i]
+        const distance = Math.sqrt(Math.pow(point.lng - lng, 2) + Math.pow(point.lat - lat, 2))
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestIndex = i
+        }
+      }
+
+      return closestIndex / (path.length - 1)
+    })()
+
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+    const targetScroll = progress * scrollHeight
+
+    setScrollProgress(progress)
+    setCurrentMiles(progress * PCT_TOTAL_MILES)
+
+    const pathIndex = progress * (path.length - 1)
+    const lowerIndex = Math.floor(pathIndex)
+    const upperIndex = Math.min(Math.ceil(pathIndex), path.length - 1)
+    const fraction = pathIndex - lowerIndex
+
+    const lowerPoint = path[lowerIndex]
+    const upperPoint = path[upperIndex]
+
+    if (lowerPoint && upperPoint) {
+      cameraStateRef.current.lng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
+      cameraStateRef.current.lat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
+      cameraStateRef.current.bearing = lerpBearing(lowerPoint.smoothedBearing, upperPoint.smoothedBearing, fraction)
+    }
+
+    window.scrollTo({
+      top: targetScroll,
+      behavior: "instant",
+    })
+  }, [])
+
+  const pauseScrollAnimation = useCallback(() => {
+    setIsScrollPaused(true)
+  }, [])
+
+  const resumeScrollAnimation = useCallback(() => {
+    const pending = pendingSyncRef.current
+    
+    // Sync camera state from actual map position before resuming
+    // This prevents jarring jumps when transitioning back to scroll control
+    const currentMap = mapRef.current
+    if (currentMap) {
+      try {
+        const camera = currentMap.getFreeCameraOptions()
+        if (camera && camera.position) {
+          const lngLat = camera.position.toLngLat()
+          cameraStateRef.current.lng = lngLat.lng
+          cameraStateRef.current.lat = lngLat.lat
+          cameraStateRef.current.altitude = camera.position.toAltitude()
+          cameraStateRef.current.pitch = currentMap.getPitch()
+          cameraStateRef.current.bearing = currentMap.getBearing()
+        }
+      } catch (e) {
+        const center = currentMap.getCenter()
+        cameraStateRef.current.lng = center.lng
+        cameraStateRef.current.lat = center.lat
+        cameraStateRef.current.pitch = currentMap.getPitch()
+        cameraStateRef.current.bearing = currentMap.getBearing()
+      }
+    }
+    
+    if (pending) {
+      syncScrollToPosition(pending)
+      pendingSyncRef.current = null
+    }
+    setIsScrollPaused(false)
+  }, [syncScrollToPosition])
+
+  const setPendingSyncCoordinates = useCallback((coordinates: [number, number]) => {
+    pendingSyncRef.current = coordinates
+  }, [])
+
+  const setBlocked = useCallback((blocked: boolean) => {
+    isBlockedRef.current = blocked
+  }, [])
 
   useEffect(() => {
     onProgressChangeRef.current = onProgressChange
   }, [onProgressChange])
 
   useEffect(() => {
-    if (trailCoordinates.length > 0) {
-      cumulativeDistances.current = calculateCumulativeDistances(trailCoordinates)
-    }
+    trailCoordinatesRef.current = trailCoordinates
   }, [trailCoordinates])
 
   useEffect(() => {
-    if (!map || !enabled || !trailCoordinates.length) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-        animationFrameRef.current = null
-      }
-      isAnimating.current = false
-      return
-    }
+    mapRef.current = map
+  }, [map])
 
-    const handleScroll = () => {
-      if (!enabled) return
+  useEffect(() => {
+    if (!trailCoordinates || trailCoordinates.length < 2) return
 
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
-      const scrolled = window.scrollY
-      const progress = Math.max(0, Math.min(1, scrolled / scrollHeight))
-
-      targetProgress.current = progress
-      setScrollProgress(progress)
-      lastScrollTime.current = Date.now()
-
-      if (!isAnimating.current) {
-        isAnimating.current = true
-        if ("requestIdleCallback" in window) {
-          ;(window as any).requestIdleCallback(
-            () => {
-              animateCamera()
-            },
-            { timeout: 16 },
-          )
-        } else {
-          animateCamera()
-        }
-      }
-    }
-
-    const calculateSmoothedBearing = (index: number): number => {
-      const lookAheadDistance = Math.min(150, Math.floor(trailCoordinates.length * 0.05))
-      const currentIndex = Math.floor(index)
-      const futureIndex = Math.min(currentIndex + lookAheadDistance, trailCoordinates.length - 1)
-
-      if (currentIndex >= trailCoordinates.length - 1) return 0
-
-      const current = trailCoordinates[currentIndex]
-      const future = trailCoordinates[futureIndex]
-
-      const deltaLng = future[0] - current[0]
-      const deltaLat = future[1] - current[1]
-
-      let bearing = (Math.atan2(deltaLng, deltaLat) * 180) / Math.PI
-
-      bearing = Math.max(-90, Math.min(90, bearing))
-
-      return bearing
-    }
-
-    const animateCamera = () => {
-      if (!enabled) {
-        isAnimating.current = false
+    const buildCameraPath = () => {
+      if (typeof window === "undefined" || !window.turf) {
+        setTimeout(buildCameraPath, 100)
         return
       }
 
-      const ease = 0.18
-      const rawDelta = targetProgress.current - currentProgress.current
+      try {
+        const line = window.turf.lineString(trailCoordinates)
+        const totalLength = window.turf.length(line, { units: "kilometers" })
 
-      const easeInOutCubic = (t: number): number => {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-      }
+        const points: { lng: number; lat: number; bearing: number; smoothedBearing: number }[] = []
 
-      const normalizedDelta = Math.sign(rawDelta) * Math.min(Math.abs(rawDelta), 1)
-      const easedDelta = easeInOutCubic(Math.abs(normalizedDelta)) * Math.sign(normalizedDelta)
+        for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
+          const distance = (i / CAMERA_PATH_POINTS) * totalLength
+          const point = window.turf.along(line, distance, { units: "kilometers" })
+          const coords = point.geometry.coordinates
 
-      currentProgress.current += easedDelta * ease
+          // Look further ahead to get smoother bearing (5% of trail instead of 1%)
+          const nextDistance = Math.min(distance + totalLength * 0.05, totalLength)
+          const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
+          const bearing = window.turf.bearing(point, nextPoint)
 
-      const currentDistanceInMiles = currentProgress.current * PCT_TOTAL_MILES
-      setCurrentMiles(currentDistanceInMiles)
-
-      const distances = cumulativeDistances.current
-      if (distances.length === 0) return
-
-      const totalDistance = distances[distances.length - 1]
-      const targetDistance = currentProgress.current * totalDistance
-
-      let lowerIndex = 0
-      for (let i = 0; i < distances.length - 1; i++) {
-        if (distances[i] <= targetDistance && targetDistance <= distances[i + 1]) {
-          lowerIndex = i
-          break
-        }
-      }
-
-      const upperIndex = Math.min(lowerIndex + 1, trailCoordinates.length - 1)
-      const lowerDistance = distances[lowerIndex]
-      const upperDistance = distances[upperIndex]
-      const segmentDistance = upperDistance - lowerDistance
-
-      const fraction = segmentDistance > 0 ? (targetDistance - lowerDistance) / segmentDistance : 0
-
-      if (lowerIndex >= 0 && upperIndex < trailCoordinates.length) {
-        const lowerCoord = trailCoordinates[lowerIndex]
-        const upperCoord = trailCoordinates[upperIndex]
-
-        // Interpolate between points for smooth animation
-        const targetLng = lowerCoord[0] + (upperCoord[0] - lowerCoord[0]) * fraction
-        const targetLat = lowerCoord[1] + (upperCoord[1] - lowerCoord[1]) * fraction
-
-        // Update position cursor with smoothly interpolated coordinates
-        onProgressChangeRef.current?.(currentProgress.current, [targetLng, targetLat])
-
-        if (!isInitialized.current) {
-          smoothedLng.current = targetLng
-          smoothedLat.current = targetLat
-          isInitialized.current = true
+          points.push({
+            lng: coords[0],
+            lat: coords[1],
+            bearing: bearing,
+            smoothedBearing: bearing, // Will be updated in second pass
+          })
         }
 
-        coordinateHistory.current.push([targetLng, targetLat])
-        if (coordinateHistory.current.length > 2) {
-          coordinateHistory.current.shift()
+        const windowSize = 8 // Average over 8 points (~1.6% of trail)
+        for (let i = 0; i < points.length; i++) {
+          let sumX = 0
+          let sumY = 0
+          let count = 0
+
+          for (let j = Math.max(0, i - windowSize); j <= Math.min(points.length - 1, i + windowSize); j++) {
+            // Convert bearing to unit vector and average (handles wrap-around correctly)
+            const rad = (points[j].bearing * Math.PI) / 180
+            sumX += Math.cos(rad)
+            sumY += Math.sin(rad)
+            count++
+          }
+
+          // Convert averaged vector back to bearing
+          const avgBearing = (Math.atan2(sumY / count, sumX / count) * 180) / Math.PI
+
+          // This keeps camera oriented generally northward while allowing some natural movement
+          const northBiasStrength = 0.4
+          points[i].smoothedBearing = biasTowardNorth(avgBearing, northBiasStrength)
         }
 
-        const avgLng =
-          coordinateHistory.current.reduce((sum, coord) => sum + coord[0], 0) / coordinateHistory.current.length
-        const avgLat =
-          coordinateHistory.current.reduce((sum, coord) => sum + coord[1], 0) / coordinateHistory.current.length
+        const maxBearingChangePerPoint = 3 // Max 3 degrees change per point
+        for (let i = 1; i < points.length; i++) {
+          const prevBearing = points[i - 1].smoothedBearing
+          const currentBearing = points[i].smoothedBearing
+          const change = ((currentBearing - prevBearing + 540) % 360) - 180
 
-        const positionSmoothing = 0.25 // Increased from 0.1 for quicker stop
-        smoothedLng.current += (avgLng - smoothedLng.current) * positionSmoothing
-        smoothedLat.current += (avgLat - smoothedLat.current) * positionSmoothing
+          if (Math.abs(change) > maxBearingChangePerPoint) {
+            // Clamp the change
+            const clampedChange = Math.sign(change) * maxBearingChangePerPoint
+            points[i].smoothedBearing = (prevBearing + clampedChange + 360) % 360
+          }
+        }
 
-        const targetBearing = calculateSmoothedBearing(lowerIndex + fraction)
-        const bearingSmoothing = 0.2 // Increased from 0.05 for quicker bearing changes
-        currentBearing.current += (targetBearing - currentBearing.current) * bearingSmoothing
-
-        map.easeTo({
-          center: [smoothedLng.current, smoothedLat.current],
-          zoom: 14.5,
-          pitch: 75,
-          bearing: currentBearing.current,
-          duration: 0,
-          easing: (t: number) => t,
-        })
-      }
-
-      if (Math.abs(targetProgress.current - currentProgress.current) > 0.001) {
-        animationFrameRef.current = requestAnimationFrame(animateCamera)
-      } else {
-        isAnimating.current = false
+        setCameraPath(points)
+      } catch (error) {
+        console.error("[v0] Error creating camera path:", error)
       }
     }
 
-    window.addEventListener("scroll", handleScroll, { passive: true })
+    buildCameraPath()
+  }, [trailCoordinates])
+
+  useEffect(() => {
+    if (!enabled || !cameraPath || cameraPath.length === 0 || isScrollPaused) {
+      return
+    }
+
+    let animationFrame: number
+
+    const updateCamera = () => {
+      const currentMap = mapRef.current
+
+      if (!currentMap || !window.mapboxgl) {
+        animationFrame = requestAnimationFrame(updateCamera)
+        return
+      }
+
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+      const scrollTop = window.scrollY
+      const rawPhase = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0
+
+      setScrollProgress(rawPhase)
+      setCurrentMiles(rawPhase * PCT_TOTAL_MILES)
+
+      const pathIndex = rawPhase * (cameraPath.length - 1)
+      const lowerIndex = Math.floor(pathIndex)
+      const upperIndex = Math.min(Math.ceil(pathIndex), cameraPath.length - 1)
+      const fraction = pathIndex - lowerIndex
+
+      const lowerPoint = cameraPath[lowerIndex]
+      const upperPoint = cameraPath[upperIndex]
+
+      const targetLng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
+      const targetLat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
+      const targetBearing = lerpBearing(lowerPoint.smoothedBearing, upperPoint.smoothedBearing, fraction)
+
+      // Start altitude matches intro animation end (zoom ~9.55 = ~50000m altitude)
+      // Gradually decrease to end altitude as we progress through trail
+      const startAltitude = 50000
+      const endAltitude = 15000
+      const targetAltitude = startAltitude - (startAltitude - endAltitude) * rawPhase
+
+      const startPitch = 0
+      const peakPitch = 60
+      let targetPitch: number
+
+      const endTransitionStart = 1 - 35 / PCT_TOTAL_MILES // ~0.9868
+
+      if (rawPhase < endTransitionStart) {
+        // Normal pitch increase from 0 to 60 during most of the trail
+        targetPitch = startPitch + (peakPitch - startPitch) * Math.min(rawPhase * 2, 1)
+      } else {
+        // Transition from peak pitch back to 0 in the last 35 miles
+        const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart) // 0 to 1 over last 35 miles
+        targetPitch = peakPitch * (1 - endPhase)
+      }
+
+      // On first frame, sync camera state from current map position to avoid jump
+      if (!hasInitializedFromMap.current && currentMap) {
+        try {
+          const camera = currentMap.getFreeCameraOptions()
+          if (camera && camera.position) {
+            const lngLat = camera.position.toLngLat()
+            cameraStateRef.current.lng = lngLat.lng
+            cameraStateRef.current.lat = lngLat.lat
+            cameraStateRef.current.altitude = camera.position.toAltitude()
+            cameraStateRef.current.pitch = currentMap.getPitch()
+            cameraStateRef.current.bearing = currentMap.getBearing()
+          }
+        } catch (e) {
+          // Fallback: use standard getters
+          const center = currentMap.getCenter()
+          cameraStateRef.current.lng = center.lng
+          cameraStateRef.current.lat = center.lat
+          cameraStateRef.current.pitch = currentMap.getPitch()
+          cameraStateRef.current.bearing = currentMap.getBearing()
+        }
+        hasInitializedFromMap.current = true
+      }
+
+      const lerpFactor = 0.05
+      const state = cameraStateRef.current
+
+      state.lng += (targetLng - state.lng) * lerpFactor
+      state.lat += (targetLat - state.lat) * lerpFactor
+      state.bearing = lerpBearing(state.bearing, targetBearing, lerpFactor * 0.6)
+      state.pitch += (targetPitch - state.pitch) * lerpFactor
+      state.altitude += (targetAltitude - state.altitude) * lerpFactor
+
+      onProgressChangeRef.current?.(rawPhase, [state.lng, state.lat])
+
+      try {
+        if (typeof currentMap.getFreeCameraOptions !== "function") {
+          animationFrame = requestAnimationFrame(updateCamera)
+          return
+        }
+
+        const camera = currentMap.getFreeCameraOptions()
+
+        camera.position = window.mapboxgl.MercatorCoordinate.fromLngLat(
+          { lng: state.lng, lat: state.lat },
+          state.altitude,
+        )
+
+        camera.setPitchBearing(state.pitch, state.bearing)
+
+        currentMap.setFreeCameraOptions(camera)
+      } catch (error) {
+        console.error("[v0] Camera update error:", error)
+      }
+
+      animationFrame = requestAnimationFrame(updateCamera)
+    }
+
+    animationFrame = requestAnimationFrame(updateCamera)
 
     return () => {
-      window.removeEventListener("scroll", handleScroll)
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-        animationFrameRef.current = null
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame)
       }
-      isAnimating.current = false
     }
-  }, [map, trailCoordinates, enabled])
+  }, [enabled, cameraPath, isScrollPaused])
+
+  useEffect(() => {
+    if (!isScrollPaused) return
+
+    const handleUserScroll = () => {
+      if (isBlockedRef.current) return
+
+      // Sync camera state from actual map position first
+      const currentMap = mapRef.current
+      if (currentMap) {
+        try {
+          const camera = currentMap.getFreeCameraOptions()
+          if (camera && camera.position) {
+            const lngLat = camera.position.toLngLat()
+            cameraStateRef.current.lng = lngLat.lng
+            cameraStateRef.current.lat = lngLat.lat
+            cameraStateRef.current.altitude = camera.position.toAltitude()
+            cameraStateRef.current.pitch = currentMap.getPitch()
+            cameraStateRef.current.bearing = currentMap.getBearing()
+          }
+        } catch (e) {
+          const center = currentMap.getCenter()
+          cameraStateRef.current.lng = center.lng
+          cameraStateRef.current.lat = center.lat
+          cameraStateRef.current.pitch = currentMap.getPitch()
+          cameraStateRef.current.bearing = currentMap.getBearing()
+        }
+      }
+
+      if (pendingSyncRef.current) {
+        syncScrollToPosition(pendingSyncRef.current)
+        pendingSyncRef.current = null
+      } else if (currentMap) {
+        const center = currentMap.getCenter()
+        if (center) {
+          syncScrollToPosition([center.lng, center.lat])
+        }
+      }
+      setIsScrollPaused(false)
+    }
+
+    const checkAndResume = (e: Event) => {
+      if (isBlockedRef.current || e.defaultPrevented) return
+      handleUserScroll()
+    }
+
+    window.addEventListener("wheel", checkAndResume, { once: true, passive: true })
+    window.addEventListener("touchmove", checkAndResume, { once: true, passive: true })
+
+    return () => {
+      window.removeEventListener("wheel", checkAndResume)
+      window.removeEventListener("touchmove", checkAndResume)
+    }
+  }, [isScrollPaused, syncScrollToPosition])
 
   return {
     scrollProgress,
     currentMiles,
     totalMiles: PCT_TOTAL_MILES,
+    pauseScrollAnimation,
+    resumeScrollAnimation,
+    syncScrollToPosition,
+    setPendingSyncCoordinates,
+    setBlocked,
   }
 }

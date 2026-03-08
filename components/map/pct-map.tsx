@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
+
 
 declare global {
   interface Window {
@@ -15,27 +16,77 @@ declare global {
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
   onMilesUpdate?: (currentMiles: number, totalMiles: number) => void
+  onScrollControlReady?: (controls: {
+    pauseScrollAnimation: () => void
+    resumeScrollAnimation: () => void
+    syncScrollToPosition: (coordinates: [number, number]) => void
+    setPendingSyncCoordinates: (coordinates: [number, number]) => void
+    setBlocked: (blocked: boolean) => void
+  }) => void
+  onIntroComplete?: () => void
+  startIntro?: boolean
+  hideLoading?: boolean
 }
 
-export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
+export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntroComplete, startIntro = false, hideLoading = false }: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [initialAnimationDone, setInitialAnimationDone] = useState(false)
+  const [introPhase, setIntroPhase] = useState<"waiting" | "overview" | "flying" | "done">("waiting")
   const [currentSegment, setCurrentSegment] = useState(0)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
   const [scriptsLoaded, setScriptsLoaded] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
+  const [trailData, setTrailData] = useState<any>(null)
+  const [debugMode, setDebugMode] = useState(false)
+  const [cameraInfo, setCameraInfo] = useState({ center: [0, 0], zoom: 0, pitch: 0, bearing: 0 })
+  const [tilesPreloaded, setTilesPreloaded] = useState(false)
+  const preloadingRef = useRef(false)
 
-  const trailCoordinates = pctTrailGeometry.geometry.coordinates
-  const { scrollProgress, currentMiles, totalMiles } = useTrailScroll({
+  useEffect(() => {
+    fetch("/pct-trail.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        const feature = data.type === "FeatureCollection" ? data.features[0] : data
+        console.log("[v0] Loaded trail data with", feature.geometry.coordinates.length, "points")
+        setTrailData(feature)
+      })
+      .catch((err) => {
+        console.error("[v0] Failed to load trail data:", err)
+        setTrailData(pctTrailGeometry)
+      })
+  }, [])
+
+  const trailCoordinates = trailData?.geometry?.coordinates || []
+  const {
+    scrollProgress,
+    currentMiles,
+    totalMiles,
+    pauseScrollAnimation,
+    resumeScrollAnimation,
+    syncScrollToPosition,
+    setPendingSyncCoordinates,
+    setBlocked,
+  } = useTrailScroll({
     map: map.current,
     trailCoordinates,
-    enabled: initialAnimationDone,
+    enabled: initialAnimationDone && trailData !== null && !debugMode,
     onProgressChange: (progress, coordinates) => {
       setCurrentPosition(coordinates)
     },
   })
+
+  const scrollControls = useMemo(
+    () => ({
+      pauseScrollAnimation,
+      resumeScrollAnimation,
+      syncScrollToPosition,
+      setPendingSyncCoordinates,
+      setBlocked,
+    }),
+    [pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition, setPendingSyncCoordinates, setBlocked],
+  )
 
   useEffect(() => {
     if (onMilesUpdate && totalMiles > 0) {
@@ -45,7 +96,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
 
   useEffect(() => {
     const loadMapboxScripts = () => {
-      // Load CSS
       const cssLink = document.createElement("link")
       cssLink.rel = "stylesheet"
       cssLink.href = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css"
@@ -55,7 +105,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
       turfScript.src = "https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"
       document.head.appendChild(turfScript)
 
-      // Load Mapbox JS
       const script = document.createElement("script")
       script.src = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
       script.onload = () => {
@@ -77,7 +126,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
 
   useEffect(() => {
     const initializeMap = async () => {
-      if (!scriptsLoaded || !window.mapboxgl) {
+      if (!scriptsLoaded || !window.mapboxgl || !trailData) {
         return
       }
 
@@ -97,27 +146,17 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
 
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
-          style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo",
-          center: [-118.29, 36.58],
-          zoom: 6,
+          style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo?optimize=true",
+          center: [-118.4102, 38.6467],
+          zoom: 5.49,
           pitch: 60,
-          bearing: 30,
+          bearing: 31,
           antialias: true,
-          interactive: true,
-          dragPan: false,
-          dragRotate: false,
-          scrollZoom: false,
-          boxZoom: false,
-          doubleClickZoom: false,
-          touchZoomRotate: false,
-          touchPitch: false,
-          keyboard: false,
+          interactive: false,
           attributionControl: false,
-          // Performance optimizations
-          maxTileCacheSize: 500, // Increase tile cache for smoother scrolling
-          preserveDrawingBuffer: false, // Better performance
-          refreshExpiredTiles: false, // Reduce unnecessary tile reloads
-          fadeDuration: 100, // Faster tile fade-in
+          fadeDuration: 0,
+          trackResize: true,
+          refreshExpiredTiles: false,
         })
 
         map.current.on("load", () => {
@@ -126,8 +165,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
           map.current.addSource("mapbox-terrain-rgb", {
             type: "raster-dem",
             url: "mapbox://mapbox.terrain-rgb",
-            tileSize: 512, // Larger tile size for fewer requests
-            maxzoom: 14, // Reduced from 15 to load fewer tiles
+            tileSize: 512,
+            maxzoom: 14,
           })
 
           map.current.setTerrain({
@@ -135,13 +174,11 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
             exaggeration: 1.8,
           })
 
-          // This provides smooth coordinates for the camera to follow without elevation changes
           const cameraTrackingGeometry = {
-            ...pctTrailGeometry,
+            ...trailData,
             geometry: {
-              ...pctTrailGeometry.geometry,
-              // Clone coordinates to use for camera tracking
-              coordinates: pctTrailGeometry.geometry.coordinates.map((coord) => [...coord]),
+              ...trailData.geometry,
+              coordinates: trailData.geometry.coordinates.map((coord: number[]) => [...coord]),
             },
           }
 
@@ -151,7 +188,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
             lineMetrics: true,
           })
 
-          // This layer is invisible - used only for camera tracking
           map.current.addLayer({
             id: "camera-tracking-layer",
             type: "line",
@@ -163,14 +199,13 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
             paint: {
               "line-color": "#000000",
               "line-width": 0,
-              "line-opacity": 0, // Invisible
+              "line-opacity": 0,
             },
           })
 
-          // Visible trail line source - follows terrain
           map.current.addSource("pct-trail", {
             type: "geojson",
-            data: pctTrailGeometry,
+            data: trailData,
           })
 
           map.current.addLayer({
@@ -226,106 +261,16 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
               type: "Feature",
               geometry: {
                 type: "Point",
-                coordinates: pctTrailGeometry.geometry.coordinates[0],
+                coordinates: trailData.geometry.coordinates[0],
               },
             },
-          })
-
-          map.current.addLayer({
-            id: "position-cursor-outer",
-            type: "circle",
-            source: "position-cursor",
-            paint: {
-              "circle-radius": 12,
-              "circle-color": "#fbbf24",
-              "circle-opacity": 0.3,
-              "circle-blur": 0.5,
-            },
-          })
-
-          map.current.addLayer({
-            id: "position-cursor-inner",
-            type: "circle",
-            source: "position-cursor",
-            paint: {
-              "circle-radius": 8,
-              "circle-color": "#fbbf24",
-              "circle-opacity": 1,
-              "circle-stroke-width": 3,
-              "circle-stroke-color": "#ffffff",
-            },
-          })
-
-          const waypoints = [
-            { name: "Campo (Start)", coordinates: [-116.465, 32.599] },
-            { name: "Mount Whitney", coordinates: [-118.68, 37.06] },
-            { name: "Tuolumne Meadows", coordinates: [-119.18, 38.03] },
-            { name: "Mount Shasta", coordinates: [-122.31, 41.31] },
-            { name: "Crater Lake", coordinates: [-122.12, 43.07] },
-            { name: "Mount Hood", coordinates: [-121.78, 44.91] },
-            { name: "Manning Park (End)", coordinates: [-120.78, 49.0] },
-          ]
-
-          waypoints.forEach((waypoint, index) => {
-            const marker = new window.mapboxgl.Marker({
-              color: "#ff6b9d",
-              scale: 0.8,
-            })
-              .setLngLat(waypoint.coordinates as [number, number])
-              .setPopup(
-                new window.mapboxgl.Popup({ offset: 25 }).setHTML(
-                  `<div class="text-sm font-semibold">${waypoint.name}</div>`,
-                ),
-              )
-              .addTo(map.current!)
           })
 
           setMapLoaded(true)
           onMapLoad?.(map.current)
 
-          setTimeout(() => {
-            const trailheadCoord = pctTrailGeometry.geometry.coordinates[0]
-
-            map.current!.flyTo({
-              center: trailheadCoord,
-              zoom: 14.5,
-              pitch: 75,
-              bearing: 0,
-              duration: 6000,
-              easing: (t: number) => {
-                return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
-              },
-              essential: true,
-            })
-
-            setTimeout(() => {
-              setInitialAnimationDone(true)
-            }, 5500)
-          }, 1500)
-
-          map.current.once("idle", () => {
-            // Prefetch tiles for better scroll performance
-            const trailBounds = [
-              [-122.5, 32.5], // Southwest
-              [-116.0, 49.5], // Northeast
-            ]
-
-            // Trigger tile prefetching by briefly adjusting bounds
-            const currentCenter = map.current.getCenter()
-            const currentZoom = map.current.getZoom()
-
-            map.current.fitBounds(trailBounds, {
-              duration: 0,
-              maxZoom: 12,
-              padding: 0,
-            })
-
-            // Restore original view after prefetch
-            setTimeout(() => {
-              map.current.setCenter(currentCenter)
-              map.current.setZoom(currentZoom)
-            }, 100)
-          })
+          preloadTrailTiles()
+          // Keep at "waiting" until startIntro is true
         })
 
         map.current.on("error", (e: any) => {
@@ -338,6 +283,43 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
       }
     }
 
+    const preloadTrailTiles = () => {
+      if (!map.current || !trailData || preloadingRef.current) return
+      preloadingRef.current = true
+
+      const coords = trailData.geometry.coordinates
+      const totalPoints = coords.length
+
+      const sampleInterval = Math.floor(totalPoints / 50)
+      const samplePoints: [number, number][] = []
+
+      for (let i = 0; i < totalPoints; i += sampleInterval) {
+        samplePoints.push(coords[i])
+      }
+      samplePoints.push(coords[totalPoints - 1])
+
+      let preloadIndex = 0
+
+      const preloadNext = () => {
+        if (preloadIndex >= samplePoints.length || !map.current) {
+          setTilesPreloaded(true)
+          return
+        }
+
+        const point = samplePoints[preloadIndex]
+
+        try {
+          const screenPoint = map.current.project(point)
+          map.current.queryRenderedFeatures(screenPoint)
+        } catch (e) {}
+
+        preloadIndex++
+        requestAnimationFrame(preloadNext)
+      }
+
+      setTimeout(preloadNext, 500)
+    }
+
     initializeMap()
 
     return () => {
@@ -346,14 +328,13 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
         map.current = null
       }
     }
-  }, [scriptsLoaded, onMapLoad])
+  }, [scriptsLoaded, onMapLoad, trailData])
 
   useEffect(() => {
     if (!map.current || !mapLoaded || !currentPosition || !window.turf) return
 
     const source = map.current.getSource("position-cursor")
     if (source) {
-      // Create a point feature with the current position
       const point = {
         type: "Feature",
         properties: {},
@@ -363,23 +344,63 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
         },
       }
 
-      // Use Turf to create smooth point updates
       source.setData(point)
     }
   }, [currentPosition, mapLoaded])
+
+  useEffect(() => {
+    if (initialAnimationDone && onScrollControlReady && !scrollControlReadyCalledRef.current) {
+      scrollControlReadyCalledRef.current = true
+      onScrollControlReady(scrollControls)
+    }
+  }, [initialAnimationDone, onScrollControlReady, scrollControls])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    const updateCameraInfo = () => {
+      if (map.current) {
+        setCameraInfo({
+          center: [map.current.getCenter().lng, map.current.getCenter().lat],
+          zoom: map.current.getZoom(),
+          pitch: map.current.getPitch(),
+          bearing: map.current.getBearing(),
+        })
+      }
+    }
+
+    updateCameraInfo()
+    const interval = setInterval(updateCameraInfo, 100)
+    return () => clearInterval(interval)
+  }, [mapLoaded, debugMode])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    if (debugMode) {
+      map.current.dragPan.enable()
+      map.current.scrollZoom.enable()
+      map.current.dragRotate.enable()
+      map.current.touchZoomRotate.enable()
+      map.current.keyboard.enable()
+      map.current.boxZoom.enable()
+      map.current.doubleClickZoom.enable()
+    } else {
+      map.current.dragPan.disable()
+      map.current.scrollZoom.disable()
+      map.current.dragRotate.disable()
+      map.current.touchZoomRotate.disable()
+      map.current.keyboard.disable()
+      map.current.boxZoom.disable()
+      map.current.doubleClickZoom.disable()
+    }
+  }, [debugMode, mapLoaded])
 
   const flyToSegment = (segmentIndex: number) => {
     if (!map.current || !mapLoaded) return
 
     const segment = pctSegments[segmentIndex]
     if (!segment) return
-
-    if (segment.terrain) {
-      map.current.setTerrain({
-        source: "mapbox-terrain-rgb",
-        exaggeration: segment.terrain.exaggeration,
-      })
-    }
 
     map.current.flyTo({
       center: segment.camera.center,
@@ -392,6 +413,48 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
 
     setCurrentSegment(segmentIndex)
   }
+
+  const scrollControlReadyCalledRef = useRef(false)
+
+  // Start intro animation when startIntro becomes true
+  useEffect(() => {
+    if (startIntro && introPhase === "waiting" && mapLoaded && map.current) {
+      setIntroPhase("overview")
+    }
+  }, [startIntro, introPhase, mapLoaded])
+
+  useEffect(() => {
+    if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return
+
+    // Wait a moment at the overview position before flying to trailhead
+    const timer = setTimeout(() => {
+      setIntroPhase("flying")
+
+      map.current.flyTo({
+        center: [-116.467, 32.5897],
+        zoom: 9.55,
+        pitch: 0,
+        bearing: -5,
+        duration: 8000,
+        essential: true,
+        easing: (t: number) => {
+          // Ease-in-out cubic for balanced acceleration/deceleration
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        },
+      })
+
+      map.current.once("moveend", () => {
+        // Small delay to ensure camera is fully settled before handoff
+        setTimeout(() => {
+          setIntroPhase("done")
+          setInitialAnimationDone(true)
+          onIntroComplete?.()
+        }, 100)
+      })
+    }, 2000)
+
+    return () => clearTimeout(timer)
+  }, [introPhase, mapLoaded, debugMode])
 
   if (mapboxError) {
     return (
@@ -418,19 +481,17 @@ export function PCTMap({ onMapLoad, onMilesUpdate }: PCTMapProps) {
     <div className="relative h-full w-full">
       <div ref={mapContainer} className="h-full w-full" />
 
-      {(!scriptsLoaded || !mapLoaded) && (
+      {!hideLoading && (!scriptsLoaded || !trailData || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
-          <div className="text-white text-xl">{!scriptsLoaded ? "Loading Mapbox..." : "Loading PCT Audio Map..."}</div>
-        </div>
-      )}
-
-      {mapLoaded && initialAnimationDone && (
-        <div className="absolute top-6 left-6 z-10">
-          <div className="bg-black/80 backdrop-blur-sm rounded-lg p-4 text-white max-w-xs">
-            <h1 className="text-xl font-bold text-balance">Pacific Crest Trail Audio Journey</h1>
+          <div className="text-white text-xl">
+            {!scriptsLoaded ? "Loading Mapbox..." : !trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
           </div>
         </div>
       )}
+
+
+
+
     </div>
   )
 }
