@@ -60,7 +60,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-stone-950 transition-all duration-800 ease-out ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-end md:justify-center pb-24 md:pb-0 bg-stone-950 transition-all duration-800 ease-out ${
         isExiting ? "opacity-0 scale-105" : "opacity-100 scale-100"
       }`}
     >
@@ -76,22 +76,22 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-2xl">
         {/* Abstract trail icon */}
-        <div className="mb-8">
-          <AbstractTrailIcon className="w-16 h-28 md:w-20 md:h-36" />
+        <div className="mb-6 md:mb-8">
+          <AbstractTrailIcon className="w-12 h-20 md:w-20 md:h-36" />
         </div>
 
         {/* Title */}
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-4">
+        <h1 className="text-3xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-2 md:mb-4">
           <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
         </h1>
 
         {/* Subtitle */}
-        <p className="text-lg md:text-xl text-stone-400 mb-3 font-light">
+        <p className="text-base md:text-xl text-stone-400 mb-6 md:mb-3 font-light">
           An Audio Journey Along the Pacific Crest Trail
         </p>
 
-        {/* Trail stats */}
-        <div className="flex items-center gap-4 md:gap-6 text-sm text-stone-500 mb-12 flex-wrap justify-center">
+        {/* Trail stats - hidden on mobile */}
+        <div className="hidden md:flex items-center gap-6 text-sm text-stone-500 mb-12 flex-wrap justify-center">
           <span>2,650 miles</span>
           <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
           <span>Mexico to Canada</span>
@@ -99,11 +99,12 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
           <span>Field recordings</span>
         </div>
 
-        {/* Description */}
-        <p className="text-base md:text-lg text-stone-400 mb-12 leading-relaxed max-w-lg">
-          Scroll through an immersive map experience featuring ambient soundscapes 
+        {/* Description - shorter on mobile */}
+        <p className="text-sm md:text-lg text-stone-400 mb-8 md:mb-12 leading-relaxed max-w-lg">
+          <span className="hidden md:inline">Scroll through an immersive map experience featuring ambient soundscapes 
           recorded along the Pacific Crest Trail. Discover the sonic landscape of 
-          the American West.
+          the American West.</span>
+          <span className="md:hidden">Explore ambient soundscapes recorded along 2,650 miles of the Pacific Crest Trail.</span>
         </p>
 
         {/* CTA Button */}
@@ -116,7 +117,7 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
       </div>
 
       {/* Footer credits */}
-      <div className="absolute bottom-8 left-0 right-0 text-center">
+      <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center">
         <p className="text-xs text-stone-600">
           Recordings collected 2024
         </p>

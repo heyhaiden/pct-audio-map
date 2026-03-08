@@ -363,28 +363,28 @@ export default function Home() {
           !introComplete || !journeyStarted ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
         }`}
       >
-        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-4 py-2 text-white text-sm border border-stone-800/50">
+        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-6 border-2 border-stone-500 rounded-sm relative">
-              <div className="w-1 h-2 bg-stone-400 rounded-full absolute top-1 left-1/2 -translate-x-1/2 animate-bounce"></div>
+            <div className="w-3 h-5 border border-stone-500 rounded-sm relative">
+              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute top-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
             </div>
-            <span className="text-stone-300">Scroll to fly along the trail</span>
+            <span className="text-stone-400">Scroll to explore</span>
           </div>
         </div>
       </div>
 
       {/* Instructions overlay - mobile */}
       <div
-        className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
+        className={`md:hidden fixed bottom-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-1000 ease-out ${
           !introComplete || !journeyStarted ? "opacity-0" : currentMiles > 10 ? "opacity-0" : "opacity-100"
         }`}
       >
-        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-4 py-2 text-white text-sm border border-stone-800/50">
+        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-6 border-2 border-stone-500 rounded-sm relative">
-              <div className="w-1 h-2 bg-stone-400 rounded-full absolute top-1 left-1/2 -translate-x-1/2 animate-bounce"></div>
+            <div className="w-3 h-5 border border-stone-500 rounded-sm relative">
+              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute top-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
             </div>
-            <span className="text-stone-300">Swipe up to explore</span>
+            <span className="text-stone-400">Swipe to explore</span>
           </div>
         </div>
       </div>

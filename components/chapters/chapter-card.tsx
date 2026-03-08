@@ -21,28 +21,29 @@ export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles
     const milesIntoChapter = currentMiles - range.start
 
     const fadeInDistance = 5      // Quick fade in over 5 miles
-    const visibleDuration = 40     // Stay visible for 40 miles
-    const fadeOutDuration = 20     // Fade out over 20 miles
+    const visibleDuration = 30    // Stay visible for 30 miles
+    const fadeOutDuration = 15    // Fade out over 15 miles
+    const totalDisplayWindow = fadeInDistance + visibleDuration + fadeOutDuration
 
+    // Not yet reached this chapter
     if (milesIntoChapter < 0) return 0
 
-    if (currentMiles >= range.end) return 0
+    // Already past the display window for this chapter
+    if (milesIntoChapter >= totalDisplayWindow) return 0
 
+    // Fade in phase
     if (milesIntoChapter < fadeInDistance) {
       return milesIntoChapter / fadeInDistance
     }
 
-    if (milesIntoChapter <= visibleDuration) {
+    // Fully visible phase
+    if (milesIntoChapter < fadeInDistance + visibleDuration) {
       return 1
     }
 
-    const fadeOutStart = visibleDuration
-    const fadeOutEnd = fadeOutStart + fadeOutDuration
-
-    if (milesIntoChapter >= fadeOutEnd) return 0
-
-    const fadeOutProgress = (milesIntoChapter - fadeOutStart) / (fadeOutEnd - fadeOutStart)
-    return 1 - fadeOutProgress
+    // Fade out phase
+    const fadeOutProgress = (milesIntoChapter - fadeInDistance - visibleDuration) / fadeOutDuration
+    return Math.max(0, 1 - fadeOutProgress)
   }, [chapterIndex, currentMiles])
 
   useEffect(() => {
