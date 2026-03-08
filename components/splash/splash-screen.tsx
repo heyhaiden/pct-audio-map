@@ -110,12 +110,12 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
       }`}
     >
       {/* Header - About link in top right */}
-      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-20">
         <Link
           href="/about"
-          className="px-4 py-2 rounded-full bg-stone-900/60 backdrop-blur-sm border border-stone-800/40 text-xs md:text-sm text-stone-400 hover:text-white hover:bg-stone-800/60 transition-all duration-300"
+          className="inline-block px-4 py-2 rounded-full bg-stone-900/60 backdrop-blur-sm border border-stone-800/40 text-xs md:text-sm text-stone-400 hover:text-white hover:bg-stone-800/60 transition-all duration-300"
         >
-          About this Project
+          About
         </Link>
       </div>
 
