@@ -108,8 +108,8 @@ export function AboutSocial({ className }: AboutSocialProps) {
 
       {/* Mobile: Menu button in top-right - fades while scrolling */}
       <div 
-        className={`md:hidden fixed top-3 right-3 z-50 transition-opacity duration-200 ${
-          isScrolling && !isMobileMenuOpen ? "opacity-0" : "opacity-100"
+        className={`md:hidden fixed top-3 right-3 z-50 transition-opacity duration-300 ${
+          isScrolling && !isMobileMenuOpen ? "opacity-20" : "opacity-100"
         }`}
       >
         <button

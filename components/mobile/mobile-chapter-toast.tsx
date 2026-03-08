@@ -56,13 +56,6 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
 
         {/* Full description */}
         <p className="text-xs text-stone-400 leading-relaxed">{chapter.description}</p>
-
-        {/* Mile range */}
-        <div className="mt-3 pt-2 border-t border-stone-800/50">
-          <p className="text-[10px] text-stone-500">
-            Miles {chapter.startMile?.toLocaleString()} – {chapter.endMile?.toLocaleString()}
-          </p>
-        </div>
       </div>
     </div>
   )
