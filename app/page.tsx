@@ -28,6 +28,7 @@ export default function Home() {
   const [showCompletion, setShowCompletion] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [forceChapterVisible, setForceChapterVisible] = useState(false)
+  const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
   const lastChapterRef = useRef(0)
   const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const scrollControlRef = useRef<{
@@ -111,18 +112,29 @@ export default function Home() {
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
+    // Start the dim transition
+    setIsChapterTransitioning(true)
+    
     // Force chapter card to be visible at 100% opacity
     setForceChapterVisible(true)
     
-    window.scrollTo({
-      top: targetScroll,
-      behavior: "smooth",
-    })
+    // Small delay before scrolling to let the dim effect start
+    setTimeout(() => {
+      window.scrollTo({
+        top: targetScroll,
+        behavior: "smooth",
+      })
+    }, 150)
 
-    // Reset force visible after the scroll animation completes
+    // Fade out the dim overlay after scroll settles
+    setTimeout(() => {
+      setIsChapterTransitioning(false)
+    }, 1800)
+
+    // Reset force visible after the transition completes
     setTimeout(() => {
       setForceChapterVisible(false)
-    }, 2000)
+    }, 2500)
   }
 
   const handleCloseAudio = () => {
@@ -316,6 +328,13 @@ export default function Home() {
         isVisible={showCompletion} 
         totalMiles={totalMiles} 
         onRestart={handleRestart} 
+      />
+
+      {/* Chapter transition dim overlay */}
+      <div
+        className={`fixed inset-0 z-20 bg-black/40 pointer-events-none transition-opacity duration-500 ${
+          isChapterTransitioning ? "opacity-100" : "opacity-0"
+        }`}
       />
 
       {/* Fixed map background */}
