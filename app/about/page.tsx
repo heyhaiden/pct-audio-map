@@ -57,7 +57,7 @@ export default function AboutPage() {
               className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm">Back to Map</span>
+              <span className="text-sm">Back to Home  </span>
             </Link>
           </div>
         </header>
