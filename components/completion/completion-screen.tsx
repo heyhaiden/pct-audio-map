@@ -1,7 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Mountain, Instagram, Twitter, RefreshCcw } from "lucide-react"
+import { Mountain, Linkedin, RefreshCcw } from "lucide-react"
+
+// X/Twitter icon component (lucide doesn't have the new X logo)
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
 
 interface CompletionScreenProps {
   isVisible: boolean
@@ -97,22 +106,22 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
           <div className="flex items-center gap-3">
             <a
-              href="https://instagram.com"
+              href="https://www.linkedin.com/sharing/share-offsite/?url=https://pctsoundscapes.com&title=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey!&summary=2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before."
               target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-              aria-label="Share on Instagram"
+              aria-label="Share on LinkedIn"
             >
-              <Instagram className="w-5 h-5" />
+              <Linkedin className="w-5 h-5" />
             </a>
             <a
-              href="https://twitter.com"
+              href="https://twitter.com/intent/tweet?text=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey%20%F0%9F%8F%94%EF%B8%8F%0A%0A2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before.&url=https://pctsoundscapes.com"
               target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-              aria-label="Share on Twitter"
+              aria-label="Share on X"
             >
-              <Twitter className="w-5 h-5" />
+              <XIcon className="w-5 h-5" />
             </a>
           </div>
         </div>
