@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Mountain, Linkedin, RefreshCcw } from "lucide-react"
+import Link from "next/link"
+import { Mountain, Linkedin, RefreshCcw, Library } from "lucide-react"
 
 // X/Twitter icon component (lucide doesn't have the new X logo)
 function XIcon({ className }: { className?: string }) {
@@ -37,19 +38,30 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
+      className={`fixed inset-0 z-50 flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
         showContent ? "opacity-100" : "opacity-0"
       }`}
     >
+      {/* Header with Start Over */}
+      <header className="relative z-10 px-6 py-4">
+        <button
+          onClick={onRestart}
+          className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors"
+        >
+          <RefreshCcw className="w-4 h-4" />
+          <span className="text-sm">Start Over</span>
+        </button>
+      </header>
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#ff6b9d]/10 via-transparent to-stone-950" />
 
-      {/* Content */}
-      <div
-        className={`relative z-10 flex flex-col items-center text-center px-6 max-w-xl transition-all duration-1000 delay-300 ${
-          showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-        }`}
-      >
+      {/* Content - centered in remaining space */}
+      <div className="flex-1 flex items-center justify-center">
+        <div
+          className={`relative z-10 flex flex-col items-center text-center px-6 max-w-xl transition-all duration-1000 delay-300 ${
+            showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+        >
         {/* Monument icon */}
         <div className="mb-8">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#ff6b9d]/10 border-2 border-[#ff6b9d]/40 flex items-center justify-center">
@@ -96,13 +108,13 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <button
-            onClick={onRestart}
+          <Link
+            href="/library"
             className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
           >
-            <RefreshCcw className="w-4 h-4" />
-            Start Over
-          </button>
+            <Library className="w-4 h-4" />
+            Audio Library
+          </Link>
 
           <div className="flex items-center gap-3">
             <a
@@ -124,6 +136,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
               <XIcon className="w-5 h-5" />
             </a>
           </div>
+        </div>
         </div>
       </div>
 
