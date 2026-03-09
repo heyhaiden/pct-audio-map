@@ -112,6 +112,11 @@ export default function Home() {
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
+    // Calculate distance to determine scroll behavior
+    const currentScroll = window.scrollY
+    const scrollDistance = Math.abs(targetScroll - currentScroll)
+    const isLongDistance = scrollDistance > window.innerHeight * 3
+
     // Start the dim transition
     setIsChapterTransitioning(true)
     
@@ -120,21 +125,28 @@ export default function Home() {
     
     // Small delay before scrolling to let the dim effect start
     setTimeout(() => {
+      // For long distances, use instant scroll to avoid incomplete smooth scrolls
+      // Then manually update currentMiles to match the chapter start
       window.scrollTo({
         top: targetScroll,
-        behavior: "smooth",
+        behavior: isLongDistance ? "instant" : "smooth",
       })
+      
+      // Force update miles to chapter start for immediate feedback
+      if (isLongDistance) {
+        setCurrentMiles(chapterStartMile)
+      }
     }, 150)
 
-    // Fade out the dim overlay after scroll settles
+    // Fade out the dim overlay - shorter timeout for instant scrolls
     setTimeout(() => {
       setIsChapterTransitioning(false)
-    }, 1800)
+    }, isLongDistance ? 600 : 1800)
 
     // Reset force visible after the transition completes
     setTimeout(() => {
       setForceChapterVisible(false)
-    }, 2500)
+    }, isLongDistance ? 1500 : 2500)
   }
 
   const handleCloseAudio = () => {
