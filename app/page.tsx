@@ -115,7 +115,11 @@ export default function Home() {
     // Calculate distance to determine scroll behavior
     const currentScroll = window.scrollY
     const scrollDistance = Math.abs(targetScroll - currentScroll)
-    const isLongDistance = scrollDistance > window.innerHeight * 3
+    const isLongDistance = scrollDistance > window.innerHeight * 2
+
+    // ALWAYS update currentMiles immediately so all UI elements sync up
+    // This ensures: chapter card shows correctly, pink dots fill, chapter counter updates
+    setCurrentMiles(chapterStartMile)
 
     // Start the dim transition
     setIsChapterTransitioning(true)
@@ -125,28 +129,22 @@ export default function Home() {
     
     // Small delay before scrolling to let the dim effect start
     setTimeout(() => {
-      // For long distances, use instant scroll to avoid incomplete smooth scrolls
-      // Then manually update currentMiles to match the chapter start
+      // Use instant scroll for long distances to ensure we reach the target
       window.scrollTo({
         top: targetScroll,
         behavior: isLongDistance ? "instant" : "smooth",
       })
-      
-      // Force update miles to chapter start for immediate feedback
-      if (isLongDistance) {
-        setCurrentMiles(chapterStartMile)
-      }
     }, 150)
 
     // Fade out the dim overlay - shorter timeout for instant scrolls
     setTimeout(() => {
       setIsChapterTransitioning(false)
-    }, isLongDistance ? 600 : 1800)
+    }, isLongDistance ? 600 : 1500)
 
     // Reset force visible after the transition completes
     setTimeout(() => {
       setForceChapterVisible(false)
-    }, isLongDistance ? 1500 : 2500)
+    }, isLongDistance ? 1500 : 2000)
   }
 
   const handleCloseAudio = () => {

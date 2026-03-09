@@ -9,7 +9,8 @@ interface ScrollIndicatorProps {
 
 export function ScrollIndicator({ progress, currentChapter, totalChapters, onChapterClick }: ScrollIndicatorProps) {
   const handleDotClick = (chapterIndex: number) => {
-    if (onChapterClick && chapterIndex !== currentChapter) {
+    // Allow clicking any chapter, even the current one (to re-center)
+    if (onChapterClick) {
       onChapterClick(chapterIndex)
     }
   }
