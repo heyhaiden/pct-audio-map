@@ -108,7 +108,10 @@ export default function Home() {
 
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
-    const progress = chapterStartMile / totalMiles
+    // Add a small offset (1 mile) so we're clearly IN the chapter, not at the boundary
+    // This ensures the chapter card shows at 100% opacity and the pink dot fills
+    const targetMile = chapterStartMile + 1
+    const progress = targetMile / totalMiles
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
@@ -119,7 +122,7 @@ export default function Home() {
 
     // ALWAYS update currentMiles immediately so all UI elements sync up
     // This ensures: chapter card shows correctly, pink dots fill, chapter counter updates
-    setCurrentMiles(chapterStartMile)
+    setCurrentMiles(targetMile)
 
     // Start the dim transition
     setIsChapterTransitioning(true)
