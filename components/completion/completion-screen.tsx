@@ -110,7 +110,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
             <div className="flex items-center gap-3">
               <a
-                href="https://www.linkedin.com/sharing/share-offsite/?url=https://pctsoundscapes.com&title=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey!&summary=2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before."
+                href="https://www.linkedin.com/shareArticle?mini=true&url=https://pctsoundscapes.com&title=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey!&summary=2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
@@ -132,7 +132,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
           <button
             onClick={onRestart}
-            className="text-sm text-stone-500 hover:text-white transition-colors"
+            className="px-6 py-2.5 text-sm text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full transition-colors"
           >
             Back to Home
           </button>

@@ -182,11 +182,6 @@ export default function LibraryPage() {
                             <div className="flex-1 min-w-0">
                               <h3 className="text-white font-medium truncate">
                                 {marker.name}
-                                {marker.featured && (
-                                  <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-[#ff6b9d]/20 text-[#ff6b9d]">
-                                    Featured
-                                  </span>
-                                )}
                               </h3>
                               <p className="text-sm text-stone-400 truncate">
                                 {marker.description}
