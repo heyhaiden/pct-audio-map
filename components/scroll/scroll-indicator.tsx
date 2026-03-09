@@ -9,7 +9,8 @@ interface ScrollIndicatorProps {
 
 export function ScrollIndicator({ progress, currentChapter, totalChapters, onChapterClick }: ScrollIndicatorProps) {
   const handleDotClick = (chapterIndex: number) => {
-    if (onChapterClick && chapterIndex !== currentChapter) {
+    // Allow clicking any chapter, even the current one (to re-center)
+    if (onChapterClick) {
       onChapterClick(chapterIndex)
     }
   }
@@ -31,6 +32,7 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
             // Invert the dot position so chapter 0 is at bottom (100%) and last chapter is at top (0%)
             const dotPosition = totalChapters === 1 ? 50 : ((totalChapters - 1 - i) / (totalChapters - 1)) * 100
             const isActive = i === currentChapter
+            // A chapter is "past" if we've reached or passed it (i <= currentChapter, but not active)
             const isPast = i < currentChapter
 
             return (
@@ -41,7 +43,7 @@ export function ScrollIndicator({ progress, currentChapter, totalChapters, onCha
                   isActive
                     ? "bg-[#ff6b9d] border-[#ff6b9d] scale-125 shadow-lg shadow-[#ff6b9d]/50"
                     : isPast
-                      ? "bg-[#ff6b9d]/50 border-[#ff6b9d]/50 hover:scale-110"
+                      ? "bg-[#ff6b9d] border-[#ff6b9d] hover:scale-110"
                       : "bg-transparent border-white/30 hover:border-white/50 hover:scale-110"
                 }`}
                 style={{ top: `${dotPosition}%` }}

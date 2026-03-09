@@ -19,31 +19,35 @@ export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles
     const range = CHAPTER_MILE_RANGES[chapterIndex]
     if (!range) return 0
 
-    const milesIntoChapter = currentMiles - range.start
-
-    const fadeInDistance = 5      // Quick fade in over 5 miles
-    const visibleDuration = 15    // Stay visible for 15 miles
+    const fadeInDistance = 5      // Fade in over 5 miles BEFORE chapter start
+    const visibleDuration = 15    // Stay visible for 15 miles after chapter start
     const fadeOutDuration = 8     // Fade out over 8 miles
-    const totalDisplayWindow = fadeInDistance + visibleDuration + fadeOutDuration
 
-    // Not yet reached this chapter
-    if (milesIntoChapter < 0) return 0
+    // Calculate position relative to chapter start
+    // Fade begins fadeInDistance BEFORE chapter start
+    // 100% opacity is reached exactly AT chapter start
+    const milesFromChapterStart = currentMiles - range.start
+    
+    // Not yet reached the fade-in zone (more than fadeInDistance before chapter start)
+    if (milesFromChapterStart < -fadeInDistance) return 0
 
     // Already past the display window for this chapter
-    if (milesIntoChapter >= totalDisplayWindow) return 0
+    if (milesFromChapterStart >= visibleDuration + fadeOutDuration) return 0
 
-    // Fade in phase
-    if (milesIntoChapter < fadeInDistance) {
-      return milesIntoChapter / fadeInDistance
+    // Fade in phase (before chapter start)
+    if (milesFromChapterStart < 0) {
+      // milesFromChapterStart goes from -fadeInDistance to 0
+      // opacity goes from 0 to 1
+      return (milesFromChapterStart + fadeInDistance) / fadeInDistance
     }
 
-    // Fully visible phase
-    if (milesIntoChapter < fadeInDistance + visibleDuration) {
+    // Fully visible phase (at and after chapter start)
+    if (milesFromChapterStart < visibleDuration) {
       return 1
     }
 
     // Fade out phase
-    const fadeOutProgress = (milesIntoChapter - fadeInDistance - visibleDuration) / fadeOutDuration
+    const fadeOutProgress = (milesFromChapterStart - visibleDuration) / fadeOutDuration
     return Math.max(0, 1 - fadeOutProgress)
   }, [chapterIndex, currentMiles])
 

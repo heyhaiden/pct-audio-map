@@ -401,9 +401,19 @@ export function useTrailScroll({
     if (!isScrollPaused) return
 
     const handleUserScroll = () => {
+      // If blocked, don't do anything - the animation needs to complete first
       if (isBlockedRef.current) return
 
-      // Sync camera state from actual map position first
+      // ALWAYS prioritize pending sync coordinates - this is where we WANT to be
+      // Don't use current map position as it may be mid-animation
+      if (pendingSyncRef.current) {
+        syncScrollToPosition(pendingSyncRef.current)
+        pendingSyncRef.current = null
+        setIsScrollPaused(false)
+        return
+      }
+
+      // Only fall back to current map position if no pending coordinates
       const currentMap = mapRef.current
       if (currentMap) {
         try {
@@ -423,12 +433,7 @@ export function useTrailScroll({
           cameraStateRef.current.pitch = currentMap.getPitch()
           cameraStateRef.current.bearing = currentMap.getBearing()
         }
-      }
-
-      if (pendingSyncRef.current) {
-        syncScrollToPosition(pendingSyncRef.current)
-        pendingSyncRef.current = null
-      } else if (currentMap) {
+        
         const center = currentMap.getCenter()
         if (center) {
           syncScrollToPosition([center.lng, center.lat])

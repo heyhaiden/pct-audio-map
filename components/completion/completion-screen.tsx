@@ -1,7 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Mountain, Instagram, Twitter, RefreshCcw } from "lucide-react"
+import Link from "next/link"
+import { Mountain, Linkedin, Library } from "lucide-react"
+
+// X/Twitter icon component (lucide doesn't have the new X logo)
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
 
 interface CompletionScreenProps {
   isVisible: boolean
@@ -28,19 +38,21 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
+      className={`fixed inset-0 z-50 flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
         showContent ? "opacity-100" : "opacity-0"
       }`}
     >
+
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#ff6b9d]/10 via-transparent to-stone-950" />
 
-      {/* Content */}
-      <div
-        className={`relative z-10 flex flex-col items-center text-center px-6 max-w-xl transition-all duration-1000 delay-300 ${
-          showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-        }`}
-      >
+      {/* Content - centered in remaining space */}
+      <div className="flex-1 flex items-center justify-center">
+        <div
+          className={`relative z-10 flex flex-col items-center text-center px-6 max-w-xl transition-all duration-1000 delay-300 ${
+            showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+        >
         {/* Monument icon */}
         <div className="mb-8">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#ff6b9d]/10 border-2 border-[#ff6b9d]/40 flex items-center justify-center">
@@ -86,48 +98,49 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
         </p>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Link
+              href="/library"
+              className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+            >
+              <Library className="w-4 h-4" />
+              Audio Library
+            </Link>
+
+            <div className="flex items-center gap-3">
+              <a
+                href="https://www.linkedin.com/shareArticle?mini=true&url=https://pctsoundscapes.com&title=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey!&summary=2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
+                aria-label="Share on LinkedIn"
+              >
+                <Linkedin className="w-5 h-5" />
+              </a>
+              <a
+                href="https://twitter.com/intent/tweet?text=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey%20%F0%9F%8F%94%EF%B8%8F%0A%0A2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before.&url=https://pctsoundscapes.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
+                aria-label="Share on X"
+              >
+                <XIcon className="w-5 h-5" />
+              </a>
+            </div>
+          </div>
+
           <button
             onClick={onRestart}
-            className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+            className="px-6 py-2.5 text-sm text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full transition-colors"
           >
-            <RefreshCcw className="w-4 h-4" />
-            Start Over
+            Back to Home
           </button>
-
-          <div className="flex items-center gap-3">
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-              aria-label="Share on Instagram"
-            >
-              <Instagram className="w-5 h-5" />
-            </a>
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-              aria-label="Share on Twitter"
-            >
-              <Twitter className="w-5 h-5" />
-            </a>
-          </div>
+        </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div
-        className={`absolute bottom-8 text-center transition-all duration-1000 delay-500 ${
-          showContent ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <p className="text-xs text-stone-600">
-          PCT Soundscapes - Field recordings collected 2025
-        </p>
-      </div>
+
     </div>
   )
 }

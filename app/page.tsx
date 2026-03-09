@@ -28,6 +28,7 @@ export default function Home() {
   const [showCompletion, setShowCompletion] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [forceChapterVisible, setForceChapterVisible] = useState(false)
+  const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
   const lastChapterRef = useRef(0)
   const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const scrollControlRef = useRef<{
@@ -107,22 +108,46 @@ export default function Home() {
 
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
-    const progress = chapterStartMile / totalMiles
+    // Add a small offset (1 mile) so we're clearly IN the chapter, not at the boundary
+    // This ensures the chapter card shows at 100% opacity and the pink dot fills
+    const targetMile = chapterStartMile + 1
+    const progress = targetMile / totalMiles
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
+    // Calculate distance to determine scroll behavior
+    const currentScroll = window.scrollY
+    const scrollDistance = Math.abs(targetScroll - currentScroll)
+    const isLongDistance = scrollDistance > window.innerHeight * 2
+
+    // ALWAYS update currentMiles immediately so all UI elements sync up
+    // This ensures: chapter card shows correctly, pink dots fill, chapter counter updates
+    setCurrentMiles(targetMile)
+
+    // Start the dim transition
+    setIsChapterTransitioning(true)
+    
     // Force chapter card to be visible at 100% opacity
     setForceChapterVisible(true)
     
-    window.scrollTo({
-      top: targetScroll,
-      behavior: "smooth",
-    })
+    // Small delay before scrolling to let the dim effect start
+    setTimeout(() => {
+      // Use instant scroll for long distances to ensure we reach the target
+      window.scrollTo({
+        top: targetScroll,
+        behavior: isLongDistance ? "instant" : "smooth",
+      })
+    }, 150)
 
-    // Reset force visible after the scroll animation completes
+    // Fade out the dim overlay - shorter timeout for instant scrolls
+    setTimeout(() => {
+      setIsChapterTransitioning(false)
+    }, isLongDistance ? 600 : 1500)
+
+    // Reset force visible after the transition completes
     setTimeout(() => {
       setForceChapterVisible(false)
-    }, 2000)
+    }, isLongDistance ? 1500 : 2000)
   }
 
   const handleCloseAudio = () => {
@@ -131,6 +156,11 @@ export default function Home() {
       // This ensures we sync to the closest scroll position after navigating through markers
       const currentCoords = selectedAudioMarker.coordinates
       const targetZoom = previousCameraPositionRef.current?.zoom || 9.55
+
+      // Set pending sync coordinates BEFORE starting the flyTo
+      // and keep scroll blocked until animation completes
+      scrollControlRef.current?.setPendingSyncCoordinates(currentCoords)
+      scrollControlRef.current?.setBlocked(true)
 
       map.flyTo({
         center: currentCoords,
@@ -147,8 +177,11 @@ export default function Home() {
         freezeElevation: true,
       })
 
-      // Set pending sync coordinates to current marker so scroll resumes here
-      scrollControlRef.current?.setPendingSyncCoordinates(currentCoords)
+      // Wait for flyTo to complete before unblocking and resuming scroll
+      map.once("moveend", () => {
+        scrollControlRef.current?.setBlocked(false)
+        scrollControlRef.current?.resumeScrollAnimation()
+      })
     }
 
     setSelectedAudioMarker(null)
@@ -308,6 +341,13 @@ export default function Home() {
         isVisible={showCompletion} 
         totalMiles={totalMiles} 
         onRestart={handleRestart} 
+      />
+
+      {/* Chapter transition dim overlay */}
+      <div
+        className={`fixed inset-0 z-20 bg-black/40 pointer-events-none transition-opacity duration-500 ${
+          isChapterTransitioning ? "opacity-100" : "opacity-0"
+        }`}
       />
 
       {/* Fixed map background */}
