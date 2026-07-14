@@ -11,11 +11,36 @@ import { SplashScreen } from "@/components/splash/splash-screen"
 import { MobileStatsBar } from "@/components/mobile/mobile-stats-bar"
 import { MobileChapterToast } from "@/components/mobile/mobile-chapter-toast"
 import { AboutSocial } from "@/components/navigation/about-social"
-import { CompletionScreen } from "@/components/completion/completion-screen"
+import { WipScreen } from "@/components/completion/wip-screen"
 import { pctSegments } from "@/data/pct-segments"
 import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
+import { computePunchInPose, type CameraPathPoint, type FreeCameraPose } from "@/lib/railing-camera"
+import {
+  animateFreeCamera,
+  applyFreeCameraPose,
+  cancelFreeCameraAnimation,
+  readFreeCameraPose,
+} from "@/lib/node-camera"
 import type { AudioMarker } from "@/types/map"
+
+/** Early Oregon — content ends here for now. */
+const WIP_MILE = 1700
+
+const ACTIVE_CHAPTERS = new Set(["southern-california", "sierra-nevada", "northern-california"])
+
+const navigableMarkers = audioMarkers.filter((m) => ACTIVE_CHAPTERS.has(m.chapter))
+
+type ScrollControls = {
+  pauseScrollAnimation: () => void
+  resumeScrollAnimation: () => void
+  syncScrollToPosition: (coordinates: [number, number]) => void
+  setPendingSyncCoordinates: (coordinates: [number, number]) => void
+  setBlocked: (blocked: boolean) => void
+  getCameraPath: () => CameraPathPoint[] | null
+  getRailingPoseAtCoordinates: (coordinates: [number, number]) => FreeCameraPose | null
+  getProgressFromCoordinates: (coordinates: [number, number]) => number
+}
 
 export default function Home() {
   const [map, setMap] = useState<any>(null)
@@ -25,19 +50,14 @@ export default function Home() {
   const [introComplete, setIntroComplete] = useState(false)
   const [showSplash, setShowSplash] = useState(true)
   const [journeyStarted, setJourneyStarted] = useState(false)
-  const [showCompletion, setShowCompletion] = useState(false)
+  const [showWip, setShowWip] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [forceChapterVisible, setForceChapterVisible] = useState(false)
   const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
+  const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
   const lastChapterRef = useRef(0)
-  const previousCameraPositionRef = useRef<{ center: [number, number]; zoom: number } | null>(null)
-  const scrollControlRef = useRef<{
-    pauseScrollAnimation: () => void
-    resumeScrollAnimation: () => void
-    syncScrollToPosition: (coordinates: [number, number]) => void
-    setPendingSyncCoordinates: (coordinates: [number, number]) => void
-    setBlocked: (blocked: boolean) => void
-  } | null>(null)
+  const scrollControlRef = useRef<ScrollControls | null>(null)
+  const cameraAnimRef = useRef(0)
 
   const currentChapter = useMemo(() => {
     for (let i = 0; i < CHAPTER_MILE_RANGES.length; i++) {
@@ -46,13 +66,11 @@ export default function Home() {
         return i
       }
     }
-    // If at the very end, return the last chapter
     return CHAPTER_MILE_RANGES.length - 1
   }, [currentMiles])
 
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
 
-  // Stable callback to prevent infinite re-renders
   const handleMilesUpdate = useCallback((miles: number, total: number) => {
     setCurrentMiles(miles)
     setTotalMiles(total)
@@ -63,40 +81,37 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
-    // Reset to beginning
     setCurrentMiles(0)
     setHasScrolled(false)
     window.scrollTo({ top: 0, behavior: "instant" })
-    
+
     setShowSplash(false)
     setJourneyStarted(true)
   }, [])
 
   const handleRestart = useCallback(() => {
-    setShowCompletion(false)
+    setShowWip(false)
     setCurrentMiles(0)
+    setHasScrolled(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }, [])
 
-  // Vibration on chapter change
   useEffect(() => {
     if (currentChapter !== lastChapterRef.current && journeyStarted) {
       lastChapterRef.current = currentChapter
-      // Trigger haptic feedback if available
       if (navigator.vibrate) {
         navigator.vibrate(50)
       }
     }
   }, [currentChapter, journeyStarted])
 
-  // Check for journey completion
+  // WIP overlay at early Oregon — supersedes end-of-trail completion for now
   useEffect(() => {
-    if (currentMiles >= totalMiles - 10 && journeyStarted && !showCompletion) {
-      setShowCompletion(true)
+    if (currentMiles >= WIP_MILE && journeyStarted && !showWip && !selectedAudioMarker) {
+      setShowWip(true)
     }
-  }, [currentMiles, totalMiles, journeyStarted, showCompletion])
+  }, [currentMiles, journeyStarted, showWip, selectedAudioMarker])
 
-  // Detect first scroll to hide instructions immediately
   useEffect(() => {
     if (hasScrolled) return
     const handleScroll = () => {
@@ -108,110 +123,111 @@ export default function Home() {
 
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
-    // Add a small offset (1 mile) so we're clearly IN the chapter, not at the boundary
-    // This ensures the chapter card shows at 100% opacity and the pink dot fills
+    // Don't jump past the WIP boundary into unfinished regions
+    if (chapterStartMile >= WIP_MILE) {
+      const progress = WIP_MILE / totalMiles
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+      window.scrollTo({ top: progress * scrollHeight, behavior: "smooth" })
+      return
+    }
+
     const targetMile = chapterStartMile + 1
     const progress = targetMile / totalMiles
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
-    // Calculate distance to determine scroll behavior
     const currentScroll = window.scrollY
     const scrollDistance = Math.abs(targetScroll - currentScroll)
     const isLongDistance = scrollDistance > window.innerHeight * 2
 
-    // ALWAYS update currentMiles immediately so all UI elements sync up
-    // This ensures: chapter card shows correctly, pink dots fill, chapter counter updates
     setCurrentMiles(targetMile)
-
-    // Start the dim transition
     setIsChapterTransitioning(true)
-    
-    // Force chapter card to be visible at 100% opacity
     setForceChapterVisible(true)
-    
-    // Small delay before scrolling to let the dim effect start
+
     setTimeout(() => {
-      // Use instant scroll for long distances to ensure we reach the target
       window.scrollTo({
         top: targetScroll,
         behavior: isLongDistance ? "instant" : "smooth",
       })
     }, 150)
 
-    // Fade out the dim overlay - shorter timeout for instant scrolls
     setTimeout(() => {
       setIsChapterTransitioning(false)
     }, isLongDistance ? 600 : 1500)
 
-    // Reset force visible after the transition completes
     setTimeout(() => {
       setForceChapterVisible(false)
     }, isLongDistance ? 1500 : 2000)
   }
 
-  const handleCloseAudio = () => {
-    if (map && selectedAudioMarker) {
-      // Use the current marker's position (where we are NOW) instead of where we entered
-      // This ensures we sync to the closest scroll position after navigating through markers
-      const currentCoords = selectedAudioMarker.coordinates
-      const targetZoom = previousCameraPositionRef.current?.zoom || 9.55
+  const flyToMarkerPunchIn = useCallback(
+    async (marker: AudioMarker, durationMs: number) => {
+      if (!map) return
+      const path = scrollControlRef.current?.getCameraPath()
+      if (!path?.length) return
 
-      // Set pending sync coordinates BEFORE starting the flyTo
-      // and keep scroll blocked until animation completes
-      scrollControlRef.current?.setPendingSyncCoordinates(currentCoords)
-      scrollControlRef.current?.setBlocked(true)
+      const from = readFreeCameraPose(map)
+      const to = computePunchInPose(path, marker.coordinates)
+      if (!from) {
+        applyFreeCameraPose(map, to)
+        return
+      }
 
-      map.flyTo({
-        center: currentCoords,
-        zoom: targetZoom,
-        pitch: 0,
-        bearing: -5,
-        duration: 2500,
-        curve: 1.42,
-        easing: (t: number) => {
-          // Smooth ease-in-out cubic
-          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-        },
-        essential: true,
-        freezeElevation: true,
-      })
+      const token = ++cameraAnimRef.current
+      await animateFreeCamera(map, from, to, durationMs)
+      if (token !== cameraAnimRef.current) return
+    },
+    [map],
+  )
 
-      // Wait for flyTo to complete before unblocking and resuming scroll
-      map.once("moveend", () => {
-        scrollControlRef.current?.setBlocked(false)
-        scrollControlRef.current?.resumeScrollAnimation()
-      })
+  const handleCloseAudio = async () => {
+    const marker = selectedAudioMarker
+    if (!marker) return
+
+    // Keep scroll locked while we ease back to the railing (player UI can dismiss)
+    setIsNodeCameraBusy(true)
+    setSelectedAudioMarker(null)
+
+    if (!map) {
+      setIsNodeCameraBusy(false)
+      return
     }
 
-    setSelectedAudioMarker(null)
-    previousCameraPositionRef.current = null
+    const controls = scrollControlRef.current
+    const currentCoords = marker.coordinates
+
+    controls?.setPendingSyncCoordinates(currentCoords)
+    controls?.setBlocked(true)
+
+    const railingPose = controls?.getRailingPoseAtCoordinates(currentCoords)
+    const from = readFreeCameraPose(map)
+
+    if (railingPose && from) {
+      const token = ++cameraAnimRef.current
+      await animateFreeCamera(map, from, railingPose, 2200)
+      if (token !== cameraAnimRef.current) {
+        setIsNodeCameraBusy(false)
+        return
+      }
+    }
+
+    controls?.setBlocked(false)
+    controls?.resumeScrollAnimation()
+    setIsNodeCameraBusy(false)
   }
 
   const handleNextMarker = () => {
     if (!selectedAudioMarker) return
 
-    const currentIndex = audioMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
-    if (currentIndex < audioMarkers.length - 1) {
-      const nextMarker = audioMarkers[currentIndex + 1]
+    const currentIndex = navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
+    if (currentIndex < navigableMarkers.length - 1) {
+      const nextMarker = navigableMarkers[currentIndex + 1]
       setSelectedAudioMarker(nextMarker)
 
       if (map) {
         scrollControlRef.current?.pauseScrollAnimation()
         scrollControlRef.current?.setPendingSyncCoordinates(nextMarker.coordinates)
-
-        map.flyTo({
-          center: nextMarker.coordinates,
-          zoom: 12,
-          duration: 3000,
-          curve: 1.42,
-          easing: (t: number) => {
-            // Smooth ease-in-out cubic
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-          },
-          essential: true,
-          freezeElevation: true,
-        })
+        void flyToMarkerPunchIn(nextMarker, 2800)
       }
     }
   }
@@ -219,66 +235,38 @@ export default function Home() {
   const handlePreviousMarker = () => {
     if (!selectedAudioMarker) return
 
-    const currentIndex = audioMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
+    const currentIndex = navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
     if (currentIndex > 0) {
-      const previousMarker = audioMarkers[currentIndex - 1]
+      const previousMarker = navigableMarkers[currentIndex - 1]
       setSelectedAudioMarker(previousMarker)
 
       if (map) {
         scrollControlRef.current?.pauseScrollAnimation()
         scrollControlRef.current?.setPendingSyncCoordinates(previousMarker.coordinates)
-
-        map.flyTo({
-          center: previousMarker.coordinates,
-          zoom: 12,
-          duration: 3000,
-          curve: 1.42,
-          easing: (t: number) => {
-            // Smooth ease-in-out cubic
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-          },
-          essential: true,
-          freezeElevation: true,
-        })
+        void flyToMarkerPunchIn(previousMarker, 2800)
       }
     }
   }
 
   const handleAudioMarkerClick = (marker: AudioMarker) => {
-    if (map) {
-      const center = map.getCenter()
-      const zoom = map.getZoom()
-      previousCameraPositionRef.current = {
-        center: [center.lng, center.lat] as [number, number],
-        zoom: zoom,
-      }
+    if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
+    if (map) {
+      cancelFreeCameraAnimation()
       scrollControlRef.current?.pauseScrollAnimation()
       scrollControlRef.current?.setPendingSyncCoordinates(marker.coordinates)
-
-      map.flyTo({
-        center: marker.coordinates,
-        zoom: 12,
-        duration: 3000,
-        curve: 1.42,
-        easing: (t: number) => {
-          // Smooth ease-in-out cubic
-          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-        },
-        essential: true,
-        freezeElevation: true,
-      })
+      void flyToMarkerPunchIn(marker, 2400)
     }
 
     setSelectedAudioMarker(marker)
   }
 
-  const currentMarkerIndex = selectedAudioMarker ? audioMarkers.findIndex((m) => m.id === selectedAudioMarker.id) : -1
-  const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < audioMarkers.length - 1
+  const currentMarkerIndex = selectedAudioMarker
+    ? navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
+    : -1
+  const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < navigableMarkers.length - 1
   const hasPreviousMarker = currentMarkerIndex > 0
 
-  // Southern California: 0-700 mi, Sierra Nevada: 700-1100 mi, Northern CA: 1100-1700 mi
-  // Oregon: 1700-2250 mi, Washington: 2250-2650 mi
   let currentSection = "Southern California"
   if (currentMiles >= 2250) {
     currentSection = "Washington Cascades"
@@ -291,17 +279,14 @@ export default function Home() {
   }
 
   useEffect(() => {
-    if (selectedAudioMarker) {
-      // Tell the scroll hook to block any resume attempts
+    if (selectedAudioMarker || isNodeCameraBusy) {
       scrollControlRef.current?.setBlocked(true)
 
-      // Prevent wheel and touch scroll
       const preventScroll = (e: Event) => {
         e.preventDefault()
         e.stopPropagation()
       }
 
-      // Prevent keyboard scroll
       const preventKeyScroll = (e: KeyboardEvent) => {
         const scrollKeys = ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]
         if (scrollKeys.includes(e.key)) {
@@ -310,7 +295,6 @@ export default function Home() {
         }
       }
 
-      // Lock body scroll via CSS as backup
       document.body.style.overflow = "hidden"
       document.body.style.touchAction = "none"
 
@@ -319,9 +303,8 @@ export default function Home() {
       window.addEventListener("keydown", preventKeyScroll, { capture: true })
 
       return () => {
-        // Unblock scroll resume when audio card closes
-        scrollControlRef.current?.setBlocked(false)
-
+        // Unblocking is handled by close/exit camera handoff — not here —
+        // so we don't release mid-animation when the player dismisses.
         document.body.style.overflow = ""
         document.body.style.touchAction = ""
         window.removeEventListener("wheel", preventScroll, { capture: true })
@@ -329,28 +312,20 @@ export default function Home() {
         window.removeEventListener("keydown", preventKeyScroll, { capture: true })
       }
     }
-  }, [selectedAudioMarker])
+  }, [selectedAudioMarker, isNodeCameraBusy])
 
   return (
     <main className="relative">
-      {/* Splash screen */}
       {showSplash && <SplashScreen onEnter={handleSplashEnter} />}
 
-      {/* Completion screen */}
-      <CompletionScreen 
-        isVisible={showCompletion} 
-        totalMiles={totalMiles} 
-        onRestart={handleRestart} 
-      />
+      <WipScreen isVisible={showWip} onRestart={handleRestart} />
 
-      {/* Chapter transition dim overlay */}
       <div
         className={`fixed inset-0 z-20 bg-black/40 pointer-events-none transition-opacity duration-500 ${
           isChapterTransitioning ? "opacity-100" : "opacity-0"
         }`}
       />
 
-      {/* Fixed map background */}
       <div className="fixed inset-0 z-0 pointer-events-auto">
         <PCTMap
           onMapLoad={setMap}
@@ -361,23 +336,23 @@ export default function Home() {
           onIntroComplete={handleIntroComplete}
           startIntro={journeyStarted}
           hideLoading={showSplash}
+          currentMiles={currentMiles}
         />
-        {map && <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />}
+        {map && (
+          <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />
+        )}
       </div>
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
 
-      {/* Desktop stats */}
-      <div className={`transition-opacity duration-1000 ease-out ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`transition-opacity duration-1000 ease-out ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
       </div>
 
-      {/* Mobile stats bar */}
-      <div className={`transition-opacity duration-700 ease-out ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`transition-opacity duration-700 ease-out ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <MobileStatsBar currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
       </div>
 
-      {/* Mobile chapter toast */}
       {introComplete && journeyStarted && (
         <MobileChapterToast
           chapter={pctSegments[currentChapter]}
@@ -386,8 +361,7 @@ export default function Home() {
         />
       )}
 
-      {/* Desktop chapter card - centered */}
-      <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ChapterCard
           chapter={pctSegments[currentChapter]}
           chapterIndex={currentChapter}
@@ -397,8 +371,7 @@ export default function Home() {
         />
       </div>
 
-      {/* Scroll progress indicator */}
-      <div className={`transition-opacity duration-1000 ease-out delay-300 ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`transition-opacity duration-1000 ease-out delay-300 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ScrollIndicator
           progress={currentMiles / totalMiles}
           currentChapter={currentChapter}
@@ -407,12 +380,10 @@ export default function Home() {
         />
       </div>
 
-      {/* About and social links */}
-      <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <AboutSocial />
       </div>
 
-      {/* Audio player */}
       {selectedAudioMarker && (
         <AudioPlayer
           marker={selectedAudioMarker}
@@ -424,7 +395,6 @@ export default function Home() {
         />
       )}
 
-      {/* Instructions overlay - desktop */}
       <div
         className={`hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
           !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
@@ -440,7 +410,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Instructions overlay - mobile */}
       <div
         className={`md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
           !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
