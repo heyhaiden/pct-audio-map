@@ -5,6 +5,10 @@ import Link from "next/link"
 
 interface SplashScreenProps {
   onEnter: () => void
+  /** When false, Begin Journey stays disabled while the trailhead corridor warms. */
+  trailheadReady?: boolean
+  /** 0–1 warm progress for the button loading bar. */
+  trailheadProgress?: number
 }
 
 // Abstract minimalist trail line SVG
@@ -45,7 +49,124 @@ function AbstractTrailIcon({ className }: { className?: string }) {
   )
 }
 
-export function SplashScreen({ onEnter }: SplashScreenProps) {
+function BeginJourneyButton({
+  ready,
+  progress,
+  onClick,
+  className,
+}: {
+  ready: boolean
+  progress: number
+  onClick: () => void
+  className?: string
+}) {
+  const [fill, setFill] = useState(0.04)
+  const [unlocked, setUnlocked] = useState(false)
+  const fillRef = useRef(0.04)
+  const rafRef = useRef<number | null>(null)
+
+  // Smoothly chase progress; when already-warmed (ready jumps to true),
+  // run a short ease-out fill so the button doesn't snap unlock.
+  useEffect(() => {
+    const target = ready ? 1 : Math.max(0.04, Math.min(0.97, progress))
+    const from = fillRef.current
+
+    if (Math.abs(target - from) < 0.005) {
+      if (ready && target >= 1) {
+        fillRef.current = 1
+        setFill(1)
+        const settle = window.setTimeout(() => setUnlocked(true), 180)
+        return () => clearTimeout(settle)
+      }
+      return
+    }
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+
+    const start = performance.now()
+    // Cached / instant ready: longer, more graceful sweep. Incremental warm: snappier.
+    const duration = ready && from < 0.7 ? 900 : ready ? 450 : 320
+    let settleTimer: number | undefined
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration)
+      const eased = 1 - Math.pow(1 - t, 3)
+      const next = from + (target - from) * eased
+      fillRef.current = next
+      setFill(next)
+
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick)
+        return
+      }
+
+      if (ready) {
+        settleTimer = window.setTimeout(() => setUnlocked(true), 160)
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      if (settleTimer) clearTimeout(settleTimer)
+    }
+  }, [ready, progress])
+
+  const showPreparing = !unlocked
+  const label = unlocked ? "Begin Journey" : "Preparing trail…"
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!unlocked}
+      aria-busy={showPreparing}
+      aria-label={
+        unlocked ? "Begin Journey" : `Preparing trail, ${Math.round(fill * 100)} percent`
+      }
+      className={`relative overflow-hidden text-white font-medium rounded-full transition-[transform,background-color,box-shadow] duration-500 ease-out ${
+        unlocked
+          ? "bg-[#ff6b9d] hover:bg-[#ff85ad] hover:scale-105 active:scale-95 shadow-[0_0_0_0_rgba(255,107,157,0)]"
+          : "bg-[#ff6b9d]/20 cursor-wait"
+      } ${className ?? ""}`}
+    >
+      {/* Fill bar — stays through the unlock frame so the sweep can finish */}
+      <span
+        aria-hidden
+        className={`absolute inset-y-0 left-0 bg-[#ff6b9d] transition-opacity duration-500 ${
+          unlocked ? "opacity-0" : "opacity-100"
+        }`}
+        style={{ width: `${Math.max(4, fill * 100)}%` }}
+      />
+      {/* Soft sheen while preparing */}
+      {showPreparing && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{
+            background:
+              "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.22) 50%, transparent 60%)",
+            backgroundSize: "200% 100%",
+            animation: "pct-btn-sheen 1.4s ease-in-out infinite",
+          }}
+        />
+      )}
+      <span
+        className={`relative z-10 transition-opacity duration-300 ${
+          unlocked ? "opacity-100" : "opacity-95"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  )
+}
+
+export function SplashScreen({
+  onEnter,
+  trailheadReady = false,
+  trailheadProgress = 0,
+}: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -91,7 +212,8 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
   }, [])
 
   const handleEnter = () => {
-    // Fade out audio
+    if (!trailheadReady || isExiting) return
+    // Button self-gates via unlocked; parent ready is the source of truth for cache/warm.
     if (audioRef.current) {
       const audio = audioRef.current
       const fadeOut = setInterval(() => {
@@ -164,12 +286,12 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
 
           {/* CTA Buttons - desktop only, inline with content */}
           <div className="hidden md:flex flex-col items-center gap-3">
-            <button
+            <BeginJourneyButton
+              ready={trailheadReady}
+              progress={trailheadProgress}
               onClick={handleEnter}
-              className="px-8 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 hover:scale-105"
-            >
-              Begin Journey
-            </button>
+              className="px-8 py-3"
+            />
             <Link
               href="/about"
               className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"
@@ -180,12 +302,12 @@ export function SplashScreen({ onEnter }: SplashScreenProps) {
 
           {/* Mobile CTA - inline with content for better centering */}
           <div className="md:hidden flex flex-col items-center gap-4 mt-10">
-            <button
+            <BeginJourneyButton
+              ready={trailheadReady}
+              progress={trailheadProgress}
               onClick={handleEnter}
-              className="px-10 py-3.5 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-all duration-200 active:scale-95 text-base"
-            >
-              Begin Journey
-            </button>
+              className="px-10 py-3.5 text-base"
+            />
             <Link
               href="/about"
               className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"

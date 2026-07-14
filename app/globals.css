@@ -73,3 +73,13 @@
 .duration-300 {
   animation-duration: 300ms;
 }
+
+/* Splash Begin Journey — soft sheen while preparing */
+@keyframes pct-btn-sheen {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}

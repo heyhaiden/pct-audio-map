@@ -16,9 +16,14 @@ declare global {
 
 /** Warm style + terrain out to early Oregon; content ends there for now. */
 export const PREFETCH_END_MILES = 1700
-const LOOKAHEAD_MILES = 80
-const TRAILHEAD_WARM_MILES = 120
-const SAMPLE_COUNT = 90
+/** Gate "Begin Journey" once this corridor is warm. */
+export const TRAILHEAD_WARM_MILES = 120
+/** Keep walking the real camera this far while splash still covers. */
+export const PRIORITY_WARM_MILES = 400
+const LOOKAHEAD_MILES = 100
+
+/** Soft cap so a slow network never blocks Enter forever. */
+export const TRAILHEAD_READY_TIMEOUT_MS = 12_000
 
 function buildCameraPath(trailCoordinates: number[][]): CameraPathPoint[] | null {
   if (typeof window === "undefined" || !window.turf || trailCoordinates.length < 2) return null
@@ -82,7 +87,7 @@ function posesAlongMiles(
   return poses
 }
 
-function waitForIdle(map: any, timeoutMs = 1200): Promise<void> {
+function waitForIdle(map: any, timeoutMs = 550): Promise<void> {
   return new Promise((resolve) => {
     let settled = false
     const done = () => {
@@ -99,11 +104,23 @@ function waitForIdle(map: any, timeoutMs = 1200): Promise<void> {
   })
 }
 
+/**
+ * Approximate DEM zoom from railing altitude so Image() warm matches what GL will request.
+ * ~26km cruise → ~z10–11; lower punch-in altitudes → higher zoom.
+ */
+function demZoomForAltitude(altitudeMeters: number): number {
+  if (altitudeMeters > 40000) return 8
+  if (altitudeMeters > 25000) return 10
+  if (altitudeMeters > 12000) return 11
+  return 12
+}
+
 /** Warm raster-dem tiles in the browser cache for lookahead points. */
-function prefetchTerrainImages(poses: FreeCameraPose[], accessToken: string, zoom = 9): void {
+function prefetchTerrainImages(poses: FreeCameraPose[], accessToken: string): void {
   if (!accessToken) return
 
   for (const pose of poses) {
+    const zoom = demZoomForAltitude(pose.altitude)
     const { lng, lat } = pose
     const n = Math.pow(2, zoom)
     const x = Math.floor(((lng + 180) / 360) * n)
@@ -111,7 +128,6 @@ function prefetchTerrainImages(poses: FreeCameraPose[], accessToken: string, zoo
     const y = Math.floor(
       ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
     )
-    // Neighbor tiles around the sample for coverage
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         const img = new Image()
@@ -129,7 +145,12 @@ export type PrefetchController = {
 
 /**
  * Runtime path prefetch: walk free-camera along the railing corridor while the
- * splash/intro covers the map, then keep DEM tiles warm ahead of scroll.
+ * splash covers the map (real style + DEM tiles), then keep DEM warm ahead of scroll.
+ *
+ * Phases while splash is up:
+ *  1) 0 → TRAILHEAD_WARM_MILES  → fires onTrailheadWarm (gates Enter)
+ *  2) → PRIORITY_WARM_MILES
+ *  3) → PREFETCH_END_MILES
  */
 export function startPathTilePrefetch(options: {
   map: any
@@ -138,51 +159,121 @@ export function startPathTilePrefetch(options: {
   /** True while the user cannot see the camera jumps (splash / pre-intro). */
   canMoveCamera: () => boolean
   onTrailheadWarm?: () => void
+  /** 0–1 progress through the trailhead warm segment. */
+  onTrailheadProgress?: (progress: number) => void
+  /**
+   * When true (session already warmed trailhead), unlock Enter immediately and
+   * only do lightweight DEM Image warm — skip the blocking camera walk for phase 1.
+   */
+  trailheadAlreadyCached?: boolean
 }): PrefetchController {
-  const { map, trailCoordinates, accessToken, canMoveCamera, onTrailheadWarm } = options
+  const {
+    map,
+    trailCoordinates,
+    accessToken,
+    canMoveCamera,
+    onTrailheadWarm,
+    onTrailheadProgress,
+    trailheadAlreadyCached = false,
+  } = options
   let cancelled = false
   let path: CameraPathPoint[] | null = null
   let warmedThroughMiles = 0
   let cameraWarmRunning = false
+  let trailheadNotified = false
 
   const ensurePath = () => {
     if (!path) path = buildCameraPath(trailCoordinates)
     return path
   }
 
-  const warmCameraSegment = async (fromMiles: number, toMiles: number) => {
+  const notifyTrailhead = () => {
+    if (trailheadNotified) return
+    trailheadNotified = true
+    onTrailheadProgress?.(1)
+    onTrailheadWarm?.()
+  }
+
+  const warmCameraSegment = async (
+    fromMiles: number,
+    toMiles: number,
+    sampleCount: number,
+    reportProgress = false,
+  ) => {
     const camPath = ensurePath()
     if (!camPath || cancelled || !canMoveCamera()) return
 
     cameraWarmRunning = true
-    const poses = posesAlongMiles(camPath, fromMiles, toMiles, SAMPLE_COUNT)
-    for (const pose of poses) {
+    const poses = posesAlongMiles(camPath, fromMiles, toMiles, sampleCount)
+    // Also kick DEM Image cache in parallel — style tiles come from the camera walk
+    prefetchTerrainImages(poses, accessToken)
+
+    for (let i = 0; i < poses.length; i++) {
       if (cancelled || !canMoveCamera()) break
-      applyFreeCameraPose(map, pose)
-      await waitForIdle(map, 900)
+      applyFreeCameraPose(map, poses[i])
+      await waitForIdle(map, 550)
+      if (reportProgress && !trailheadNotified) {
+        onTrailheadProgress?.((i + 1) / poses.length)
+      }
     }
     cameraWarmRunning = false
     warmedThroughMiles = Math.max(warmedThroughMiles, toMiles)
   }
 
   const runInitialWarm = async () => {
-    // Wait briefly for turf + style readiness
-    await new Promise((r) => setTimeout(r, 400))
-    if (cancelled) return
+    // Session cache hit: unlock Enter immediately; browser HTTP cache already has tiles.
+    // Still nudge DEM images and optionally continue deeper warm while splash is up.
+    if (trailheadAlreadyCached) {
+      notifyTrailhead()
+      warmedThroughMiles = TRAILHEAD_WARM_MILES
+      const camPath = ensurePath()
+      if (camPath) {
+        prefetchTerrainImages(posesAlongMiles(camPath, 0, TRAILHEAD_WARM_MILES, 16), accessToken)
+      }
+      if (!cancelled && canMoveCamera()) {
+        await warmCameraSegment(TRAILHEAD_WARM_MILES, PRIORITY_WARM_MILES, 48)
+      }
+      if (!cancelled && canMoveCamera()) {
+        await warmCameraSegment(PRIORITY_WARM_MILES, PREFETCH_END_MILES, 60)
+      }
+      return
+    }
+
+    // Soft timeout: never leave Enter gated forever
+    const readyTimer = setTimeout(() => {
+      if (!cancelled) notifyTrailhead()
+    }, TRAILHEAD_READY_TIMEOUT_MS)
+
+    onTrailheadProgress?.(0.02)
+    await new Promise((r) => setTimeout(r, 120))
+    if (cancelled) {
+      clearTimeout(readyTimer)
+      return
+    }
 
     const camPath = ensurePath()
     if (!camPath) {
-      // Retry once turf loads
-      await new Promise((r) => setTimeout(r, 500))
-      if (cancelled || !ensurePath()) return
+      await new Promise((r) => setTimeout(r, 400))
+      if (cancelled || !ensurePath()) {
+        clearTimeout(readyTimer)
+        notifyTrailhead()
+        return
+      }
     }
 
-    await warmCameraSegment(0, TRAILHEAD_WARM_MILES)
-    if (!cancelled) onTrailheadWarm?.()
+    // Phase 1 — trailhead corridor (gates Begin Journey)
+    await warmCameraSegment(0, TRAILHEAD_WARM_MILES, 28, true)
+    clearTimeout(readyTimer)
+    if (!cancelled) notifyTrailhead()
 
-    // Continue warming toward WIP while splash still covers
+    // Phase 2 — priority SoCal → Sierra approach
     if (!cancelled && canMoveCamera()) {
-      await warmCameraSegment(TRAILHEAD_WARM_MILES, PREFETCH_END_MILES)
+      await warmCameraSegment(TRAILHEAD_WARM_MILES, PRIORITY_WARM_MILES, 48)
+    }
+
+    // Phase 3 — rest of published corridor while splash still covers
+    if (!cancelled && canMoveCamera()) {
+      await warmCameraSegment(PRIORITY_WARM_MILES, PREFETCH_END_MILES, 60)
     }
   }
 
@@ -199,9 +290,8 @@ export function startPathTilePrefetch(options: {
     const poses = posesAlongMiles(camPath, warmedThroughMiles, target, 24)
     prefetchTerrainImages(poses, accessToken)
 
-    // If splash still hides the map, keep walking the real camera forward
     if (canMoveCamera() && !cameraWarmRunning) {
-      void warmCameraSegment(warmedThroughMiles, target)
+      void warmCameraSegment(warmedThroughMiles, target, 24)
     } else {
       warmedThroughMiles = Math.max(warmedThroughMiles, target)
     }
