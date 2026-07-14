@@ -1,74 +1,30 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
 import type { PCTChapter } from "@/types/map"
-import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 
 interface ChapterCardProps {
   chapter: PCTChapter
   chapterIndex: number
   totalChapters: number
-  currentMiles: number
+  /** 0–1 visibility from useChapterIntro (locked chapter, both scroll directions). */
+  opacity: number
   forceVisible?: boolean
 }
 
-export function ChapterCard({ chapter, chapterIndex, totalChapters, currentMiles, forceVisible = false }: ChapterCardProps) {
-  const [hasEntered, setHasEntered] = useState(false)
-
-  const opacity = useMemo(() => {
-    const range = CHAPTER_MILE_RANGES[chapterIndex]
-    if (!range) return 0
-
-    const fadeInDistance = 5      // Fade in over 5 miles BEFORE chapter start
-    const visibleDuration = 15    // Stay visible for 15 miles after chapter start
-    const fadeOutDuration = 8     // Fade out over 8 miles
-
-    // Calculate position relative to chapter start
-    // Fade begins fadeInDistance BEFORE chapter start
-    // 100% opacity is reached exactly AT chapter start
-    const milesFromChapterStart = currentMiles - range.start
-    
-    // Not yet reached the fade-in zone (more than fadeInDistance before chapter start)
-    if (milesFromChapterStart < -fadeInDistance) return 0
-
-    // Already past the display window for this chapter
-    if (milesFromChapterStart >= visibleDuration + fadeOutDuration) return 0
-
-    // Fade in phase (before chapter start)
-    if (milesFromChapterStart < 0) {
-      // milesFromChapterStart goes from -fadeInDistance to 0
-      // opacity goes from 0 to 1
-      return (milesFromChapterStart + fadeInDistance) / fadeInDistance
-    }
-
-    // Fully visible phase (at and after chapter start)
-    if (milesFromChapterStart < visibleDuration) {
-      return 1
-    }
-
-    // Fade out phase
-    const fadeOutProgress = (milesFromChapterStart - visibleDuration) / fadeOutDuration
-    return Math.max(0, 1 - fadeOutProgress)
-  }, [chapterIndex, currentMiles])
-
-  useEffect(() => {
-    const timer = setTimeout(() => setHasEntered(true), 100)
-    return () => clearTimeout(timer)
-  }, [chapter.id])
-
-  useEffect(() => {
-    setHasEntered(false)
-    const timer = setTimeout(() => setHasEntered(true), 100)
-    return () => clearTimeout(timer)
-  }, [chapter.id])
-
-  const finalOpacity = forceVisible ? 1 : (hasEntered ? opacity : 0)
+export function ChapterCard({
+  chapter,
+  chapterIndex,
+  totalChapters,
+  opacity,
+  forceVisible = false,
+}: ChapterCardProps) {
+  const finalOpacity = forceVisible ? 1 : opacity
   const isVisible = finalOpacity > 0.01
 
   return (
     <div className="fixed right-8 top-1/2 -translate-y-1/2 z-30 hidden md:block pointer-events-none">
       <div
-        className={`bg-black/60 backdrop-blur-xl rounded-xl px-5 py-5 text-white max-w-xs transition-all duration-500`}
+        className="bg-black/60 backdrop-blur-xl rounded-xl px-5 py-5 text-white max-w-xs transition-[opacity,transform] duration-500"
         style={{
           opacity: finalOpacity,
           transform: isVisible ? "translateX(0)" : "translateX(16px)",

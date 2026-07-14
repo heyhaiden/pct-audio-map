@@ -4,7 +4,12 @@ import { useEffect, useRef, useState, useMemo } from "react"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
-
+import {
+  startPathTilePrefetch,
+  TRAILHEAD_READY_TIMEOUT_MS,
+  type PrefetchController,
+} from "@/lib/tile-prefetch"
+import { isTrailPrepCached, markTrailPrepCached } from "@/lib/trail-prep-cache"
 
 declare global {
   interface Window {
@@ -12,6 +17,10 @@ declare global {
     turf: any
   }
 }
+
+const MAPBOX_GL_JS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
+const MAPBOX_GL_CSS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css"
+const TURF_JS = "https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"
 
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
@@ -22,13 +31,34 @@ interface PCTMapProps {
     syncScrollToPosition: (coordinates: [number, number]) => void
     setPendingSyncCoordinates: (coordinates: [number, number]) => void
     setBlocked: (blocked: boolean) => void
+    getCameraPath: () => import("@/lib/railing-camera").CameraPathPoint[] | null
+    getRailingPoseAtCoordinates: (
+      coordinates: [number, number],
+    ) => import("@/lib/railing-camera").FreeCameraPose | null
+    getProgressFromCoordinates: (coordinates: [number, number]) => number
   }) => void
   onIntroComplete?: () => void
+  /** Fired when trailhead tiles are warm enough (or soft-timeout). */
+  onTrailheadReady?: () => void
+  /** 0–1 progress while warming the trailhead corridor. */
+  onTrailheadProgress?: (progress: number) => void
   startIntro?: boolean
   hideLoading?: boolean
+  /** Used to warm tiles ahead of the railing camera. */
+  currentMiles?: number
 }
 
-export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntroComplete, startIntro = false, hideLoading = false }: PCTMapProps) {
+export function PCTMap({
+  onMapLoad,
+  onMilesUpdate,
+  onScrollControlReady,
+  onIntroComplete,
+  onTrailheadReady,
+  onTrailheadProgress,
+  startIntro = false,
+  hideLoading = false,
+  currentMiles: externalMiles = 0,
+}: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -40,9 +70,62 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
   const [trailData, setTrailData] = useState<any>(null)
   const [debugMode, setDebugMode] = useState(false)
-  const [cameraInfo, setCameraInfo] = useState({ center: [0, 0], zoom: 0, pitch: 0, bearing: 0 })
-  const [tilesPreloaded, setTilesPreloaded] = useState(false)
-  const preloadingRef = useRef(false)
+  const [, setTilesPreloaded] = useState(false)
+  const prefetchRef = useRef<PrefetchController | null>(null)
+  const introPhaseRef = useRef(introPhase)
+  const accessTokenRef = useRef<string>("")
+  const tokenPromiseRef = useRef<Promise<string> | null>(null)
+  const trailheadReadyRef = useRef(false)
+  const onTrailheadReadyRef = useRef(onTrailheadReady)
+  const onTrailheadProgressRef = useRef(onTrailheadProgress)
+
+  useEffect(() => {
+    introPhaseRef.current = introPhase
+  }, [introPhase])
+
+  useEffect(() => {
+    onTrailheadReadyRef.current = onTrailheadReady
+  }, [onTrailheadReady])
+
+  useEffect(() => {
+    onTrailheadProgressRef.current = onTrailheadProgress
+  }, [onTrailheadProgress])
+
+  const notifyTrailheadReady = () => {
+    if (trailheadReadyRef.current) return
+    trailheadReadyRef.current = true
+    setTilesPreloaded(true)
+    onTrailheadProgressRef.current?.(1)
+    onTrailheadReadyRef.current?.()
+  }
+
+  // Soft timeout so Enter is never gated forever (e.g. map init failure)
+  useEffect(() => {
+    // Session already warmed — unlock immediately (tiles live in browser HTTP cache)
+    if (isTrailPrepCached()) {
+      notifyTrailheadReady()
+      return
+    }
+
+    const timer = setTimeout(() => {
+      if (trailheadReadyRef.current) return
+      trailheadReadyRef.current = true
+      setTilesPreloaded(true)
+      onTrailheadProgressRef.current?.(1)
+      onTrailheadReadyRef.current?.()
+    }, TRAILHEAD_READY_TIMEOUT_MS + 2000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Kick token fetch as early as possible (parallel with scripts / geojson)
+  useEffect(() => {
+    if (!tokenPromiseRef.current) {
+      tokenPromiseRef.current = getMapboxToken().catch((error) => {
+        console.error("[v0] Token error:", error)
+        throw error
+      })
+    }
+  }, [])
 
   useEffect(() => {
     fetch("/pct-trail.geojson")
@@ -68,6 +151,9 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
     syncScrollToPosition,
     setPendingSyncCoordinates,
     setBlocked,
+    getCameraPath,
+    getRailingPoseAtCoordinates,
+    getProgressFromCoordinates,
   } = useTrailScroll({
     map: map.current,
     trailCoordinates,
@@ -84,8 +170,20 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
       syncScrollToPosition,
       setPendingSyncCoordinates,
       setBlocked,
+      getCameraPath,
+      getRailingPoseAtCoordinates,
+      getProgressFromCoordinates,
     }),
-    [pauseScrollAnimation, resumeScrollAnimation, syncScrollToPosition, setPendingSyncCoordinates, setBlocked],
+    [
+      pauseScrollAnimation,
+      resumeScrollAnimation,
+      syncScrollToPosition,
+      setPendingSyncCoordinates,
+      setBlocked,
+      getCameraPath,
+      getRailingPoseAtCoordinates,
+      getProgressFromCoordinates,
+    ],
   )
 
   useEffect(() => {
@@ -95,32 +193,52 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
   }, [currentMiles, totalMiles, onMilesUpdate])
 
   useEffect(() => {
-    const loadMapboxScripts = () => {
+    const ensureStylesheet = () => {
+      if (document.querySelector(`link[href="${MAPBOX_GL_CSS}"]`)) return
       const cssLink = document.createElement("link")
       cssLink.rel = "stylesheet"
-      cssLink.href = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css"
+      cssLink.href = MAPBOX_GL_CSS
       document.head.appendChild(cssLink)
-
-      const turfScript = document.createElement("script")
-      turfScript.src = "https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"
-      document.head.appendChild(turfScript)
-
-      const script = document.createElement("script")
-      script.src = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
-      script.onload = () => {
-        setScriptsLoaded(true)
-      }
-      script.onerror = () => {
-        console.error("[v0] Failed to load Mapbox scripts")
-        setMapboxError("Failed to load Mapbox scripts. Please check your internet connection.")
-      }
-      document.head.appendChild(script)
     }
 
-    if (!window.mapboxgl && !scriptsLoaded) {
-      loadMapboxScripts()
-    } else if (window.mapboxgl) {
+    const loadScript = (src: string) =>
+      new Promise<void>((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null
+        if (existing) {
+          if ((src.includes("mapbox-gl") && window.mapboxgl) || (src.includes("turf") && window.turf)) {
+            resolve()
+            return
+          }
+          existing.addEventListener("load", () => resolve(), { once: true })
+          existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), {
+            once: true,
+          })
+          return
+        }
+        const script = document.createElement("script")
+        script.src = src
+        script.async = true
+        script.onload = () => resolve()
+        script.onerror = () => reject(new Error(`Failed to load ${src}`))
+        document.head.appendChild(script)
+      })
+
+    const loadMapboxScripts = async () => {
+      ensureStylesheet()
+      try {
+        await Promise.all([loadScript(TURF_JS), loadScript(MAPBOX_GL_JS)])
+        setScriptsLoaded(true)
+      } catch {
+        console.error("[v0] Failed to load Mapbox scripts")
+        setMapboxError("Failed to load Mapbox scripts. Please check your internet connection.")
+        notifyTrailheadReady()
+      }
+    }
+
+    if (window.mapboxgl) {
       setScriptsLoaded(true)
+    } else if (!scriptsLoaded) {
+      void loadMapboxScripts()
     }
   }, [scriptsLoaded])
 
@@ -135,14 +253,16 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
 
         let token: string
         try {
-          token = await getMapboxToken()
+          token = await (tokenPromiseRef.current ?? getMapboxToken())
         } catch (error) {
           console.error("[v0] Token error:", error)
           setMapboxError("Mapbox access token is required. Please set MAPBOX_ACCESS_TOKEN in your Project Settings.")
+          notifyTrailheadReady()
           return
         }
 
         window.mapboxgl.accessToken = token
+        accessTokenRef.current = token
 
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
@@ -269,60 +389,39 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
           setMapLoaded(true)
           onMapLoad?.(map.current)
 
-          preloadTrailTiles()
-          // Keep at "waiting" until startIntro is true
+          prefetchRef.current?.cancel()
+          prefetchRef.current = startPathTilePrefetch({
+            map: map.current,
+            trailCoordinates: trailData.geometry.coordinates,
+            accessToken: accessTokenRef.current,
+            // Camera jumps are safe while splash/waiting still covers the map
+            canMoveCamera: () => introPhaseRef.current === "waiting",
+            onTrailheadWarm: () => {
+              markTrailPrepCached()
+              notifyTrailheadReady()
+            },
+            onTrailheadProgress: (progress) => onTrailheadProgressRef.current?.(progress),
+            trailheadAlreadyCached: isTrailPrepCached(),
+          })
         })
 
         map.current.on("error", (e: any) => {
           console.error("[v0] Mapbox error:", e)
           setMapboxError("Failed to load map. Please check your Mapbox token and internet connection.")
+          notifyTrailheadReady()
         })
       } catch (error) {
         console.error("[v0] Failed to initialize Mapbox:", error)
         setMapboxError("Failed to load Mapbox. Please refresh the page and try again.")
+        notifyTrailheadReady()
       }
-    }
-
-    const preloadTrailTiles = () => {
-      if (!map.current || !trailData || preloadingRef.current) return
-      preloadingRef.current = true
-
-      const coords = trailData.geometry.coordinates
-      const totalPoints = coords.length
-
-      const sampleInterval = Math.floor(totalPoints / 50)
-      const samplePoints: [number, number][] = []
-
-      for (let i = 0; i < totalPoints; i += sampleInterval) {
-        samplePoints.push(coords[i])
-      }
-      samplePoints.push(coords[totalPoints - 1])
-
-      let preloadIndex = 0
-
-      const preloadNext = () => {
-        if (preloadIndex >= samplePoints.length || !map.current) {
-          setTilesPreloaded(true)
-          return
-        }
-
-        const point = samplePoints[preloadIndex]
-
-        try {
-          const screenPoint = map.current.project(point)
-          map.current.queryRenderedFeatures(screenPoint)
-        } catch (e) {}
-
-        preloadIndex++
-        requestAnimationFrame(preloadNext)
-      }
-
-      setTimeout(preloadNext, 500)
     }
 
     initializeMap()
 
     return () => {
+      prefetchRef.current?.cancel()
+      prefetchRef.current = null
       if (map.current) {
         map.current.remove()
         map.current = null
@@ -330,21 +429,29 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
     }
   }, [scriptsLoaded, onMapLoad, trailData])
 
+  // Ahead-of-scroll DEM warm — throttled so it doesn't run on every miles tick
   useEffect(() => {
-    if (!map.current || !mapLoaded || !currentPosition || !window.turf) return
+    if (!mapLoaded || !prefetchRef.current) return
+    const miles = externalMiles || currentMiles
+    const timer = setTimeout(() => {
+      prefetchRef.current?.warmAhead(miles)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [externalMiles, currentMiles, mapLoaded])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !currentPosition) return
 
     const source = map.current.getSource("position-cursor")
     if (source) {
-      const point = {
+      source.setData({
         type: "Feature",
         properties: {},
         geometry: {
           type: "Point",
           coordinates: currentPosition,
         },
-      }
-
-      source.setData(point)
+      })
     }
   }, [currentPosition, mapLoaded])
 
@@ -354,25 +461,6 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
       onScrollControlReady(scrollControls)
     }
   }, [initialAnimationDone, onScrollControlReady, scrollControls])
-
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return
-
-    const updateCameraInfo = () => {
-      if (map.current) {
-        setCameraInfo({
-          center: [map.current.getCenter().lng, map.current.getCenter().lat],
-          zoom: map.current.getZoom(),
-          pitch: map.current.getPitch(),
-          bearing: map.current.getBearing(),
-        })
-      }
-    }
-
-    updateCameraInfo()
-    const interval = setInterval(updateCameraInfo, 100)
-    return () => clearInterval(interval)
-  }, [mapLoaded, debugMode])
 
   useEffect(() => {
     if (!map.current || !mapLoaded) return
@@ -419,6 +507,14 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
   // Start intro animation when startIntro becomes true
   useEffect(() => {
     if (startIntro && introPhase === "waiting" && mapLoaded && map.current) {
+      // Flip ref immediately so in-flight prefetch stops before we restore bird's-eye.
+      introPhaseRef.current = "overview"
+      map.current.jumpTo({
+        center: [-118.4102, 38.6467],
+        zoom: 5.49,
+        pitch: 60,
+        bearing: 31,
+      })
       setIntroPhase("overview")
     }
   }, [startIntro, introPhase, mapLoaded])
@@ -426,7 +522,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
   useEffect(() => {
     if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return
 
-    // Wait at the overview before the original slow crane shot to the trailhead.
+    // Wait briefly at the overview before the crane shot to the trailhead.
     const timer = setTimeout(() => {
       setIntroPhase("flying")
 
@@ -449,7 +545,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
           onIntroComplete?.()
         }, 100)
       })
-    }, 2000)
+    }, 600)
 
     return () => clearTimeout(timer)
   }, [introPhase, mapLoaded, debugMode])
