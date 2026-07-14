@@ -11,16 +11,15 @@ interface MobileChapterToastProps {
 }
 
 export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: MobileChapterToastProps) {
-  // Calculate visibility based on miles - shorter duration for mobile (no scroll fade)
   const opacity = useMemo(() => {
     const range = CHAPTER_MILE_RANGES[chapterIndex]
     if (!range) return 0
 
     const milesIntoChapter = currentMiles - range.start
 
-    const fadeInDistance = 3
-    const visibleDuration = 20
-    const fadeOutDuration = 12
+    const fadeInDistance = 2
+    const visibleDuration = 8
+    const fadeOutDuration = 5
     const totalDisplayWindow = fadeInDistance + visibleDuration + fadeOutDuration
 
     if (milesIntoChapter < 0) return 0
@@ -42,11 +41,10 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
 
   return (
     <div
-      className="md:hidden fixed top-1/2 left-4 right-4 -translate-y-1/2 z-30 transition-opacity duration-300"
+      className="md:hidden fixed top-1/2 left-4 right-4 -translate-y-1/2 z-30 transition-opacity duration-700"
       style={{ opacity }}
     >
       <div className="bg-stone-900/90 backdrop-blur-md rounded-xl border border-stone-800/50 p-4">
-        {/* Chapter header */}
         <div className="flex items-center gap-2 mb-2">
           <div className="w-6 h-6 rounded-full bg-[#ff6b9d]/20 border border-[#ff6b9d]/40 flex items-center justify-center">
             <span className="text-[10px] font-semibold text-[#ff6b9d]">{chapterIndex + 1}</span>
@@ -54,7 +52,6 @@ export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: Mobi
           <h3 className="text-sm font-semibold text-white">{chapter.title}</h3>
         </div>
 
-        {/* Full description */}
         <p className="text-xs text-stone-400 leading-relaxed">{chapter.description}</p>
       </div>
     </div>
