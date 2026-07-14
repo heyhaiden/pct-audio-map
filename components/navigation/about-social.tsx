@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Info, Instagram, Twitter, Menu, X } from "lucide-react"
+import { Info, Instagram, Twitter, Menu, X, Headphones } from "lucide-react"
 
 interface AboutSocialProps {
   className?: string
@@ -76,6 +76,13 @@ export function AboutSocial({ className }: AboutSocialProps) {
                 >
                   <Info className="w-4 h-4" />
                   About this project
+                </Link>
+                <Link
+                  href="/library"
+                  className="flex items-center gap-2 text-sm text-stone-400 hover:text-white transition-colors"
+                >
+                  <Headphones className="w-4 h-4" />
+                  Audio library
                 </Link>
               </div>
 
@@ -160,6 +167,14 @@ export function AboutSocial({ className }: AboutSocialProps) {
               >
                 <span>About</span>
                 <Info className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/library"
+                className="flex items-center justify-between text-stone-300 hover:text-white transition-colors py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <span>Audio library</span>
+                <Headphones className="w-4 h-4" />
               </Link>
             </nav>
 

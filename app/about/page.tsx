@@ -1,7 +1,7 @@
 "use client"
 
-import Link from "next/link"
-import { ArrowLeft, Mail, ExternalLink, Linkedin, Globe } from "lucide-react"
+import { Mail, ExternalLink, Linkedin, Globe } from "lucide-react"
+import { SiteHeader } from "@/components/navigation/site-header"
 
 // Abstract minimalist trail line SVG (same as splash)
 function AbstractTrailIcon({ className }: { className?: string }) {
@@ -49,18 +49,7 @@ export default function AboutPage() {
       }} />
 
       <div className="relative z-10">
-        {/* Header */}
-        <header className="sticky top-0 bg-stone-950/80 backdrop-blur-md border-b border-stone-800/50 z-50">
-          <div className="max-w-4xl mx-auto px-6 py-4">
-            <Link 
-              href="/"
-              className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm">Back to Home  </span>
-            </Link>
-          </div>
-        </header>
+        <SiteHeader current="about" />
 
         {/* Main content */}
         <main className="max-w-4xl mx-auto px-6 py-12 md:py-20">

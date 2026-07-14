@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import Link from "next/link"
-import { ArrowLeft, Play, Pause, MapPin, Mountain } from "lucide-react"
+import { Play, Pause, MapPin, Mountain, ChevronDown } from "lucide-react"
 import { audioMarkers } from "@/data/audio-markers"
+import { SiteHeader } from "@/components/navigation/site-header"
 
 // Chapter display names
 const chapterNames: Record<string, string> = {
@@ -29,6 +29,9 @@ function groupByChapter() {
 export default function LibraryPage() {
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [progress, setProgress] = useState<Record<string, number>>({})
+  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({
+    "southern-california": true,
+  })
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const groupedMarkers = groupByChapter()
 
@@ -40,6 +43,13 @@ export default function LibraryPage() {
     "oregon-cascades",
     "washington-cascades",
   ]
+
+  const toggleChapter = (chapterKey: string) => {
+    setExpandedChapters((prev) => ({
+      ...prev,
+      [chapterKey]: !prev[chapterKey],
+    }))
+  }
 
   useEffect(() => {
     return () => {
@@ -99,18 +109,7 @@ export default function LibraryPage() {
       />
 
       <div className="relative z-10">
-        {/* Header */}
-        <header className="sticky top-0 bg-stone-950/80 backdrop-blur-md border-b border-stone-800/50 z-50">
-          <div className="max-w-4xl mx-auto px-6 py-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm">Back to Map</span>
-            </Link>
-          </div>
-        </header>
+        <SiteHeader current="library" />
 
         {/* Main content */}
         <main className="max-w-4xl mx-auto px-6 py-12 md:py-20">
@@ -125,82 +124,101 @@ export default function LibraryPage() {
           </section>
 
           {/* Audio listings by chapter */}
-          <div className="space-y-12">
+          <div className="space-y-4">
             {chapterOrder.map((chapterKey) => {
               const markers = groupedMarkers[chapterKey]
               if (!markers || markers.length === 0) return null
 
+              const isExpanded = !!expandedChapters[chapterKey]
+
               return (
-                <section key={chapterKey}>
-                  <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-3">
-                    <Mountain className="w-5 h-5 text-[#ff6b9d]" />
-                    {chapterNames[chapterKey]}
-                    <span className="text-sm font-normal text-stone-500">
-                      ({markers.length} recordings)
-                    </span>
-                  </h2>
+                <section
+                  key={chapterKey}
+                  className="border border-stone-800/50 rounded-xl overflow-hidden bg-stone-900/30"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleChapter(chapterKey)}
+                    aria-expanded={isExpanded}
+                    className="w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-stone-900/50 transition-colors"
+                  >
+                    <Mountain className="w-5 h-5 text-[#ff6b9d] flex-shrink-0" />
+                    <h2 className="text-xl font-semibold text-white flex-1 min-w-0">
+                      {chapterNames[chapterKey]}
+                      <span className="ml-2 text-sm font-normal text-stone-500">
+                        ({markers.length} recordings)
+                      </span>
+                    </h2>
+                    <ChevronDown
+                      className={`w-5 h-5 text-stone-400 flex-shrink-0 transition-transform duration-200 ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
 
-                  <div className="space-y-3">
-                    {markers.map((marker) => {
-                      const isPlaying = playingId === marker.id
-                      const currentProgress = progress[marker.id] || 0
+                  {isExpanded && (
+                    <div className="space-y-3 px-4 pb-4">
+                      {markers.map((marker) => {
+                        const isPlaying = playingId === marker.id
+                        const currentProgress = progress[marker.id] || 0
 
-                      return (
-                        <div
-                          key={marker.id}
-                          className={`relative bg-stone-900/50 border rounded-xl p-4 transition-all duration-300 ${
-                            isPlaying
-                              ? "border-[#ff6b9d]/50 bg-stone-900/80"
-                              : "border-stone-800/50 hover:border-stone-700/50"
-                          }`}
-                        >
-                          {/* Progress bar background */}
+                        return (
                           <div
-                            className="absolute inset-0 bg-[#ff6b9d]/10 rounded-xl transition-all duration-200"
-                            style={{ width: `${currentProgress}%` }}
-                          />
+                            key={marker.id}
+                            className={`relative bg-stone-900/50 border rounded-xl p-4 transition-all duration-300 ${
+                              isPlaying
+                                ? "border-[#ff6b9d]/50 bg-stone-900/80"
+                                : "border-stone-800/50 hover:border-stone-700/50"
+                            }`}
+                          >
+                            {/* Progress bar background */}
+                            <div
+                              className="absolute inset-0 bg-[#ff6b9d]/10 rounded-xl transition-all duration-200"
+                              style={{ width: `${currentProgress}%` }}
+                            />
 
-                          <div className="relative flex items-center gap-4">
-                            {/* Play button */}
-                            <button
-                              onClick={() => handlePlayPause(marker.id, marker.audioUrl)}
-                              className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                                isPlaying
-                                  ? "bg-[#ff6b9d] text-white"
-                                  : "bg-stone-800 text-stone-400 hover:bg-stone-700 hover:text-white"
-                              }`}
-                              aria-label={isPlaying ? "Pause" : "Play"}
-                            >
-                              {isPlaying ? (
-                                <Pause className="w-5 h-5" />
-                              ) : (
-                                <Play className="w-5 h-5 ml-0.5" />
-                              )}
-                            </button>
+                            <div className="relative flex items-center gap-4">
+                              {/* Play button */}
+                              <button
+                                onClick={() => handlePlayPause(marker.id, marker.audioUrl)}
+                                className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                  isPlaying
+                                    ? "bg-[#ff6b9d] text-white"
+                                    : "bg-stone-800 text-stone-400 hover:bg-stone-700 hover:text-white"
+                                }`}
+                                aria-label={isPlaying ? "Pause" : "Play"}
+                              >
+                                {isPlaying ? (
+                                  <Pause className="w-5 h-5" />
+                                ) : (
+                                  <Play className="w-5 h-5 ml-0.5" />
+                                )}
+                              </button>
 
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-white font-medium truncate">
-                                {marker.name}
-                              </h3>
-                              <p className="text-sm text-stone-400 truncate">
-                                {marker.description}
-                              </p>
-                            </div>
-
-                            {/* Metadata */}
-                            <div className="hidden sm:flex flex-col items-end text-right">
-                              <div className="flex items-center gap-1 text-xs text-stone-500">
-                                <MapPin className="w-3 h-3" />
-                                {marker.elevation.toLocaleString()} ft
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-white font-medium truncate">
+                                  {marker.name}
+                                </h3>
+                                <p className="text-sm text-stone-400 truncate">
+                                  {marker.description}
+                                </p>
                               </div>
-                              <p className="text-xs text-stone-600">{marker.recordingDate}</p>
+
+                              {/* Metadata */}
+                              <div className="hidden sm:flex flex-col items-end text-right">
+                                <div className="flex items-center gap-1 text-xs text-stone-500">
+                                  <MapPin className="w-3 h-3" />
+                                  {marker.elevation.toLocaleString()} ft
+                                </div>
+                                <p className="text-xs text-stone-600">{marker.recordingDate}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </section>
               )
             })}
