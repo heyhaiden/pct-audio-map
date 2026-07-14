@@ -75,6 +75,7 @@ export function useTrailScroll({
     altitude: 80000, // Higher starting altitude for zoom 9.55
     aimLng: -116.467,
     aimLat: 32.5897,
+    groundElevation: 0,
   })
   const hasInitializedFromMap = useRef(false)
   const previousFrameTimeRef = useRef<number | null>(null)
@@ -384,6 +385,16 @@ export function useTrailScroll({
             const center = currentMap.getCenter()
             cameraStateRef.current.aimLng = center.lng
             cameraStateRef.current.aimLat = center.lat
+            if (typeof currentMap.queryTerrainElevation === "function") {
+              const initialElevation = currentMap.queryTerrainElevation(center, { exaggerated: true })
+              if (initialElevation != null && Number.isFinite(initialElevation)) {
+                cameraStateRef.current.groundElevation = initialElevation
+                cameraStateRef.current.altitude = Math.max(
+                  1000,
+                  cameraStateRef.current.altitude - initialElevation,
+                )
+              }
+            }
           }
         } catch (e) {
           // Fallback: use standard getters
@@ -417,6 +428,26 @@ export function useTrailScroll({
       state.pitch += (targetPitch - state.pitch) * positionFactor
       state.altitude += (targetAltitude - state.altitude) * positionFactor
 
+      // The camera flies at a constant height above the ground rather than
+      // above sea level. Terrain elevation is smoothed with a long time
+      // constant so mountain ranges roll gently underneath instead of
+      // punching the camera up and down at every ridge.
+      let rawGroundElevation: number | null = null
+      try {
+        if (typeof currentMap.queryTerrainElevation === "function") {
+          rawGroundElevation = currentMap.queryTerrainElevation(
+            { lng: state.aimLng, lat: state.aimLat },
+            { exaggerated: true },
+          )
+        }
+      } catch {
+        rawGroundElevation = null
+      }
+      if (rawGroundElevation != null && Number.isFinite(rawGroundElevation)) {
+        const elevationFactor = 1 - Math.exp(-deltaSeconds / 2.5)
+        state.groundElevation += (rawGroundElevation - state.groundElevation) * elevationFactor
+      }
+
       const horizontalDistanceKilometers =
         (state.altitude / 1000) * Math.tan((state.pitch * Math.PI) / 180)
       const cameraPoint = window.turf.destination(
@@ -441,10 +472,14 @@ export function useTrailScroll({
 
         camera.position = window.mapboxgl.MercatorCoordinate.fromLngLat(
           { lng: state.lng, lat: state.lat },
-          state.altitude,
+          state.groundElevation + state.altitude,
         )
 
-        camera.lookAtPoint({ lng: state.aimLng, lat: state.aimLat })
+        // Orient with pitch/bearing instead of lookAtPoint(). lookAtPoint aims
+        // at sea level, so terrain height between camera and target skewed the
+        // framing over mountains. The position above already places the aim
+        // point at the correct screen location for this pitch and bearing.
+        camera.setPitchBearing(state.pitch, state.bearing)
 
         currentMap.setFreeCameraOptions(camera)
       } catch (error) {
