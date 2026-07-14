@@ -426,7 +426,7 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
   useEffect(() => {
     if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return
 
-    // Wait a moment at the overview position before flying to trailhead
+    // Wait at the overview before the original slow crane shot to the trailhead.
     const timer = setTimeout(() => {
       setIntroPhase("flying")
 
@@ -437,10 +437,8 @@ export function PCTMap({ onMapLoad, onMilesUpdate, onScrollControlReady, onIntro
         bearing: -5,
         duration: 8000,
         essential: true,
-        easing: (t: number) => {
-          // Ease-in-out cubic for balanced acceleration/deceleration
-          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-        },
+        easing: (t: number) =>
+          t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
       })
 
       map.current.once("moveend", () => {
