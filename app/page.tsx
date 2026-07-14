@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo, useEffect, useCallback } from "react"
+import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
 import { PCTMap } from "@/components/map/pct-map"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
@@ -22,6 +22,8 @@ import {
   cancelFreeCameraAnimation,
   readFreeCameraPose,
 } from "@/lib/node-camera"
+import { useChapterIntro } from "@/hooks/use-chapter-intro"
+import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import type { AudioMarker } from "@/types/map"
 
 /** Early Oregon — content ends here for now. */
@@ -50,6 +52,8 @@ export default function Home() {
   const [introComplete, setIntroComplete] = useState(false)
   const [showSplash, setShowSplash] = useState(true)
   const [journeyStarted, setJourneyStarted] = useState(false)
+  const [trailheadReady, setTrailheadReady] = useState(false)
+  const [trailheadProgress, setTrailheadProgress] = useState(0)
   const [showWip, setShowWip] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [forceChapterVisible, setForceChapterVisible] = useState(false)
@@ -58,6 +62,13 @@ export default function Home() {
   const lastChapterRef = useRef(0)
   const scrollControlRef = useRef<ScrollControls | null>(null)
   const cameraAnimRef = useRef(0)
+
+  // Restore Enter-gate from session after navigating away and back home
+  useLayoutEffect(() => {
+    if (!isTrailPrepCached()) return
+    setTrailheadProgress(1)
+    setTrailheadReady(true)
+  }, [])
 
   const currentChapter = useMemo(() => {
     for (let i = 0; i < CHAPTER_MILE_RANGES.length; i++) {
@@ -71,6 +82,15 @@ export default function Home() {
 
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
 
+  const { intro: chapterIntro, triggerIntro } = useChapterIntro(
+    currentMiles,
+    introComplete && journeyStarted,
+  )
+
+  const introChapterIndex = chapterIntro?.index ?? currentChapter
+  const introChapter = pctSegments[introChapterIndex] ?? pctSegments[0]
+  const introOpacity = chapterIntro?.opacity ?? 0
+
   const handleMilesUpdate = useCallback((miles: number, total: number) => {
     setCurrentMiles(miles)
     setTotalMiles(total)
@@ -78,6 +98,15 @@ export default function Home() {
 
   const handleIntroComplete = useCallback(() => {
     setIntroComplete(true)
+  }, [])
+
+  const handleTrailheadReady = useCallback(() => {
+    setTrailheadProgress(1)
+    setTrailheadReady(true)
+  }, [])
+
+  const handleTrailheadProgress = useCallback((progress: number) => {
+    setTrailheadProgress((prev) => Math.max(prev, Math.min(1, progress)))
   }, [])
 
   const handleSplashEnter = useCallback(() => {
@@ -143,6 +172,7 @@ export default function Home() {
     setCurrentMiles(targetMile)
     setIsChapterTransitioning(true)
     setForceChapterVisible(true)
+    triggerIntro(chapterIndex, targetMile)
 
     setTimeout(() => {
       window.scrollTo({
@@ -157,7 +187,7 @@ export default function Home() {
 
     setTimeout(() => {
       setForceChapterVisible(false)
-    }, isLongDistance ? 1500 : 2000)
+    }, isLongDistance ? 2500 : 3500)
   }
 
   const flyToMarkerPunchIn = useCallback(
@@ -316,7 +346,13 @@ export default function Home() {
 
   return (
     <main className="relative">
-      {showSplash && <SplashScreen onEnter={handleSplashEnter} />}
+      {showSplash && (
+        <SplashScreen
+          onEnter={handleSplashEnter}
+          trailheadReady={trailheadReady}
+          trailheadProgress={trailheadProgress}
+        />
+      )}
 
       <WipScreen isVisible={showWip} onRestart={handleRestart} />
 
@@ -334,6 +370,8 @@ export default function Home() {
             scrollControlRef.current = controls
           }}
           onIntroComplete={handleIntroComplete}
+          onTrailheadReady={handleTrailheadReady}
+          onTrailheadProgress={handleTrailheadProgress}
           startIntro={journeyStarted}
           hideLoading={showSplash}
           currentMiles={currentMiles}
@@ -355,18 +393,18 @@ export default function Home() {
 
       {introComplete && journeyStarted && (
         <MobileChapterToast
-          chapter={pctSegments[currentChapter]}
-          chapterIndex={currentChapter}
-          currentMiles={currentMiles}
+          chapter={introChapter}
+          chapterIndex={introChapterIndex}
+          opacity={forceChapterVisible ? 1 : introOpacity}
         />
       )}
 
       <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ChapterCard
-          chapter={pctSegments[currentChapter]}
-          chapterIndex={currentChapter}
+          chapter={introChapter}
+          chapterIndex={introChapterIndex}
           totalChapters={pctSegments.length}
-          currentMiles={currentMiles}
+          opacity={introOpacity}
           forceVisible={forceChapterVisible}
         />
       </div>
