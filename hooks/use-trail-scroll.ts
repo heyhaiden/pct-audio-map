@@ -1,6 +1,18 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
+import {
+  CAMERA_PATH_POINTS,
+  PCT_TOTAL_MILES,
+  computeRailingPose,
+  findProgressFromCoordinates,
+  lerpBearing,
+  offsetLngLat,
+  sampleTrailAtProgress,
+  altitudeAndPitchForProgress,
+  type CameraPathPoint,
+  type FreeCameraPose,
+} from "@/lib/railing-camera"
 
 interface TrailScrollOptions {
   map: any
@@ -9,7 +21,7 @@ interface TrailScrollOptions {
   onProgressChange?: (progress: number, coordinates: [number, number]) => void
 }
 
-interface TrailScrollReturn {
+export interface TrailScrollReturn {
   scrollProgress: number
   currentMiles: number
   totalMiles: number
@@ -18,43 +30,9 @@ interface TrailScrollReturn {
   syncScrollToPosition: (coordinates: [number, number]) => void
   setPendingSyncCoordinates: (coordinates: [number, number]) => void
   setBlocked: (blocked: boolean) => void
-}
-
-const PCT_TOTAL_MILES = 2650
-const CAMERA_PATH_POINTS = 500
-const OPENING_TRANSITION_MILES = 80
-const END_TRANSITION_MILES = 35
-const CRUISING_ALTITUDE_METERS = 26000
-const INTRO_ALTITUDE_METERS = 50000
-
-function lerpBearing(a: number, b: number, t: number): number {
-  const diff = ((b - a + 540) % 360) - 180
-  return (a + diff * t + 360) % 360
-}
-
-function angularDistance(a: number, b: number): number {
-  const diff = ((b - a + 540) % 360) - 180
-  return Math.abs(diff)
-}
-
-// Great-circle destination: move distanceKm from [lng, lat] along bearingDeg.
-// Used to place the camera behind the trail point so that point sits centered.
-function offsetLngLat(lng: number, lat: number, distanceKm: number, bearingDeg: number): [number, number] {
-  const R = 6371 // Earth radius in km
-  const brng = (bearingDeg * Math.PI) / 180
-  const lat1 = (lat * Math.PI) / 180
-  const lng1 = (lng * Math.PI) / 180
-  const angular = distanceKm / R
-  const lat2 = Math.asin(
-    Math.sin(lat1) * Math.cos(angular) + Math.cos(lat1) * Math.sin(angular) * Math.cos(brng),
-  )
-  const lng2 =
-    lng1 +
-    Math.atan2(
-      Math.sin(brng) * Math.sin(angular) * Math.cos(lat1),
-      Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2),
-    )
-  return [(lng2 * 180) / Math.PI, (lat2 * 180) / Math.PI]
+  getCameraPath: () => CameraPathPoint[] | null
+  getRailingPoseAtCoordinates: (coordinates: [number, number]) => FreeCameraPose | null
+  getProgressFromCoordinates: (coordinates: [number, number]) => number
 }
 
 export function useTrailScroll({
@@ -65,25 +43,22 @@ export function useTrailScroll({
 }: TrailScrollOptions): TrailScrollReturn {
   const [scrollProgress, setScrollProgress] = useState(0)
   const [currentMiles, setCurrentMiles] = useState(0)
-  const [cameraPath, setCameraPath] = useState<
-    { lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null
-  >(null)
+  const [cameraPath, setCameraPath] = useState<CameraPathPoint[] | null>(null)
   const [isScrollPaused, setIsScrollPaused] = useState(false)
   const pendingSyncRef = useRef<[number, number] | null>(null)
-  const cameraPathRef = useRef<{ lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null>(null)
+  const cameraPathRef = useRef<CameraPathPoint[] | null>(null)
   const isBlockedRef = useRef(false)
 
   const onProgressChangeRef = useRef(onProgressChange)
   const trailCoordinatesRef = useRef(trailCoordinates)
   const mapRef = useRef(map)
 
-  // Initialize camera state - will be synced from map after intro completes
   const cameraStateRef = useRef({
     lng: -116.467,
     lat: 32.5897,
     bearing: -5,
     pitch: 0,
-    altitude: 80000, // Higher starting altitude for zoom 9.55
+    altitude: 80000,
   })
   const hasInitializedFromMap = useRef(false)
   const previousFrameTimeRef = useRef<number | null>(null)
@@ -92,67 +67,42 @@ export function useTrailScroll({
     cameraPathRef.current = cameraPath
   }, [cameraPath])
 
-  const findProgressFromCoordinates = useCallback((coordinates: [number, number]): number => {
+  const getCameraPath = useCallback(() => cameraPathRef.current, [])
+
+  const getProgressFromCoordinates = useCallback((coordinates: [number, number]): number => {
     const path = cameraPathRef.current
     if (!path || path.length === 0) return 0
-
-    const [lng, lat] = coordinates
-    let closestIndex = 0
-    let closestDistance = Number.POSITIVE_INFINITY
-
-    for (let i = 0; i < path.length; i++) {
-      const point = path[i]
-      const distance = Math.sqrt(Math.pow(point.lng - lng, 2) + Math.pow(point.lat - lat, 2))
-      if (distance < closestDistance) {
-        closestDistance = distance
-        closestIndex = i
-      }
-    }
-
-    return closestIndex / (path.length - 1)
+    return findProgressFromCoordinates(path, coordinates)
   }, [])
+
+  const getRailingPoseAtCoordinates = useCallback(
+    (coordinates: [number, number]): FreeCameraPose | null => {
+      const path = cameraPathRef.current
+      if (!path || path.length === 0) return null
+      const progress = findProgressFromCoordinates(path, coordinates)
+      return computeRailingPose(path, progress)
+    },
+    [],
+  )
 
   const syncScrollToPosition = useCallback((coordinates: [number, number]) => {
     if (typeof window === "undefined") return
     const path = cameraPathRef.current
     if (!path) return
 
-    const progress = (() => {
-      const [lng, lat] = coordinates
-      let closestIndex = 0
-      let closestDistance = Number.POSITIVE_INFINITY
-
-      for (let i = 0; i < path.length; i++) {
-        const point = path[i]
-        const distance = Math.sqrt(Math.pow(point.lng - lng, 2) + Math.pow(point.lat - lat, 2))
-        if (distance < closestDistance) {
-          closestDistance = distance
-          closestIndex = i
-        }
-      }
-
-      return closestIndex / (path.length - 1)
-    })()
-
+    const progress = findProgressFromCoordinates(path, coordinates)
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
 
     setScrollProgress(progress)
     setCurrentMiles(progress * PCT_TOTAL_MILES)
 
-    const pathIndex = progress * (path.length - 1)
-    const lowerIndex = Math.floor(pathIndex)
-    const upperIndex = Math.min(Math.ceil(pathIndex), path.length - 1)
-    const fraction = pathIndex - lowerIndex
-
-    const lowerPoint = path[lowerIndex]
-    const upperPoint = path[upperIndex]
-
-    if (lowerPoint && upperPoint) {
-      cameraStateRef.current.lng = lowerPoint.lng + (upperPoint.lng - lowerPoint.lng) * fraction
-      cameraStateRef.current.lat = lowerPoint.lat + (upperPoint.lat - lowerPoint.lat) * fraction
-      cameraStateRef.current.bearing = lerpBearing(lowerPoint.smoothedBearing, upperPoint.smoothedBearing, fraction)
-    }
+    const railing = computeRailingPose(path, progress)
+    cameraStateRef.current.lng = railing.lng
+    cameraStateRef.current.lat = railing.lat
+    cameraStateRef.current.bearing = railing.bearing
+    cameraStateRef.current.pitch = railing.pitch
+    cameraStateRef.current.altitude = railing.altitude
 
     window.scrollTo({
       top: targetScroll,
@@ -166,9 +116,7 @@ export function useTrailScroll({
 
   const resumeScrollAnimation = useCallback(() => {
     const pending = pendingSyncRef.current
-    
-    // Sync camera state from actual map position before resuming
-    // This prevents jarring jumps when transitioning back to scroll control
+
     const currentMap = mapRef.current
     if (currentMap) {
       try {
@@ -181,7 +129,7 @@ export function useTrailScroll({
           cameraStateRef.current.pitch = currentMap.getPitch()
           cameraStateRef.current.bearing = currentMap.getBearing()
         }
-      } catch (e) {
+      } catch {
         const center = currentMap.getCenter()
         cameraStateRef.current.lng = center.lng
         cameraStateRef.current.lat = center.lat
@@ -189,7 +137,7 @@ export function useTrailScroll({
         cameraStateRef.current.bearing = currentMap.getBearing()
       }
     }
-    
+
     if (pending) {
       syncScrollToPosition(pending)
       pendingSyncRef.current = null
@@ -230,15 +178,13 @@ export function useTrailScroll({
         const line = window.turf.lineString(trailCoordinates)
         const totalLength = window.turf.length(line, { units: "kilometers" })
 
-        const points: { lng: number; lat: number; bearing: number; smoothedBearing: number }[] = []
+        const points: CameraPathPoint[] = []
 
         for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
           const distance = (i / CAMERA_PATH_POINTS) * totalLength
           const point = window.turf.along(line, distance, { units: "kilometers" })
           const coords = point.geometry.coordinates
 
-          // Use a fixed-distance look-ahead so steering behaves consistently
-          // across the full trail instead of scaling with total route length.
           const bearingLookAheadKilometers = 16
           const nextDistance = Math.min(distance + bearingLookAheadKilometers, totalLength)
           const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
@@ -248,32 +194,24 @@ export function useTrailScroll({
             lng: coords[0],
             lat: coords[1],
             bearing: bearing,
-            smoothedBearing: bearing, // Will be updated in second pass
+            smoothedBearing: bearing,
           })
         }
 
-        const windowSize = 8 // Average over 8 points (~1.6% of trail)
+        const windowSize = 8
         for (let i = 0; i < points.length; i++) {
           let sumX = 0
           let sumY = 0
           let count = 0
 
           for (let j = Math.max(0, i - windowSize); j <= Math.min(points.length - 1, i + windowSize); j++) {
-            // Convert bearing to unit vector and average (handles wrap-around correctly)
             const rad = (points[j].bearing * Math.PI) / 180
             sumX += Math.cos(rad)
             sumY += Math.sin(rad)
             count++
           }
 
-          // Convert averaged vector back to bearing
           const avgBearing = (Math.atan2(sumY / count, sumX / count) * 180) / Math.PI
-
-          // Follow the trail's actual heading with NO northward bias. Biasing
-          // toward north was what pushed east/west sections (Angeles Forest,
-          // Quincy, Shasta into Oregon) out of frame. The wide averaging window
-          // above already keeps this heading smooth through switchbacks, so the
-          // camera turns with the route instead of fighting it.
           points[i].smoothedBearing = (avgBearing + 360) % 360
         }
 
@@ -292,6 +230,8 @@ export function useTrailScroll({
     }
 
     let animationFrame: number
+    let lastUiPublishMs = 0
+    let lastPublishedMiles = -1
 
     const updateCamera = (frameTime: number) => {
       const currentMap = mapRef.current
@@ -304,56 +244,29 @@ export function useTrailScroll({
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
       const scrollTop = window.scrollY
       const rawPhase = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0
+      const miles = rawPhase * PCT_TOTAL_MILES
 
-      setScrollProgress(rawPhase)
-      setCurrentMiles(rawPhase * PCT_TOTAL_MILES)
-
-      const trailPathIndex = rawPhase * (cameraPath.length - 1)
-      const trailLowerIndex = Math.floor(trailPathIndex)
-      const trailUpperIndex = Math.min(Math.ceil(trailPathIndex), cameraPath.length - 1)
-      const trailFraction = trailPathIndex - trailLowerIndex
-      const trailLowerPoint = cameraPath[trailLowerIndex]
-      const trailUpperPoint = cameraPath[trailUpperIndex]
-
-      const trailLng = trailLowerPoint.lng + (trailUpperPoint.lng - trailLowerPoint.lng) * trailFraction
-      const trailLat = trailLowerPoint.lat + (trailUpperPoint.lat - trailLowerPoint.lat) * trailFraction
-      const targetBearing = lerpBearing(
-        trailLowerPoint.smoothedBearing,
-        trailUpperPoint.smoothedBearing,
-        trailFraction,
-      )
-
-      const openingPhase = Math.min(1, (rawPhase * PCT_TOTAL_MILES) / OPENING_TRANSITION_MILES)
-      const openingEase = 1 - Math.pow(1 - openingPhase, 3)
-      const targetAltitude =
-        INTRO_ALTITUDE_METERS + (CRUISING_ALTITUDE_METERS - INTRO_ALTITUDE_METERS) * openingEase
-
-      // Pitch ramps up during the opening ~80 miles, then holds a constant
-      // viewing angle for the rest of the trail (a short easing back to flat
-      // only in the final miles).
-      const peakPitch = 60
-      const endTransitionStart = 1 - END_TRANSITION_MILES / PCT_TOTAL_MILES
-      let targetPitch = peakPitch * openingEase
-
-      if (rawPhase >= endTransitionStart) {
-        const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart)
-        targetPitch = peakPitch * (1 - endPhase)
-      }
-
-      // Center the current trail point in the viewport. A camera at altitude A
-      // tilted to `pitch` (measured from straight down) has its view ray meet
-      // the ground A * tan(pitch) away, in the bearing direction. So placing the
-      // camera that same distance BEHIND the trail point (bearing + 180) makes
-      // the trail point land at screen center — for any heading, north or not.
+      const trail = sampleTrailAtProgress(cameraPath, rawPhase)
+      const { altitude: targetAltitude, pitch: targetPitch } = altitudeAndPitchForProgress(rawPhase)
       const groundOffsetKm = (targetAltitude * Math.tan((targetPitch * Math.PI) / 180)) / 1000
       const [targetLng, targetLat] = offsetLngLat(
-        trailLng,
-        trailLat,
+        trail.lng,
+        trail.lat,
         groundOffsetKm,
-        (targetBearing + 180) % 360,
+        (trail.bearing + 180) % 360,
       )
+      const targetBearing = trail.bearing
 
-      // On first frame, sync camera state from current map position to avoid jump
+      // Keep the free-camera loop at full rate, but don't React-re-render UI every frame
+      const now = frameTime
+      if (now - lastUiPublishMs > 100 || Math.abs(miles - lastPublishedMiles) >= 0.5) {
+        lastUiPublishMs = now
+        lastPublishedMiles = miles
+        setScrollProgress(rawPhase)
+        setCurrentMiles(miles)
+        onProgressChangeRef.current?.(rawPhase, [trail.lng, trail.lat])
+      }
+
       if (!hasInitializedFromMap.current && currentMap) {
         try {
           const camera = currentMap.getFreeCameraOptions()
@@ -365,8 +278,7 @@ export function useTrailScroll({
             cameraStateRef.current.pitch = currentMap.getPitch()
             cameraStateRef.current.bearing = currentMap.getBearing()
           }
-        } catch (e) {
-          // Fallback: use standard getters
+        } catch {
           const center = currentMap.getCenter()
           cameraStateRef.current.lng = center.lng
           cameraStateRef.current.lat = center.lat
@@ -380,8 +292,6 @@ export function useTrailScroll({
       const deltaSeconds = Math.min((frameTime - previousFrameTime) / 1000, 0.1)
       previousFrameTimeRef.current = frameTime
 
-      // Exponential smoothing is independent of refresh rate. Position and
-      // framing react quickly while bearing remains slightly more deliberate.
       const positionFactor = 1 - Math.exp(-deltaSeconds / 0.16)
       const bearingFactor = 1 - Math.exp(-deltaSeconds / 0.28)
       const state = cameraStateRef.current
@@ -391,8 +301,6 @@ export function useTrailScroll({
       state.bearing = lerpBearing(state.bearing, targetBearing, bearingFactor)
       state.pitch += (targetPitch - state.pitch) * positionFactor
       state.altitude += (targetAltitude - state.altitude) * positionFactor
-
-      onProgressChangeRef.current?.(rawPhase, [trailLng, trailLat])
 
       try {
         if (typeof currentMap.getFreeCameraOptions !== "function") {
@@ -432,11 +340,8 @@ export function useTrailScroll({
     if (!isScrollPaused) return
 
     const handleUserScroll = () => {
-      // If blocked, don't do anything - the animation needs to complete first
       if (isBlockedRef.current) return
 
-      // ALWAYS prioritize pending sync coordinates - this is where we WANT to be
-      // Don't use current map position as it may be mid-animation
       if (pendingSyncRef.current) {
         syncScrollToPosition(pendingSyncRef.current)
         pendingSyncRef.current = null
@@ -444,7 +349,6 @@ export function useTrailScroll({
         return
       }
 
-      // Only fall back to current map position if no pending coordinates
       const currentMap = mapRef.current
       if (currentMap) {
         try {
@@ -457,14 +361,14 @@ export function useTrailScroll({
             cameraStateRef.current.pitch = currentMap.getPitch()
             cameraStateRef.current.bearing = currentMap.getBearing()
           }
-        } catch (e) {
+        } catch {
           const center = currentMap.getCenter()
           cameraStateRef.current.lng = center.lng
           cameraStateRef.current.lat = center.lat
           cameraStateRef.current.pitch = currentMap.getPitch()
           cameraStateRef.current.bearing = currentMap.getBearing()
         }
-        
+
         const center = currentMap.getCenter()
         if (center) {
           syncScrollToPosition([center.lng, center.lat])
@@ -496,5 +400,8 @@ export function useTrailScroll({
     syncScrollToPosition,
     setPendingSyncCoordinates,
     setBlocked,
+    getCameraPath,
+    getRailingPoseAtCoordinates,
+    getProgressFromCoordinates,
   }
 }
