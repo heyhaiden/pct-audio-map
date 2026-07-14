@@ -1,47 +1,20 @@
 "use client"
 
-import { useMemo } from "react"
-import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import type { PCTSegment } from "@/data/pct-segments"
 
 interface MobileChapterToastProps {
   chapter: PCTSegment
   chapterIndex: number
-  currentMiles: number
+  /** 0–1 visibility from useChapterIntro (locked chapter, both scroll directions). */
+  opacity: number
 }
 
-export function MobileChapterToast({ chapter, chapterIndex, currentMiles }: MobileChapterToastProps) {
-  const opacity = useMemo(() => {
-    const range = CHAPTER_MILE_RANGES[chapterIndex]
-    if (!range) return 0
-
-    const milesIntoChapter = currentMiles - range.start
-
-    const fadeInDistance = 2
-    const visibleDuration = 8
-    const fadeOutDuration = 5
-    const totalDisplayWindow = fadeInDistance + visibleDuration + fadeOutDuration
-
-    if (milesIntoChapter < 0) return 0
-    if (milesIntoChapter >= totalDisplayWindow) return 0
-
-    if (milesIntoChapter < fadeInDistance) {
-      return milesIntoChapter / fadeInDistance
-    }
-
-    if (milesIntoChapter < fadeInDistance + visibleDuration) {
-      return 1
-    }
-
-    const fadeOutProgress = (milesIntoChapter - fadeInDistance - visibleDuration) / fadeOutDuration
-    return Math.max(0, 1 - fadeOutProgress)
-  }, [chapterIndex, currentMiles])
-
-  if (opacity <= 0) return null
+export function MobileChapterToast({ chapter, chapterIndex, opacity }: MobileChapterToastProps) {
+  if (opacity <= 0.01) return null
 
   return (
     <div
-      className="md:hidden fixed top-1/2 left-4 right-4 -translate-y-1/2 z-30 transition-opacity duration-700"
+      className="md:hidden fixed top-1/2 left-4 right-4 -translate-y-1/2 z-30 transition-opacity duration-500"
       style={{ opacity }}
     >
       <div className="bg-stone-900/90 backdrop-blur-md rounded-xl border border-stone-800/50 p-4">
