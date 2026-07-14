@@ -171,6 +171,9 @@ export function useTrailScroll({
           cameraStateRef.current.altitude = camera.position.toAltitude()
           cameraStateRef.current.pitch = currentMap.getPitch()
           cameraStateRef.current.bearing = currentMap.getBearing()
+          const center = currentMap.getCenter()
+          cameraStateRef.current.aimLng = center.lng
+          cameraStateRef.current.aimLat = center.lat
         }
       } catch (e) {
         const center = currentMap.getCenter()
@@ -178,7 +181,10 @@ export function useTrailScroll({
         cameraStateRef.current.lat = center.lat
         cameraStateRef.current.pitch = currentMap.getPitch()
         cameraStateRef.current.bearing = currentMap.getBearing()
+        cameraStateRef.current.aimLng = center.lng
+        cameraStateRef.current.aimLat = center.lat
       }
+
     }
     
     if (pending) {
@@ -364,19 +370,6 @@ export function useTrailScroll({
         targetPitch = cruisingPitch * (1 - endPhase)
       }
 
-      // Derive the camera's ground position from the requested pitch and its
-      // aim point. lookAtPoint() then keeps that point centered regardless of
-      // whether this trail section heads north, sideways, or back on itself.
-      const horizontalDistanceKilometers =
-        (targetAltitude / 1000) * Math.tan((targetPitch * Math.PI) / 180)
-      const targetCameraPoint = window.turf.destination(
-        window.turf.point([targetAimLng, targetAimLat]),
-        horizontalDistanceKilometers,
-        targetBearing + 180,
-        { units: "kilometers" },
-      )
-      const [targetLng, targetLat] = targetCameraPoint.geometry.coordinates
-
       // On first frame, sync camera state from current map position to avoid jump
       if (!hasInitializedFromMap.current && currentMap) {
         try {
@@ -388,6 +381,9 @@ export function useTrailScroll({
             cameraStateRef.current.altitude = camera.position.toAltitude()
             cameraStateRef.current.pitch = currentMap.getPitch()
             cameraStateRef.current.bearing = currentMap.getBearing()
+            const center = currentMap.getCenter()
+            cameraStateRef.current.aimLng = center.lng
+            cameraStateRef.current.aimLat = center.lat
           }
         } catch (e) {
           // Fallback: use standard getters
@@ -396,6 +392,8 @@ export function useTrailScroll({
           cameraStateRef.current.lat = center.lat
           cameraStateRef.current.pitch = currentMap.getPitch()
           cameraStateRef.current.bearing = currentMap.getBearing()
+          cameraStateRef.current.aimLng = center.lng
+          cameraStateRef.current.aimLat = center.lat
         }
         hasInitializedFromMap.current = true
       }
@@ -410,13 +408,26 @@ export function useTrailScroll({
       const bearingFactor = 1 - Math.exp(-deltaSeconds / 0.28)
       const state = cameraStateRef.current
 
-      state.lng += (targetLng - state.lng) * positionFactor
-      state.lat += (targetLat - state.lat) * positionFactor
+      // Smooth one coherent framing model, then derive the camera position from
+      // it. Independently smoothing position and aim creates a changing view
+      // vector, which caused the jagged movement introduced by adaptive framing.
       state.aimLng += (targetAimLng - state.aimLng) * positionFactor
       state.aimLat += (targetAimLat - state.aimLat) * positionFactor
       state.bearing = lerpBearing(state.bearing, targetBearing, bearingFactor)
       state.pitch += (targetPitch - state.pitch) * positionFactor
       state.altitude += (targetAltitude - state.altitude) * positionFactor
+
+      const horizontalDistanceKilometers =
+        (state.altitude / 1000) * Math.tan((state.pitch * Math.PI) / 180)
+      const cameraPoint = window.turf.destination(
+        window.turf.point([state.aimLng, state.aimLat]),
+        horizontalDistanceKilometers,
+        state.bearing + 180,
+        { units: "kilometers" },
+      )
+      const [cameraLng, cameraLat] = cameraPoint.geometry.coordinates
+      state.lng = cameraLng
+      state.lat = cameraLat
 
       onProgressChangeRef.current?.(rawPhase, [trailLng, trailLat])
 
