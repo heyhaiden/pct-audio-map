@@ -75,7 +75,6 @@ export function useTrailScroll({
     altitude: 80000, // Higher starting altitude for zoom 9.55
     aimLng: -116.467,
     aimLat: 32.5897,
-    groundElevation: 0,
   })
   const hasInitializedFromMap = useRef(false)
   const previousFrameTimeRef = useRef<number | null>(null)
@@ -172,9 +171,6 @@ export function useTrailScroll({
           cameraStateRef.current.altitude = camera.position.toAltitude()
           cameraStateRef.current.pitch = currentMap.getPitch()
           cameraStateRef.current.bearing = currentMap.getBearing()
-          const center = currentMap.getCenter()
-          cameraStateRef.current.aimLng = center.lng
-          cameraStateRef.current.aimLat = center.lat
         }
       } catch (e) {
         const center = currentMap.getCenter()
@@ -182,10 +178,7 @@ export function useTrailScroll({
         cameraStateRef.current.lat = center.lat
         cameraStateRef.current.pitch = currentMap.getPitch()
         cameraStateRef.current.bearing = currentMap.getBearing()
-        cameraStateRef.current.aimLng = center.lng
-        cameraStateRef.current.aimLat = center.lat
       }
-
     }
     
     if (pending) {
@@ -371,6 +364,19 @@ export function useTrailScroll({
         targetPitch = cruisingPitch * (1 - endPhase)
       }
 
+      // Derive the camera's ground position from the requested pitch and its
+      // aim point. lookAtPoint() then keeps that point centered regardless of
+      // whether this trail section heads north, sideways, or back on itself.
+      const horizontalDistanceKilometers =
+        (targetAltitude / 1000) * Math.tan((targetPitch * Math.PI) / 180)
+      const targetCameraPoint = window.turf.destination(
+        window.turf.point([targetAimLng, targetAimLat]),
+        horizontalDistanceKilometers,
+        targetBearing + 180,
+        { units: "kilometers" },
+      )
+      const [targetLng, targetLat] = targetCameraPoint.geometry.coordinates
+
       // On first frame, sync camera state from current map position to avoid jump
       if (!hasInitializedFromMap.current && currentMap) {
         try {
@@ -382,19 +388,6 @@ export function useTrailScroll({
             cameraStateRef.current.altitude = camera.position.toAltitude()
             cameraStateRef.current.pitch = currentMap.getPitch()
             cameraStateRef.current.bearing = currentMap.getBearing()
-            const center = currentMap.getCenter()
-            cameraStateRef.current.aimLng = center.lng
-            cameraStateRef.current.aimLat = center.lat
-            if (typeof currentMap.queryTerrainElevation === "function") {
-              const initialElevation = currentMap.queryTerrainElevation(center, { exaggerated: true })
-              if (initialElevation != null && Number.isFinite(initialElevation)) {
-                cameraStateRef.current.groundElevation = initialElevation
-                cameraStateRef.current.altitude = Math.max(
-                  1000,
-                  cameraStateRef.current.altitude - initialElevation,
-                )
-              }
-            }
           }
         } catch (e) {
           // Fallback: use standard getters
@@ -403,8 +396,6 @@ export function useTrailScroll({
           cameraStateRef.current.lat = center.lat
           cameraStateRef.current.pitch = currentMap.getPitch()
           cameraStateRef.current.bearing = currentMap.getBearing()
-          cameraStateRef.current.aimLng = center.lng
-          cameraStateRef.current.aimLat = center.lat
         }
         hasInitializedFromMap.current = true
       }
@@ -419,46 +410,13 @@ export function useTrailScroll({
       const bearingFactor = 1 - Math.exp(-deltaSeconds / 0.28)
       const state = cameraStateRef.current
 
-      // Smooth one coherent framing model, then derive the camera position from
-      // it. Independently smoothing position and aim creates a changing view
-      // vector, which caused the jagged movement introduced by adaptive framing.
+      state.lng += (targetLng - state.lng) * positionFactor
+      state.lat += (targetLat - state.lat) * positionFactor
       state.aimLng += (targetAimLng - state.aimLng) * positionFactor
       state.aimLat += (targetAimLat - state.aimLat) * positionFactor
       state.bearing = lerpBearing(state.bearing, targetBearing, bearingFactor)
       state.pitch += (targetPitch - state.pitch) * positionFactor
       state.altitude += (targetAltitude - state.altitude) * positionFactor
-
-      // The camera flies at a constant height above the ground rather than
-      // above sea level. Terrain elevation is smoothed with a long time
-      // constant so mountain ranges roll gently underneath instead of
-      // punching the camera up and down at every ridge.
-      let rawGroundElevation: number | null = null
-      try {
-        if (typeof currentMap.queryTerrainElevation === "function") {
-          rawGroundElevation = currentMap.queryTerrainElevation(
-            { lng: state.aimLng, lat: state.aimLat },
-            { exaggerated: true },
-          )
-        }
-      } catch {
-        rawGroundElevation = null
-      }
-      if (rawGroundElevation != null && Number.isFinite(rawGroundElevation)) {
-        const elevationFactor = 1 - Math.exp(-deltaSeconds / 2.5)
-        state.groundElevation += (rawGroundElevation - state.groundElevation) * elevationFactor
-      }
-
-      const horizontalDistanceKilometers =
-        (state.altitude / 1000) * Math.tan((state.pitch * Math.PI) / 180)
-      const cameraPoint = window.turf.destination(
-        window.turf.point([state.aimLng, state.aimLat]),
-        horizontalDistanceKilometers,
-        state.bearing + 180,
-        { units: "kilometers" },
-      )
-      const [cameraLng, cameraLat] = cameraPoint.geometry.coordinates
-      state.lng = cameraLng
-      state.lat = cameraLat
 
       onProgressChangeRef.current?.(rawPhase, [trailLng, trailLat])
 
@@ -472,14 +430,10 @@ export function useTrailScroll({
 
         camera.position = window.mapboxgl.MercatorCoordinate.fromLngLat(
           { lng: state.lng, lat: state.lat },
-          state.groundElevation + state.altitude,
+          state.altitude,
         )
 
-        // Orient with pitch/bearing instead of lookAtPoint(). lookAtPoint aims
-        // at sea level, so terrain height between camera and target skewed the
-        // framing over mountains. The position above already places the aim
-        // point at the correct screen location for this pitch and bearing.
-        camera.setPitchBearing(state.pitch, state.bearing)
+        camera.lookAtPoint({ lng: state.aimLng, lat: state.aimLat })
 
         currentMap.setFreeCameraOptions(camera)
       } catch (error) {
