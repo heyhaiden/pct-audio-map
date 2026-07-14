@@ -26,17 +26,7 @@ const OPENING_TRANSITION_MILES = 80
 const END_TRANSITION_MILES = 35
 const CRUISING_ALTITUDE_METERS = 26000
 const INTRO_ALTITUDE_METERS = 50000
-const MIN_LOOK_AHEAD_MILES = 6
-const MAX_LOOK_AHEAD_MILES = 14
-const MAX_CURVATURE_PITCH_REDUCTION = 10
-
-type CameraPathPoint = {
-  lng: number
-  lat: number
-  bearing: number
-  smoothedBearing: number
-  curvature: number
-}
+const CAMERA_FOLLOW_DISTANCE_MILES = 8
 
 function lerpBearing(a: number, b: number, t: number): number {
   const diff = ((b - a + 540) % 360) - 180
@@ -48,6 +38,13 @@ function angularDistance(a: number, b: number): number {
   return Math.abs(diff)
 }
 
+function biasTowardNorth(bearing: number, northBias = 0.3): number {
+  // northBias: 0 = no bias, 1 = always north
+  // Allow some deviation but pull toward north
+  const northBearing = 0
+  return lerpBearing(bearing, northBearing, northBias)
+}
+
 export function useTrailScroll({
   map,
   trailCoordinates,
@@ -56,10 +53,12 @@ export function useTrailScroll({
 }: TrailScrollOptions): TrailScrollReturn {
   const [scrollProgress, setScrollProgress] = useState(0)
   const [currentMiles, setCurrentMiles] = useState(0)
-  const [cameraPath, setCameraPath] = useState<CameraPathPoint[] | null>(null)
+  const [cameraPath, setCameraPath] = useState<
+    { lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null
+  >(null)
   const [isScrollPaused, setIsScrollPaused] = useState(false)
   const pendingSyncRef = useRef<[number, number] | null>(null)
-  const cameraPathRef = useRef<CameraPathPoint[] | null>(null)
+  const cameraPathRef = useRef<{ lng: number; lat: number; bearing: number; smoothedBearing: number }[] | null>(null)
   const isBlockedRef = useRef(false)
 
   const onProgressChangeRef = useRef(onProgressChange)
@@ -73,8 +72,6 @@ export function useTrailScroll({
     bearing: -5,
     pitch: 0,
     altitude: 80000, // Higher starting altitude for zoom 9.55
-    aimLng: -116.467,
-    aimLat: 32.5897,
   })
   const hasInitializedFromMap = useRef(false)
   const previousFrameTimeRef = useRef<number | null>(null)
@@ -221,46 +218,25 @@ export function useTrailScroll({
         const line = window.turf.lineString(trailCoordinates)
         const totalLength = window.turf.length(line, { units: "kilometers" })
 
-        const points: CameraPathPoint[] = []
-        const directionWindowKilometers = 16
-        const curvatureWindowKilometers = 10
+        const points: { lng: number; lat: number; bearing: number; smoothedBearing: number }[] = []
 
         for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
           const distance = (i / CAMERA_PATH_POINTS) * totalLength
           const point = window.turf.along(line, distance, { units: "kilometers" })
           const coords = point.geometry.coordinates
-          const previousPoint = window.turf.along(
-            line,
-            Math.max(0, distance - directionWindowKilometers),
-            { units: "kilometers" },
-          )
-          const nextPoint = window.turf.along(
-            line,
-            Math.min(totalLength, distance + directionWindowKilometers),
-            { units: "kilometers" },
-          )
-          const bearing = window.turf.bearing(previousPoint, nextPoint)
 
-          const curvaturePreviousPoint = window.turf.along(
-            line,
-            Math.max(0, distance - curvatureWindowKilometers),
-            { units: "kilometers" },
-          )
-          const curvatureNextPoint = window.turf.along(
-            line,
-            Math.min(totalLength, distance + curvatureWindowKilometers),
-            { units: "kilometers" },
-          )
-          const incomingBearing = window.turf.bearing(curvaturePreviousPoint, point)
-          const outgoingBearing = window.turf.bearing(point, curvatureNextPoint)
-          const curvature = Math.min(1, angularDistance(incomingBearing, outgoingBearing) / 90)
+          // Use a fixed-distance look-ahead so steering behaves consistently
+          // across the full trail instead of scaling with total route length.
+          const bearingLookAheadKilometers = 16
+          const nextDistance = Math.min(distance + bearingLookAheadKilometers, totalLength)
+          const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
+          const bearing = window.turf.bearing(point, nextPoint)
 
           points.push({
             lng: coords[0],
             lat: coords[1],
-            bearing,
-            smoothedBearing: bearing,
-            curvature,
+            bearing: bearing,
+            smoothedBearing: bearing, // Will be updated in second pass
           })
         }
 
@@ -281,9 +257,22 @@ export function useTrailScroll({
           // Convert averaged vector back to bearing
           const avgBearing = (Math.atan2(sumY / count, sumX / count) * 180) / Math.PI
 
-          // Preserve the actual regional direction. A northward bias can point
-          // away from east-west trail sections and move the route off-screen.
-          points[i].smoothedBearing = avgBearing
+          // This keeps camera oriented generally northward while allowing some natural movement
+          const northBiasStrength = 0.4
+          points[i].smoothedBearing = biasTowardNorth(avgBearing, northBiasStrength)
+        }
+
+        const maxBearingChangePerPoint = 3 // Max 3 degrees change per point
+        for (let i = 1; i < points.length; i++) {
+          const prevBearing = points[i - 1].smoothedBearing
+          const currentBearing = points[i].smoothedBearing
+          const change = ((currentBearing - prevBearing + 540) % 360) - 180
+
+          if (Math.abs(change) > maxBearingChangePerPoint) {
+            // Clamp the change
+            const clampedChange = Math.sign(change) * maxBearingChangePerPoint
+            points[i].smoothedBearing = (prevBearing + clampedChange + 360) % 360
+          }
         }
 
         setCameraPath(points)
@@ -331,23 +320,19 @@ export function useTrailScroll({
         trailUpperPoint.smoothedBearing,
         trailFraction,
       )
-      const curvature =
-        trailLowerPoint.curvature + (trailUpperPoint.curvature - trailLowerPoint.curvature) * trailFraction
 
-      // Look farther through winding sections so individual switchbacks do not
-      // whip the camera around. This target, not a compass bearing, anchors the
-      // visible trail inside the viewport.
-      const lookAheadMiles =
-        MIN_LOOK_AHEAD_MILES + (MAX_LOOK_AHEAD_MILES - MIN_LOOK_AHEAD_MILES) * curvature
-      const aimPhase = Math.min(1, rawPhase + lookAheadMiles / PCT_TOTAL_MILES)
-      const aimPathIndex = aimPhase * (cameraPath.length - 1)
-      const aimLowerIndex = Math.floor(aimPathIndex)
-      const aimUpperIndex = Math.min(Math.ceil(aimPathIndex), cameraPath.length - 1)
-      const aimFraction = aimPathIndex - aimLowerIndex
-      const aimLowerPoint = cameraPath[aimLowerIndex]
-      const aimUpperPoint = cameraPath[aimUpperIndex]
-      const targetAimLng = aimLowerPoint.lng + (aimUpperPoint.lng - aimLowerPoint.lng) * aimFraction
-      const targetAimLat = aimLowerPoint.lat + (aimUpperPoint.lat - aimLowerPoint.lat) * aimFraction
+      // Keep the camera behind the active trail point. With pitch applied, this
+      // reserves the upper portion of the viewport for the upcoming route.
+      const followProgress = CAMERA_FOLLOW_DISTANCE_MILES / PCT_TOTAL_MILES
+      const cameraPhase = Math.max(0, rawPhase - followProgress)
+      const cameraPathIndex = cameraPhase * (cameraPath.length - 1)
+      const cameraLowerIndex = Math.floor(cameraPathIndex)
+      const cameraUpperIndex = Math.min(Math.ceil(cameraPathIndex), cameraPath.length - 1)
+      const cameraFraction = cameraPathIndex - cameraLowerIndex
+      const cameraLowerPoint = cameraPath[cameraLowerIndex]
+      const cameraUpperPoint = cameraPath[cameraUpperIndex]
+      const targetLng = cameraLowerPoint.lng + (cameraUpperPoint.lng - cameraLowerPoint.lng) * cameraFraction
+      const targetLat = cameraLowerPoint.lat + (cameraUpperPoint.lat - cameraLowerPoint.lat) * cameraFraction
 
       const openingPhase = Math.min(1, (rawPhase * PCT_TOTAL_MILES) / OPENING_TRANSITION_MILES)
       const openingEase = 1 - Math.pow(1 - openingPhase, 3)
@@ -356,26 +341,12 @@ export function useTrailScroll({
 
       const peakPitch = 60
       const endTransitionStart = 1 - END_TRANSITION_MILES / PCT_TOTAL_MILES
-      const cruisingPitch = peakPitch - curvature * MAX_CURVATURE_PITCH_REDUCTION
-      let targetPitch = cruisingPitch * openingEase
+      let targetPitch = peakPitch * openingEase
 
       if (rawPhase >= endTransitionStart) {
         const endPhase = (rawPhase - endTransitionStart) / (1 - endTransitionStart)
-        targetPitch = cruisingPitch * (1 - endPhase)
+        targetPitch = peakPitch * (1 - endPhase)
       }
-
-      // Derive the camera's ground position from the requested pitch and its
-      // aim point. lookAtPoint() then keeps that point centered regardless of
-      // whether this trail section heads north, sideways, or back on itself.
-      const horizontalDistanceKilometers =
-        (targetAltitude / 1000) * Math.tan((targetPitch * Math.PI) / 180)
-      const targetCameraPoint = window.turf.destination(
-        window.turf.point([targetAimLng, targetAimLat]),
-        horizontalDistanceKilometers,
-        targetBearing + 180,
-        { units: "kilometers" },
-      )
-      const [targetLng, targetLat] = targetCameraPoint.geometry.coordinates
 
       // On first frame, sync camera state from current map position to avoid jump
       if (!hasInitializedFromMap.current && currentMap) {
@@ -412,8 +383,6 @@ export function useTrailScroll({
 
       state.lng += (targetLng - state.lng) * positionFactor
       state.lat += (targetLat - state.lat) * positionFactor
-      state.aimLng += (targetAimLng - state.aimLng) * positionFactor
-      state.aimLat += (targetAimLat - state.aimLat) * positionFactor
       state.bearing = lerpBearing(state.bearing, targetBearing, bearingFactor)
       state.pitch += (targetPitch - state.pitch) * positionFactor
       state.altitude += (targetAltitude - state.altitude) * positionFactor
@@ -433,7 +402,7 @@ export function useTrailScroll({
           state.altitude,
         )
 
-        camera.lookAtPoint({ lng: state.aimLng, lat: state.aimLat })
+        camera.setPitchBearing(state.pitch, state.bearing)
 
         currentMap.setFreeCameraOptions(camera)
       } catch (error) {
