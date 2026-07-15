@@ -9,6 +9,11 @@ interface SplashScreenProps {
   trailheadReady?: boolean
   /** 0–1 warm progress for the button loading bar. */
   trailheadProgress?: number
+  /**
+   * When true, fade the splash away. Parent should set this only after the map
+   * camera is restored to overview so the user never sees a mid-trail warm pose.
+   */
+  revealMap?: boolean
 }
 
 // Abstract minimalist trail line SVG
@@ -166,9 +171,11 @@ export function SplashScreen({
   onEnter,
   trailheadReady = false,
   trailheadProgress = 0,
+  revealMap = false,
 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Lock scroll when splash is visible
@@ -187,13 +194,11 @@ export function SplashScreen({
     audio.loop = true
     audio.volume = 0.15 // Light ambient volume
     audioRef.current = audio
-    
-    // Play audio (may be blocked by browser autoplay policy)
+
     const playAudio = async () => {
       try {
         await audio.play()
       } catch {
-        // Autoplay blocked - add click listener to start on first interaction
         const startOnInteraction = () => {
           audio.play().catch(() => {})
           document.removeEventListener("click", startOnInteraction)
@@ -211,9 +216,10 @@ export function SplashScreen({
     }
   }, [])
 
-  const handleEnter = () => {
-    if (!trailheadReady || isExiting) return
-    // Button self-gates via unlocked; parent ready is the source of truth for cache/warm.
+  // Parent signals overview camera is ready — now fade splash (map is already correct underneath)
+  useEffect(() => {
+    if (!revealMap || isExiting || !hasStarted) return
+
     if (audioRef.current) {
       const audio = audioRef.current
       const fadeOut = setInterval(() => {
@@ -225,12 +231,17 @@ export function SplashScreen({
         }
       }, 50)
     }
-    
+
     setIsExiting(true)
-    setTimeout(() => {
-      setIsVisible(false)
-      onEnter()
-    }, 800)
+    const t = setTimeout(() => setIsVisible(false), 700)
+    return () => clearTimeout(t)
+  }, [revealMap, isExiting, hasStarted])
+
+  const handleEnter = () => {
+    if (!trailheadReady || isExiting || hasStarted) return
+    setHasStarted(true)
+    // Start journey under the still-opaque splash — parent restores overview, then sets revealMap
+    onEnter()
   }
 
   if (!isVisible) return null

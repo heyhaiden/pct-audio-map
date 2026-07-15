@@ -38,6 +38,8 @@ interface PCTMapProps {
     getProgressFromCoordinates: (coordinates: [number, number]) => number
   }) => void
   onIntroComplete?: () => void
+  /** Fired after prefetch is cancelled and camera is jumped to overview — safe to reveal map. */
+  onOverviewReady?: () => void
   /** Fired when trailhead tiles are warm enough (or soft-timeout). */
   onTrailheadReady?: () => void
   /** 0–1 progress while warming the trailhead corridor. */
@@ -48,11 +50,28 @@ interface PCTMapProps {
   currentMiles?: number
 }
 
+/** Bird's-eye overview shown at the start of the intro. */
+export const OVERVIEW_CAMERA = {
+  center: [-118.4102, 38.6467] as [number, number],
+  zoom: 5.49,
+  pitch: 60,
+  bearing: 31,
+}
+
+/** Mexico border / trailhead — journey always begins here. */
+export const TRAILHEAD_CAMERA = {
+  center: [-116.467, 32.5897] as [number, number],
+  zoom: 9.55,
+  pitch: 0,
+  bearing: -5,
+}
+
 export function PCTMap({
   onMapLoad,
   onMilesUpdate,
   onScrollControlReady,
   onIntroComplete,
+  onOverviewReady,
   onTrailheadReady,
   onTrailheadProgress,
   startIntro = false,
@@ -78,6 +97,7 @@ export function PCTMap({
   const trailheadReadyRef = useRef(false)
   const onTrailheadReadyRef = useRef(onTrailheadReady)
   const onTrailheadProgressRef = useRef(onTrailheadProgress)
+  const onOverviewReadyRef = useRef(onOverviewReady)
 
   useEffect(() => {
     introPhaseRef.current = introPhase
@@ -90,6 +110,10 @@ export function PCTMap({
   useEffect(() => {
     onTrailheadProgressRef.current = onTrailheadProgress
   }, [onTrailheadProgress])
+
+  useEffect(() => {
+    onOverviewReadyRef.current = onOverviewReady
+  }, [onOverviewReady])
 
   const notifyTrailheadReady = () => {
     if (trailheadReadyRef.current) return
@@ -267,10 +291,10 @@ export function PCTMap({
         map.current = new window.mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo?optimize=true",
-          center: [-118.4102, 38.6467],
-          zoom: 5.49,
-          pitch: 60,
-          bearing: 31,
+          center: OVERVIEW_CAMERA.center,
+          zoom: OVERVIEW_CAMERA.zoom,
+          pitch: OVERVIEW_CAMERA.pitch,
+          bearing: OVERVIEW_CAMERA.bearing,
           antialias: true,
           interactive: false,
           attributionControl: false,
@@ -504,33 +528,54 @@ export function PCTMap({
 
   const scrollControlReadyCalledRef = useRef(false)
 
-  // Start intro animation when startIntro becomes true
+  // Start intro: cancel warm, restore overview UNDER splash, then reveal + fly to trailhead.
   useEffect(() => {
     if (startIntro && introPhase === "waiting" && mapLoaded && map.current) {
-      // Flip ref immediately so in-flight prefetch stops before we restore bird's-eye.
+      // Stop any in-flight camera warm immediately
+      prefetchRef.current?.cancel()
       introPhaseRef.current = "overview"
+
       map.current.jumpTo({
-        center: [-118.4102, 38.6467],
-        zoom: 5.49,
-        pitch: 60,
-        bearing: 31,
+        center: OVERVIEW_CAMERA.center,
+        zoom: OVERVIEW_CAMERA.zoom,
+        pitch: OVERVIEW_CAMERA.pitch,
+        bearing: OVERVIEW_CAMERA.bearing,
       })
-      setIntroPhase("overview")
+
+      // Wait for overview tiles before parent fades splash — prevents mid-trail / black flash
+      const reveal = () => {
+        onOverviewReadyRef.current?.()
+        setIntroPhase("overview")
+      }
+
+      let revealed = false
+      const safeReveal = () => {
+        if (revealed) return
+        revealed = true
+        reveal()
+      }
+
+      map.current.once("idle", safeReveal)
+      // Fallback if idle is slow (cached tiles may already be warm)
+      const fallback = setTimeout(safeReveal, 700)
+      return () => {
+        clearTimeout(fallback)
+      }
     }
   }, [startIntro, introPhase, mapLoaded])
 
   useEffect(() => {
     if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return
 
-    // Wait briefly at the overview before the crane shot to the trailhead.
+    // Brief hold on overview, then crane to trailhead (always start of map)
     const timer = setTimeout(() => {
       setIntroPhase("flying")
 
       map.current.flyTo({
-        center: [-116.467, 32.5897],
-        zoom: 9.55,
-        pitch: 0,
-        bearing: -5,
+        center: TRAILHEAD_CAMERA.center,
+        zoom: TRAILHEAD_CAMERA.zoom,
+        pitch: TRAILHEAD_CAMERA.pitch,
+        bearing: TRAILHEAD_CAMERA.bearing,
         duration: 8000,
         essential: true,
         easing: (t: number) =>
@@ -538,17 +583,16 @@ export function PCTMap({
       })
 
       map.current.once("moveend", () => {
-        // Small delay to ensure camera is fully settled before handoff
         setTimeout(() => {
           setIntroPhase("done")
           setInitialAnimationDone(true)
           onIntroComplete?.()
         }, 100)
       })
-    }, 600)
+    }, 500)
 
     return () => clearTimeout(timer)
-  }, [introPhase, mapLoaded, debugMode])
+  }, [introPhase, mapLoaded, debugMode, onIntroComplete])
 
   if (mapboxError) {
     return (
@@ -575,6 +619,7 @@ export function PCTMap({
     <div className="relative h-full w-full">
       <div ref={mapContainer} className="h-full w-full" />
 
+      {/* Never flash this during splash→intro — hideLoading covers that path */}
       {!hideLoading && (!scriptsLoaded || !trailData || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-white text-xl">
@@ -582,10 +627,6 @@ export function PCTMap({
           </div>
         </div>
       )}
-
-
-
-
     </div>
   )
 }

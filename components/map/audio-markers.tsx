@@ -88,13 +88,16 @@ function chapterCollection(chapter: string) {
 export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarkersProps) {
   const onMarkerClickRef = useRef(onMarkerClick)
   onMarkerClickRef.current = onMarkerClick
+  const installedRef = useRef(false)
+  const chapterRef = useRef(currentChapter)
+  chapterRef.current = currentChapter
 
   useEffect(() => {
     if (!map || map._removed || !window.mapboxgl) return
 
     let cancelled = false
-    let retryId: ReturnType<typeof setTimeout> | null = null
     let canvas: HTMLCanvasElement | null = null
+    let retryId: ReturnType<typeof setTimeout> | null = null
 
     const teardown = () => {
       try {
@@ -103,6 +106,7 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
         }
         if (map.getLayer?.(LAYER_ID)) map.removeLayer(LAYER_ID)
         if (map.getSource?.(SOURCE_ID)) map.removeSource(SOURCE_ID)
+        installedRef.current = false
       } catch {
         /* map may already be gone */
       }
@@ -111,7 +115,6 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
     const onCanvasClick = (e: MouseEvent) => {
       if (!canvas || !map.getLayer?.(LAYER_ID)) return
       const rect = canvas.getBoundingClientRect()
-      // Slightly padded hit box so pins stay easy to tap without a second layer
       const point = new window.mapboxgl.Point(e.clientX - rect.left, e.clientY - rect.top)
       const features = map.queryRenderedFeatures(
         [
@@ -126,9 +129,17 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
       if (marker) onMarkerClickRef.current(marker)
     }
 
+    const applyChapterData = () => {
+      const source = map.getSource?.(SOURCE_ID)
+      if (source) {
+        source.setData(chapterCollection(chapterRef.current))
+      }
+    }
+
     const install = (): boolean => {
       if (cancelled || map._removed) return false
       try {
+        // Prefer idle-ready style; isStyleLoaded alone fails during aggressive tile thrash
         if (typeof map.isStyleLoaded === "function" && !map.isStyleLoaded()) return false
         canvas = map.getCanvas?.()
         if (!canvas) return false
@@ -137,7 +148,7 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
           map.addImage(IMAGE_ID, createPinImage(64), { pixelRatio: 2 })
         }
 
-        const data = chapterCollection(currentChapter)
+        const data = chapterCollection(chapterRef.current)
 
         if (map.getSource(SOURCE_ID)) {
           map.getSource(SOURCE_ID).setData(data)
@@ -159,9 +170,9 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
           })
         }
 
-        // Click-only — no per-frame mousemove / popup work
         canvas.removeEventListener("click", onCanvasClick)
         canvas.addEventListener("click", onCanvasClick)
+        installedRef.current = true
         return true
       } catch (error) {
         console.error("[v0] Failed to install audio marker layers:", error)
@@ -169,20 +180,39 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
       }
     }
 
-    const tryInstall = (attempt = 0) => {
-      if (cancelled) return
+    const tryInstall = () => {
+      if (cancelled || installedRef.current) return
       if (install()) return
-      if (attempt < 30) {
-        retryId = setTimeout(() => tryInstall(attempt + 1), 200)
-      }
+      retryId = setTimeout(tryInstall, 250)
     }
 
+    const onIdle = () => {
+      if (!installedRef.current) tryInstall()
+      else applyChapterData()
+    }
+
+    map.on("idle", onIdle)
+    map.on("style.load", tryInstall)
+    // Kick immediately and keep retrying until success (no hard attempt cap)
     tryInstall()
 
     return () => {
       cancelled = true
       if (retryId) clearTimeout(retryId)
+      map.off?.("idle", onIdle)
+      map.off?.("style.load", tryInstall)
       teardown()
+    }
+  }, [map])
+
+  // Chapter changes only swap GeoJSON — don't teardown the layer
+  useEffect(() => {
+    if (!map || map._removed || !installedRef.current) return
+    try {
+      const source = map.getSource?.(SOURCE_ID)
+      if (source) source.setData(chapterCollection(currentChapter))
+    } catch {
+      /* ignore */
     }
   }, [map, currentChapter])
 

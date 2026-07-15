@@ -18,12 +18,16 @@ declare global {
 export const PREFETCH_END_MILES = 1700
 /** Gate "Begin Journey" once this corridor is warm. */
 export const TRAILHEAD_WARM_MILES = 120
-/** Keep walking the real camera this far while splash still covers. */
+/** Background Image() warm target while splash is up (no camera walking). */
 export const PRIORITY_WARM_MILES = 400
 const LOOKAHEAD_MILES = 100
 
 /** Soft cap so a slow network never blocks Enter forever. */
 export const TRAILHEAD_READY_TIMEOUT_MS = 12_000
+
+/** Keep trailhead camera samples low — each pose forces a full GL idle cycle. */
+const TRAILHEAD_CAMERA_SAMPLES = 10
+const IMAGE_WARM_SAMPLES = 24
 
 function buildCameraPath(trailCoordinates: number[][]): CameraPathPoint[] | null {
   if (typeof window === "undefined" || !window.turf || trailCoordinates.length < 2) return null
@@ -87,7 +91,7 @@ function posesAlongMiles(
   return poses
 }
 
-function waitForIdle(map: any, timeoutMs = 550): Promise<void> {
+function waitForIdle(map: any, timeoutMs = 450): Promise<void> {
   return new Promise((resolve) => {
     let settled = false
     const done = () => {
@@ -104,10 +108,6 @@ function waitForIdle(map: any, timeoutMs = 550): Promise<void> {
   })
 }
 
-/**
- * Approximate DEM zoom from railing altitude so Image() warm matches what GL will request.
- * ~26km cruise → ~z10–11; lower punch-in altitudes → higher zoom.
- */
 function demZoomForAltitude(altitudeMeters: number): number {
   if (altitudeMeters > 40000) return 8
   if (altitudeMeters > 25000) return 10
@@ -115,7 +115,7 @@ function demZoomForAltitude(altitudeMeters: number): number {
   return 12
 }
 
-/** Warm raster-dem tiles in the browser cache for lookahead points. */
+/** Warm raster-dem tiles in the browser cache — does not move the camera. */
 function prefetchTerrainImages(poses: FreeCameraPose[], accessToken: string): void {
   if (!accessToken) return
 
@@ -144,27 +144,17 @@ export type PrefetchController = {
 }
 
 /**
- * Runtime path prefetch: walk free-camera along the railing corridor while the
- * splash covers the map (real style + DEM tiles), then keep DEM warm ahead of scroll.
- *
- * Phases while splash is up:
- *  1) 0 → TRAILHEAD_WARM_MILES  → fires onTrailheadWarm (gates Enter)
- *  2) → PRIORITY_WARM_MILES
- *  3) → PREFETCH_END_MILES
+ * Trailhead warm: short free-camera walk (style + DEM) for the first ~120 mi only.
+ * Beyond that: Image() DEM only — never walk the camera up the corridor (that caused
+ * first-load GPU thrash and the mid-trail flash when splash dismissed).
  */
 export function startPathTilePrefetch(options: {
   map: any
   trailCoordinates: number[][]
   accessToken: string
-  /** True while the user cannot see the camera jumps (splash / pre-intro). */
   canMoveCamera: () => boolean
   onTrailheadWarm?: () => void
-  /** 0–1 progress through the trailhead warm segment. */
   onTrailheadProgress?: (progress: number) => void
-  /**
-   * When true (session already warmed trailhead), unlock Enter immediately and
-   * only do lightweight DEM Image warm — skip the blocking camera walk for phase 1.
-   */
   trailheadAlreadyCached?: boolean
 }): PrefetchController {
   const {
@@ -179,7 +169,6 @@ export function startPathTilePrefetch(options: {
   let cancelled = false
   let path: CameraPathPoint[] | null = null
   let warmedThroughMiles = 0
-  let cameraWarmRunning = false
   let trailheadNotified = false
 
   const ensurePath = () => {
@@ -194,65 +183,53 @@ export function startPathTilePrefetch(options: {
     onTrailheadWarm?.()
   }
 
-  const warmCameraSegment = async (
-    fromMiles: number,
-    toMiles: number,
-    sampleCount: number,
-    reportProgress = false,
-  ) => {
+  /** Lightweight DEM Image warm — safe anytime, no camera motion. */
+  const warmImages = (fromMiles: number, toMiles: number, samples: number) => {
+    const camPath = ensurePath()
+    if (!camPath) return
+    prefetchTerrainImages(posesAlongMiles(camPath, fromMiles, toMiles, samples), accessToken)
+    warmedThroughMiles = Math.max(warmedThroughMiles, toMiles)
+  }
+
+  const warmTrailheadCamera = async () => {
     const camPath = ensurePath()
     if (!camPath || cancelled || !canMoveCamera()) return
 
-    cameraWarmRunning = true
-    const poses = posesAlongMiles(camPath, fromMiles, toMiles, sampleCount)
-    // Also kick DEM Image cache in parallel — style tiles come from the camera walk
+    const poses = posesAlongMiles(camPath, 0, TRAILHEAD_WARM_MILES, TRAILHEAD_CAMERA_SAMPLES)
     prefetchTerrainImages(poses, accessToken)
 
     for (let i = 0; i < poses.length; i++) {
       if (cancelled || !canMoveCamera()) break
       applyFreeCameraPose(map, poses[i])
-      await waitForIdle(map, 550)
-      if (reportProgress && !trailheadNotified) {
+      await waitForIdle(map, 400)
+      if (!trailheadNotified) {
         onTrailheadProgress?.((i + 1) / poses.length)
       }
     }
-    cameraWarmRunning = false
-    warmedThroughMiles = Math.max(warmedThroughMiles, toMiles)
+    warmedThroughMiles = Math.max(warmedThroughMiles, TRAILHEAD_WARM_MILES)
   }
 
   const runInitialWarm = async () => {
-    // Session cache hit: unlock Enter immediately; browser HTTP cache already has tiles.
-    // Still nudge DEM images and optionally continue deeper warm while splash is up.
     if (trailheadAlreadyCached) {
       notifyTrailhead()
       warmedThroughMiles = TRAILHEAD_WARM_MILES
-      const camPath = ensurePath()
-      if (camPath) {
-        prefetchTerrainImages(posesAlongMiles(camPath, 0, TRAILHEAD_WARM_MILES, 16), accessToken)
-      }
-      if (!cancelled && canMoveCamera()) {
-        await warmCameraSegment(TRAILHEAD_WARM_MILES, PRIORITY_WARM_MILES, 48)
-      }
-      if (!cancelled && canMoveCamera()) {
-        await warmCameraSegment(PRIORITY_WARM_MILES, PREFETCH_END_MILES, 60)
-      }
+      warmImages(0, PRIORITY_WARM_MILES, IMAGE_WARM_SAMPLES)
+      warmImages(PRIORITY_WARM_MILES, PREFETCH_END_MILES, IMAGE_WARM_SAMPLES)
       return
     }
 
-    // Soft timeout: never leave Enter gated forever
     const readyTimer = setTimeout(() => {
       if (!cancelled) notifyTrailhead()
     }, TRAILHEAD_READY_TIMEOUT_MS)
 
     onTrailheadProgress?.(0.02)
-    await new Promise((r) => setTimeout(r, 120))
+    await new Promise((r) => setTimeout(r, 80))
     if (cancelled) {
       clearTimeout(readyTimer)
       return
     }
 
-    const camPath = ensurePath()
-    if (!camPath) {
+    if (!ensurePath()) {
       await new Promise((r) => setTimeout(r, 400))
       if (cancelled || !ensurePath()) {
         clearTimeout(readyTimer)
@@ -261,19 +238,15 @@ export function startPathTilePrefetch(options: {
       }
     }
 
-    // Phase 1 — trailhead corridor (gates Begin Journey)
-    await warmCameraSegment(0, TRAILHEAD_WARM_MILES, 28, true)
+    // Phase 1 only — short camera walk at railing height for SoCal trailhead tiles
+    await warmTrailheadCamera()
     clearTimeout(readyTimer)
     if (!cancelled) notifyTrailhead()
 
-    // Phase 2 — priority SoCal → Sierra approach
-    if (!cancelled && canMoveCamera()) {
-      await warmCameraSegment(TRAILHEAD_WARM_MILES, PRIORITY_WARM_MILES, 48)
-    }
-
-    // Phase 3 — rest of published corridor while splash still covers
-    if (!cancelled && canMoveCamera()) {
-      await warmCameraSegment(PRIORITY_WARM_MILES, PREFETCH_END_MILES, 60)
+    // Phases 2–3: Image cache only (no camera) so splash dismiss never reveals mid-Oregon
+    if (!cancelled) {
+      warmImages(TRAILHEAD_WARM_MILES, PRIORITY_WARM_MILES, IMAGE_WARM_SAMPLES)
+      warmImages(PRIORITY_WARM_MILES, PREFETCH_END_MILES, IMAGE_WARM_SAMPLES)
     }
   }
 
@@ -283,18 +256,7 @@ export function startPathTilePrefetch(options: {
     if (cancelled) return
     const target = Math.min(PREFETCH_END_MILES, currentMiles + LOOKAHEAD_MILES)
     if (target <= warmedThroughMiles + 5) return
-
-    const camPath = ensurePath()
-    if (!camPath) return
-
-    const poses = posesAlongMiles(camPath, warmedThroughMiles, target, 24)
-    prefetchTerrainImages(poses, accessToken)
-
-    if (canMoveCamera() && !cameraWarmRunning) {
-      void warmCameraSegment(warmedThroughMiles, target, 24)
-    } else {
-      warmedThroughMiles = Math.max(warmedThroughMiles, target)
-    }
+    warmImages(warmedThroughMiles, target, 16)
   }
 
   return {

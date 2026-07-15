@@ -22,6 +22,7 @@ import {
   cancelFreeCameraAnimation,
   readFreeCameraPose,
 } from "@/lib/node-camera"
+import { PerfDebugPanel } from "@/components/debug/perf-debug-panel"
 import { useChapterIntro } from "@/hooks/use-chapter-intro"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import type { AudioMarker } from "@/types/map"
@@ -51,6 +52,7 @@ export default function Home() {
   const [totalMiles, setTotalMiles] = useState(2650)
   const [introComplete, setIntroComplete] = useState(false)
   const [showSplash, setShowSplash] = useState(true)
+  const [revealMap, setRevealMap] = useState(false)
   const [journeyStarted, setJourneyStarted] = useState(false)
   const [trailheadReady, setTrailheadReady] = useState(false)
   const [trailheadProgress, setTrailheadProgress] = useState(0)
@@ -110,12 +112,22 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    // Always restart at the beginning — under splash so camera reset is invisible
     setCurrentMiles(0)
     setHasScrolled(false)
+    setShowWip(false)
+    setIntroComplete(false)
+    setRevealMap(false)
     window.scrollTo({ top: 0, behavior: "instant" })
 
-    setShowSplash(false)
+    // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
+  }, [])
+
+  const handleOverviewReady = useCallback(() => {
+    // Overview camera + tiles settled — fade splash while it stays mounted
+    setRevealMap(true)
+    window.setTimeout(() => setShowSplash(false), 750)
   }, [])
 
   const handleRestart = useCallback(() => {
@@ -351,6 +363,7 @@ export default function Home() {
           onEnter={handleSplashEnter}
           trailheadReady={trailheadReady}
           trailheadProgress={trailheadProgress}
+          revealMap={revealMap}
         />
       )}
 
@@ -370,16 +383,19 @@ export default function Home() {
             scrollControlRef.current = controls
           }}
           onIntroComplete={handleIntroComplete}
+          onOverviewReady={handleOverviewReady}
           onTrailheadReady={handleTrailheadReady}
           onTrailheadProgress={handleTrailheadProgress}
           startIntro={journeyStarted}
-          hideLoading={showSplash}
+          hideLoading={true}
           currentMiles={currentMiles}
         />
         {map && (
           <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />
         )}
       </div>
+
+      <PerfDebugPanel map={map} />
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
 
