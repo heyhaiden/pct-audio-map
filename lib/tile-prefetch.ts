@@ -1,3 +1,7 @@
+import along from "@turf/along"
+import bearing from "@turf/bearing"
+import length from "@turf/length"
+import { lineString } from "@turf/helpers"
 import {
   CAMERA_PATH_POINTS,
   PCT_TOTAL_MILES,
@@ -6,13 +10,6 @@ import {
   type FreeCameraPose,
 } from "@/lib/railing-camera"
 import { applyFreeCameraPose } from "@/lib/node-camera"
-
-declare global {
-  interface Window {
-    turf: any
-    mapboxgl: any
-  }
-}
 
 /** Warm style + terrain out to early Oregon; content ends there for now. */
 export const PREFETCH_END_MILES = 1700
@@ -30,26 +27,26 @@ const TRAILHEAD_CAMERA_SAMPLES = 10
 const IMAGE_WARM_SAMPLES = 24
 
 function buildCameraPath(trailCoordinates: number[][]): CameraPathPoint[] | null {
-  if (typeof window === "undefined" || !window.turf || trailCoordinates.length < 2) return null
+  if (typeof window === "undefined" || trailCoordinates.length < 2) return null
 
   try {
-    const line = window.turf.lineString(trailCoordinates)
-    const totalLength = window.turf.length(line, { units: "kilometers" })
+    const line = lineString(trailCoordinates)
+    const totalLength = length(line, { units: "kilometers" })
     const points: CameraPathPoint[] = []
 
     for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
       const distance = (i / CAMERA_PATH_POINTS) * totalLength
-      const point = window.turf.along(line, distance, { units: "kilometers" })
+      const point = along(line, distance, { units: "kilometers" })
       const coords = point.geometry.coordinates
       const nextDistance = Math.min(distance + 16, totalLength)
-      const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
-      const bearing = window.turf.bearing(point, nextPoint)
+      const nextPoint = along(line, nextDistance, { units: "kilometers" })
+      const pointBearing = bearing(point, nextPoint)
 
       points.push({
         lng: coords[0],
         lat: coords[1],
-        bearing,
-        smoothedBearing: bearing,
+        bearing: pointBearing,
+        smoothedBearing: pointBearing,
       })
     }
 

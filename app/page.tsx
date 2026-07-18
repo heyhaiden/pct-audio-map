@@ -184,7 +184,7 @@ export default function Home() {
     setCurrentMiles(targetMile)
     setIsChapterTransitioning(true)
     setForceChapterVisible(true)
-    triggerIntro(chapterIndex, targetMile)
+    triggerIntro(chapterIndex)
 
     setTimeout(() => {
       window.scrollTo({

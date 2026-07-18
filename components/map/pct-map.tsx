@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState, useMemo } from "react"
+import mapboxgl from "mapbox-gl"
+import "mapbox-gl/dist/mapbox-gl.css"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
@@ -10,17 +12,6 @@ import {
   type PrefetchController,
 } from "@/lib/tile-prefetch"
 import { isTrailPrepCached, markTrailPrepCached } from "@/lib/trail-prep-cache"
-
-declare global {
-  interface Window {
-    mapboxgl: any
-    turf: any
-  }
-}
-
-const MAPBOX_GL_JS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
-const MAPBOX_GL_CSS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css"
-const TURF_JS = "https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"
 
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
@@ -66,6 +57,12 @@ export const TRAILHEAD_CAMERA = {
   bearing: -5,
 }
 
+/** Decided once at map construction — never toggled during scroll. */
+function preferReducedGpu(): boolean {
+  if (typeof window === "undefined") return false
+  return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches
+}
+
 export function PCTMap({
   onMapLoad,
   onMilesUpdate,
@@ -85,7 +82,6 @@ export function PCTMap({
   const [introPhase, setIntroPhase] = useState<"waiting" | "overview" | "flying" | "done">("waiting")
   const [currentSegment, setCurrentSegment] = useState(0)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
-  const [scriptsLoaded, setScriptsLoaded] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
   const [trailData, setTrailData] = useState<any>(null)
   const [debugMode, setDebugMode] = useState(false)
@@ -217,58 +213,8 @@ export function PCTMap({
   }, [currentMiles, totalMiles, onMilesUpdate])
 
   useEffect(() => {
-    const ensureStylesheet = () => {
-      if (document.querySelector(`link[href="${MAPBOX_GL_CSS}"]`)) return
-      const cssLink = document.createElement("link")
-      cssLink.rel = "stylesheet"
-      cssLink.href = MAPBOX_GL_CSS
-      document.head.appendChild(cssLink)
-    }
-
-    const loadScript = (src: string) =>
-      new Promise<void>((resolve, reject) => {
-        const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null
-        if (existing) {
-          if ((src.includes("mapbox-gl") && window.mapboxgl) || (src.includes("turf") && window.turf)) {
-            resolve()
-            return
-          }
-          existing.addEventListener("load", () => resolve(), { once: true })
-          existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), {
-            once: true,
-          })
-          return
-        }
-        const script = document.createElement("script")
-        script.src = src
-        script.async = true
-        script.onload = () => resolve()
-        script.onerror = () => reject(new Error(`Failed to load ${src}`))
-        document.head.appendChild(script)
-      })
-
-    const loadMapboxScripts = async () => {
-      ensureStylesheet()
-      try {
-        await Promise.all([loadScript(TURF_JS), loadScript(MAPBOX_GL_JS)])
-        setScriptsLoaded(true)
-      } catch {
-        console.error("[v0] Failed to load Mapbox scripts")
-        setMapboxError("Failed to load Mapbox scripts. Please check your internet connection.")
-        notifyTrailheadReady()
-      }
-    }
-
-    if (window.mapboxgl) {
-      setScriptsLoaded(true)
-    } else if (!scriptsLoaded) {
-      void loadMapboxScripts()
-    }
-  }, [scriptsLoaded])
-
-  useEffect(() => {
     const initializeMap = async () => {
-      if (!scriptsLoaded || !window.mapboxgl || !trailData) {
+      if (!trailData) {
         return
       }
 
@@ -285,22 +231,25 @@ export function PCTMap({
           return
         }
 
-        window.mapboxgl.accessToken = token
+        mapboxgl.accessToken = token
         accessTokenRef.current = token
 
-        map.current = new window.mapboxgl.Map({
+        const reducedGpu = preferReducedGpu()
+        map.current = new mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo?optimize=true",
           center: OVERVIEW_CAMERA.center,
           zoom: OVERVIEW_CAMERA.zoom,
           pitch: OVERVIEW_CAMERA.pitch,
           bearing: OVERVIEW_CAMERA.bearing,
-          antialias: true,
+          antialias: !reducedGpu,
+          pixelRatio: Math.min(window.devicePixelRatio || 1, reducedGpu ? 1.5 : 2),
           interactive: false,
           attributionControl: false,
           fadeDuration: 0,
           trackResize: true,
           refreshExpiredTiles: false,
+          maxTileCacheSize: reducedGpu ? 80 : 150,
         })
 
         map.current.on("load", () => {
@@ -451,7 +400,7 @@ export function PCTMap({
         map.current = null
       }
     }
-  }, [scriptsLoaded, onMapLoad, trailData])
+  }, [onMapLoad, trailData])
 
   // Ahead-of-scroll DEM warm — throttled so it doesn't run on every miles tick
   useEffect(() => {
@@ -620,10 +569,10 @@ export function PCTMap({
       <div ref={mapContainer} className="h-full w-full" />
 
       {/* Never flash this during splash→intro — hideLoading covers that path */}
-      {!hideLoading && (!scriptsLoaded || !trailData || !mapLoaded) && (
+      {!hideLoading && (!trailData || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-white text-xl">
-            {!scriptsLoaded ? "Loading Mapbox..." : !trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
+            {!trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
           </div>
         </div>
       )}

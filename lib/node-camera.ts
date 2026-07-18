@@ -1,3 +1,4 @@
+import mapboxgl from "mapbox-gl"
 import {
   easeInOutCubic,
   interpolatePose,
@@ -5,7 +6,7 @@ import {
 } from "@/lib/railing-camera"
 
 export function readFreeCameraPose(map: any): FreeCameraPose | null {
-  if (!map || typeof map.getFreeCameraOptions !== "function" || !window.mapboxgl) return null
+  if (!map || typeof map.getFreeCameraOptions !== "function") return null
 
   try {
     const camera = map.getFreeCameraOptions()
@@ -24,10 +25,10 @@ export function readFreeCameraPose(map: any): FreeCameraPose | null {
 }
 
 export function applyFreeCameraPose(map: any, pose: FreeCameraPose): void {
-  if (!map || typeof map.getFreeCameraOptions !== "function" || !window.mapboxgl) return
+  if (!map || typeof map.getFreeCameraOptions !== "function") return
 
   const camera = map.getFreeCameraOptions()
-  camera.position = window.mapboxgl.MercatorCoordinate.fromLngLat(
+  camera.position = mapboxgl.MercatorCoordinate.fromLngLat(
     { lng: pose.lng, lat: pose.lat },
     pose.altitude,
   )

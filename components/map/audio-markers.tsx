@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import mapboxgl from "mapbox-gl"
 import { audioMarkers } from "@/data/audio-markers"
 import type { AudioMarker } from "@/types/map"
 
@@ -93,7 +94,7 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
   chapterRef.current = currentChapter
 
   useEffect(() => {
-    if (!map || map._removed || !window.mapboxgl) return
+    if (!map || map._removed) return
 
     let cancelled = false
     let canvas: HTMLCanvasElement | null = null
@@ -115,7 +116,7 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
     const onCanvasClick = (e: MouseEvent) => {
       if (!canvas || !map.getLayer?.(LAYER_ID)) return
       const rect = canvas.getBoundingClientRect()
-      const point = new window.mapboxgl.Point(e.clientX - rect.left, e.clientY - rect.top)
+      const point = new mapboxgl.Point(e.clientX - rect.left, e.clientY - rect.top)
       const features = map.queryRenderedFeatures(
         [
           [point.x - 14, point.y - 14],
