@@ -1,9 +1,26 @@
-import mapboxgl from "mapbox-gl"
 import {
   easeInOutCubic,
   interpolatePose,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
+
+/**
+ * Reach MercatorCoordinate off the live map's own camera instance rather than
+ * importing mapbox-gl here — keeps this module (and its page.tsx importers) out
+ * of the mapbox-gl bundle so the library can be code-split behind the map.
+ */
+function mercatorFrom(
+  camera: any,
+  lng: number,
+  lat: number,
+  altitude: number,
+): unknown | null {
+  const Ctor = camera?.position?.constructor as
+    | { fromLngLat(lngLat: { lng: number; lat: number }, altitude: number): unknown }
+    | undefined
+  if (!Ctor?.fromLngLat) return null
+  return Ctor.fromLngLat({ lng, lat }, altitude)
+}
 
 export function readFreeCameraPose(map: any): FreeCameraPose | null {
   if (!map || typeof map.getFreeCameraOptions !== "function") return null
@@ -28,10 +45,9 @@ export function applyFreeCameraPose(map: any, pose: FreeCameraPose): void {
   if (!map || typeof map.getFreeCameraOptions !== "function") return
 
   const camera = map.getFreeCameraOptions()
-  camera.position = mapboxgl.MercatorCoordinate.fromLngLat(
-    { lng: pose.lng, lat: pose.lat },
-    pose.altitude,
-  )
+  const position = mercatorFrom(camera, pose.lng, pose.lat, pose.altitude)
+  if (!position) return
+  camera.position = position
   camera.setPitchBearing(pose.pitch, pose.bearing)
   map.setFreeCameraOptions(camera)
 }

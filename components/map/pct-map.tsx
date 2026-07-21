@@ -57,6 +57,24 @@ export const TRAILHEAD_CAMERA = {
   bearing: -5,
 }
 
+/**
+ * Distance fog. Load-bearing for perf, not just look: Mapbox culls tiles once
+ * they're ~98% fogged (past `range[1]`), so at our 60°-pitch / ~26 km-altitude
+ * cruise the frustum stops demanding the huge fan of far-horizon terrain that no
+ * preloader can keep ahead of on a real network — and whatever does lag renders
+ * as atmospheric haze instead of a white/black tear. `range` is camera-relative
+ * (map center = 0); pulling `range[1]` in culls more aggressively. Cool-neutral
+ * aerial-perspective palette — safe to warm up to taste without changing perf.
+ */
+const TRAIL_FOG = {
+  range: [1.5, 10] as [number, number],
+  "horizon-blend": 0.1,
+  color: "#dbe4ec",
+  "high-color": "#b0cdea",
+  "space-color": "#c5d6e8",
+  "star-intensity": 0,
+}
+
 /** Decided once at map construction — never toggled during scroll. */
 function preferReducedGpu(): boolean {
   if (typeof window === "undefined") return false
@@ -243,13 +261,23 @@ export function PCTMap({
           pitch: OVERVIEW_CAMERA.pitch,
           bearing: OVERVIEW_CAMERA.bearing,
           antialias: !reducedGpu,
-          pixelRatio: Math.min(window.devicePixelRatio || 1, reducedGpu ? 1.5 : 2),
           interactive: false,
           attributionControl: false,
-          fadeDuration: 0,
+          // Crossfade tile refinement instead of hard-popping blurry→sharp. Was
+          // 0 (set in the Jan "terrain perf" commit) — invisible while the camera
+          // was static, but during the continuous flythrough every tile upgrade
+          // snapped in, reading as jerky upresolution, worst in mountains. 300 is
+          // the Mapbox default; the splash covers the intro so no flash leaks.
+          fadeDuration: 300,
           trackResize: true,
           refreshExpiredTiles: false,
-          maxTileCacheSize: reducedGpu ? 80 : 150,
+          // Mapbox sizes each source's tile cache from viewport area only
+          // (~60 tiles at 1400×900), ignoring that a 60°-pitch terrain frustum
+          // sees far more — and that our rolling preload window needs to stay
+          // resident until the camera arrives. Raise the floor on desktop;
+          // keep mobile capped for GPU memory.
+          minTileCacheSize: reducedGpu ? undefined : 150,
+          maxTileCacheSize: reducedGpu ? 80 : 300,
         })
 
         map.current.on("load", () => {
@@ -266,6 +294,8 @@ export function PCTMap({
             source: "mapbox-terrain-rgb",
             exaggeration: 1.8,
           })
+
+          map.current.setFog(TRAIL_FOG)
 
           const cameraTrackingGeometry = {
             ...trailData,
@@ -366,7 +396,6 @@ export function PCTMap({
           prefetchRef.current = startPathTilePrefetch({
             map: map.current,
             trailCoordinates: trailData.geometry.coordinates,
-            accessToken: accessTokenRef.current,
             // Camera jumps are safe while splash/waiting still covers the map
             canMoveCamera: () => introPhaseRef.current === "waiting",
             onTrailheadWarm: () => {
@@ -375,6 +404,9 @@ export function PCTMap({
             },
             onTrailheadProgress: (progress) => onTrailheadProgressRef.current?.(progress),
             trailheadAlreadyCached: isTrailPrepCached(),
+            reducedGpu,
+            // Any easeTo/jumpTo (even preloadOnly) would cancel the intro flyTo mid-flight
+            isIntroFlying: () => introPhaseRef.current === "flying",
           })
         })
 
@@ -402,13 +434,26 @@ export function PCTMap({
     }
   }, [onMapLoad, trailData])
 
-  // Ahead-of-scroll DEM warm — throttled so it doesn't run on every miles tick
+  // Ahead-of-scroll tile warm. Throttle (fire DURING motion), not debounce:
+  // currentMiles republishes ~10/s while scrolling, so a trailing-only timer
+  // would keep resetting and never fire until the user stops — starving the
+  // rolling window in exactly the fast-scroll case. warmAhead is internally
+  // cheap and idempotent (12mi re-arm gate), so leading-edge calls are safe.
+  const lastWarmAtRef = useRef(0)
   useEffect(() => {
     if (!mapLoaded || !prefetchRef.current) return
-    const miles = externalMiles || currentMiles
+    const now = performance.now()
+    const sinceLast = now - lastWarmAtRef.current
+    if (sinceLast >= 250) {
+      lastWarmAtRef.current = now
+      prefetchRef.current.warmAhead(externalMiles || currentMiles)
+      return
+    }
+    // Trailing call so the final resting position still gets warmed.
     const timer = setTimeout(() => {
-      prefetchRef.current?.warmAhead(miles)
-    }, 400)
+      lastWarmAtRef.current = performance.now()
+      prefetchRef.current?.warmAhead(externalMiles || currentMiles)
+    }, 250 - sinceLast)
     return () => clearTimeout(timer)
   }, [externalMiles, currentMiles, mapLoaded])
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
-import { PCTMap } from "@/components/map/pct-map"
+import dynamic from "next/dynamic"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
 import { TrailStats } from "@/components/stats/trail-stats"
@@ -26,6 +26,17 @@ import { PerfDebugPanel } from "@/components/debug/perf-debug-panel"
 import { useChapterIntro } from "@/hooks/use-chapter-intro"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import type { AudioMarker } from "@/types/map"
+
+/**
+ * Code-split the map so mapbox-gl (~250KB gz) isn't in the initial bundle. The
+ * splash paints from the initial chunk, then this loads behind it and warms —
+ * PCTMap is always mounted in the z-0 layer, so mounting isn't gated on splash
+ * dismissal. ssr:false: the map is browser-only. node-camera and audio-markers
+ * were decoupled from mapbox-gl so PCTMap is the sole path to the library.
+ */
+const PCTMap = dynamic(() => import("@/components/map/pct-map").then((m) => m.PCTMap), {
+  ssr: false,
+})
 
 /** Early Oregon — content ends here for now. */
 const WIP_MILE = 1700

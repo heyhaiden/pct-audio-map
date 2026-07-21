@@ -6,6 +6,7 @@ import {
   CAMERA_PATH_POINTS,
   PCT_TOTAL_MILES,
   computeRailingPose,
+  offsetLngLat,
   type CameraPathPoint,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
@@ -15,16 +16,38 @@ import { applyFreeCameraPose } from "@/lib/node-camera"
 export const PREFETCH_END_MILES = 1700
 /** Gate "Begin Journey" once this corridor is warm. */
 export const TRAILHEAD_WARM_MILES = 120
-/** Background Image() warm target while splash is up (no camera walking). */
+/** Background preload target while splash is up (no visible camera walking). */
 export const PRIORITY_WARM_MILES = 400
-const LOOKAHEAD_MILES = 100
 
 /** Soft cap so a slow network never blocks Enter forever. */
 export const TRAILHEAD_READY_TIMEOUT_MS = 12_000
 
 /** Keep trailhead camera samples low — each pose forces a full GL idle cycle. */
 const TRAILHEAD_CAMERA_SAMPLES = 10
-const IMAGE_WARM_SAMPLES = 24
+/** Spread preloadOnly calls out — each one does real decode/GPU-upload work. */
+const PRELOAD_STAGGER_MS = 120
+
+/**
+ * Base-layer pass: whole corridor at this low zoom so ancestor tiles are always
+ * resident/HTTP-cached. Mapbox renders a loaded parent while children stream
+ * (findLoadedParent), so guaranteed ancestors turn "white until loaded" into
+ * "blurry until sharp" — the property that matters most for perceived quality.
+ */
+const BASE_ZOOM = 7
+const BASE_SAMPLE_SPACING_MILES = 55
+
+/** Detail sweep sampling — dense enough that adjacent frustums overlap. */
+const DETAIL_SAMPLE_SPACING_MILES = 20
+
+/**
+ * Rolling GL-residency window just ahead of the camera. Kept modest on purpose:
+ * per-source tile cache is small (see minTileCacheSize note in pct-map.tsx), so
+ * warming far ahead just evicts what the next few frames need.
+ */
+const WINDOW_AHEAD_MILES = 45
+const WINDOW_SAMPLES = 8
+/** Re-arm the window after this much travel from the last anchor. */
+const WINDOW_RETRIGGER_MILES = 12
 
 function buildCameraPath(trailCoordinates: number[][]): CameraPathPoint[] | null {
   if (typeof window === "undefined" || trailCoordinates.length < 2) return null
@@ -105,33 +128,70 @@ function waitForIdle(map: any, timeoutMs = 450): Promise<void> {
   })
 }
 
-function demZoomForAltitude(altitudeMeters: number): number {
+/** Rough FreeCamera-altitude → standard-zoom mapping, good enough for tile coverage. */
+function approxZoomForAltitude(altitudeMeters: number): number {
   if (altitudeMeters > 40000) return 8
   if (altitudeMeters > 25000) return 10
   if (altitudeMeters > 12000) return 11
   return 12
 }
 
-/** Warm raster-dem tiles in the browser cache — does not move the camera. */
-function prefetchTerrainImages(poses: FreeCameraPose[], accessToken: string): void {
-  if (!accessToken) return
+/**
+ * computeRailingPose() returns the camera's own position, offset backward/above
+ * the ground point it's actually looking at (see railing-camera.ts's
+ * computeRailingPose — same offsetLngLat call, reversed here). easeTo's `center`
+ * means "ground point under view," so preloading needs this, not the raw pose.
+ */
+function lookAtGroundPoint(pose: FreeCameraPose): [number, number] {
+  const groundOffsetKm = (pose.altitude * Math.tan((pose.pitch * Math.PI) / 180)) / 1000
+  return offsetLngLat(pose.lng, pose.lat, groundOffsetKm, pose.bearing)
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Load real tiles for poses the camera hasn't reached yet — via Mapbox's own
+ * `preloadOnly` easeTo, not hand-built URLs. `preloadOnly` clones the transform
+ * instead of mutating the live one (no visible movement, no moveend/zoomend
+ * events) and internally calls `_preloadTiles` across every active source cache
+ * — satellite, vector, and the terrain painter's DEM cache alike — so a single
+ * call warms everything the real camera will need there, fully decoded and
+ * GPU-resident, not just present in some cache we can't literally address
+ * (Mapbox's own tile requests carry a session `sku` token with no public API
+ * to replicate, which is why hand-built warm URLs could only ever hope for an
+ * edge-cache hit, never the real thing).
+ *
+ * Paced with a small stagger — each call does real decode/upload work, so
+ * firing all of them in one tick would just relocate the stall rather than
+ * prevent it. Skipped while `canPreload()` is false (e.g. mid intro `flyTo`,
+ * since any `easeTo`/`jumpTo` call — `preloadOnly` or not — stops whatever
+ * animation is currently in flight).
+ */
+async function preloadPoses(
+  map: any,
+  poses: FreeCameraPose[],
+  canPreload: () => boolean,
+  overrides?: { zoom?: number; pitch?: number; bearing?: number },
+): Promise<void> {
+  if (!map || typeof map.easeTo !== "function") return
 
   for (const pose of poses) {
-    const zoom = demZoomForAltitude(pose.altitude)
-    const { lng, lat } = pose
-    const n = Math.pow(2, zoom)
-    const x = Math.floor(((lng + 180) / 360) * n)
-    const latRad = (lat * Math.PI) / 180
-    const y = Math.floor(
-      ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
-    )
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        const img = new Image()
-        img.referrerPolicy = "no-referrer"
-        img.src = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${x + dx}/${y + dy}.pngraw?access_token=${accessToken}`
-      }
+    if (!canPreload()) return
+    try {
+      map.easeTo({
+        center: lookAtGroundPoint(pose),
+        zoom: overrides?.zoom ?? approxZoomForAltitude(pose.altitude),
+        pitch: overrides?.pitch ?? pose.pitch,
+        bearing: overrides?.bearing ?? pose.bearing,
+        duration: 0,
+        preloadOnly: true,
+      })
+    } catch {
+      // Background warm — never let a bad pose interrupt the pass.
     }
+    await sleep(PRELOAD_STAGGER_MS)
   }
 }
 
@@ -142,31 +202,40 @@ export type PrefetchController = {
 
 /**
  * Trailhead warm: short free-camera walk (style + DEM) for the first ~120 mi only.
- * Beyond that: Image() DEM only — never walk the camera up the corridor (that caused
- * first-load GPU thrash and the mid-trail flash when splash dismissed).
+ * Beyond that: background preloadOnly warm — never walk the visible camera up the
+ * corridor (that caused first-load GPU thrash and the mid-trail flash when splash
+ * dismissed).
  */
 export function startPathTilePrefetch(options: {
   map: any
   trailCoordinates: number[][]
-  accessToken: string
   canMoveCamera: () => boolean
   onTrailheadWarm?: () => void
   onTrailheadProgress?: (progress: number) => void
   trailheadAlreadyCached?: boolean
+  /** Fewer/slower background preload calls on touch/narrow-viewport devices. */
+  reducedGpu?: boolean
+  /** True while the intro flyTo is animating — any easeTo/jumpTo would cancel it. */
+  isIntroFlying?: () => boolean
 }): PrefetchController {
   const {
     map,
     trailCoordinates,
-    accessToken,
     canMoveCamera,
     onTrailheadWarm,
     onTrailheadProgress,
     trailheadAlreadyCached = false,
+    reducedGpu = false,
+    isIntroFlying = () => false,
   } = options
   let cancelled = false
   let path: CameraPathPoint[] | null = null
-  let warmedThroughMiles = 0
   let trailheadNotified = false
+  /** Bumped on every new rolling window — stale in-flight passes see it and stop. */
+  let windowGeneration = 0
+  let lastWindowAnchor = Number.NEGATIVE_INFINITY
+
+  const canPreload = () => !cancelled && !isIntroFlying()
 
   const ensurePath = () => {
     if (!path) path = buildCameraPath(trailCoordinates)
@@ -180,12 +249,30 @@ export function startPathTilePrefetch(options: {
     onTrailheadWarm?.()
   }
 
-  /** Lightweight DEM Image warm — safe anytime, no camera motion. */
-  const warmImages = (fromMiles: number, toMiles: number, samples: number) => {
+  const detailSamples = (fromMiles: number, toMiles: number) => {
+    const spacing = reducedGpu ? DETAIL_SAMPLE_SPACING_MILES * 2 : DETAIL_SAMPLE_SPACING_MILES
+    return Math.max(2, Math.round((toMiles - fromMiles) / spacing))
+  }
+
+  /**
+   * Corridor-wide ancestor warm at BASE_ZOOM, flat pitch. Cheap (~30 calls) and
+   * the single biggest lever against white frames: once these are cached, an
+   * unloaded area renders as a blurry parent tile instead of blank.
+   */
+  const warmBaseLayer = async () => {
     const camPath = ensurePath()
-    if (!camPath) return
-    prefetchTerrainImages(posesAlongMiles(camPath, fromMiles, toMiles, samples), accessToken)
-    warmedThroughMiles = Math.max(warmedThroughMiles, toMiles)
+    if (!camPath || cancelled) return
+    const samples = Math.max(2, Math.round(PREFETCH_END_MILES / BASE_SAMPLE_SPACING_MILES))
+    const poses = posesAlongMiles(camPath, 0, PREFETCH_END_MILES, samples)
+    await preloadPoses(map, poses, canPreload, { zoom: BASE_ZOOM, pitch: 0, bearing: 0 })
+  }
+
+  /** HTTP-cache warm at real railing zoom — network gone by the time you arrive. */
+  const warmDetail = async (fromMiles: number, toMiles: number) => {
+    const camPath = ensurePath()
+    if (!camPath || cancelled) return
+    const poses = posesAlongMiles(camPath, fromMiles, toMiles, detailSamples(fromMiles, toMiles))
+    await preloadPoses(map, poses, canPreload)
   }
 
   const warmTrailheadCamera = async () => {
@@ -193,7 +280,6 @@ export function startPathTilePrefetch(options: {
     if (!camPath || cancelled || !canMoveCamera()) return
 
     const poses = posesAlongMiles(camPath, 0, TRAILHEAD_WARM_MILES, TRAILHEAD_CAMERA_SAMPLES)
-    prefetchTerrainImages(poses, accessToken)
 
     for (let i = 0; i < poses.length; i++) {
       if (cancelled || !canMoveCamera()) break
@@ -203,15 +289,14 @@ export function startPathTilePrefetch(options: {
         onTrailheadProgress?.((i + 1) / poses.length)
       }
     }
-    warmedThroughMiles = Math.max(warmedThroughMiles, TRAILHEAD_WARM_MILES)
   }
 
   const runInitialWarm = async () => {
     if (trailheadAlreadyCached) {
       notifyTrailhead()
-      warmedThroughMiles = TRAILHEAD_WARM_MILES
-      warmImages(0, PRIORITY_WARM_MILES, IMAGE_WARM_SAMPLES)
-      warmImages(PRIORITY_WARM_MILES, PREFETCH_END_MILES, IMAGE_WARM_SAMPLES)
+      await warmBaseLayer()
+      await warmDetail(0, PRIORITY_WARM_MILES)
+      await warmDetail(PRIORITY_WARM_MILES, PREFETCH_END_MILES)
       return
     }
 
@@ -240,20 +325,33 @@ export function startPathTilePrefetch(options: {
     clearTimeout(readyTimer)
     if (!cancelled) notifyTrailhead()
 
-    // Phases 2–3: Image cache only (no camera) so splash dismiss never reveals mid-Oregon
+    // Phases 2–4: background preload only (no visible camera motion) so splash
+    // dismiss never reveals mid-Oregon. Base layer first — ancestors beat detail.
     if (!cancelled) {
-      warmImages(TRAILHEAD_WARM_MILES, PRIORITY_WARM_MILES, IMAGE_WARM_SAMPLES)
-      warmImages(PRIORITY_WARM_MILES, PREFETCH_END_MILES, IMAGE_WARM_SAMPLES)
+      await warmBaseLayer()
+      await warmDetail(TRAILHEAD_WARM_MILES, PRIORITY_WARM_MILES)
+      await warmDetail(PRIORITY_WARM_MILES, PREFETCH_END_MILES)
     }
   }
 
   void runInitialWarm()
 
+  /**
+   * Rolling GL-residency window: re-warm [current, current+45mi] at full railing
+   * pose whenever the camera has moved ~12mi past the last anchor. Unlike the
+   * one-shot corridor sweeps (whose tiles a ~60-per-source cache evicts long
+   * before arrival), this keeps the next minute of scrolling decoded and
+   * resident. A new window obsoletes any in-flight one via windowGeneration.
+   */
   const warmAhead = (currentMiles: number) => {
     if (cancelled) return
-    const target = Math.min(PREFETCH_END_MILES, currentMiles + LOOKAHEAD_MILES)
-    if (target <= warmedThroughMiles + 5) return
-    warmImages(warmedThroughMiles, target, 16)
+    if (Math.abs(currentMiles - lastWindowAnchor) < WINDOW_RETRIGGER_MILES) return
+    const camPath = ensurePath()
+    if (!camPath) return
+    lastWindowAnchor = currentMiles
+    const generation = ++windowGeneration
+    const poses = posesAlongMiles(camPath, currentMiles, currentMiles + WINDOW_AHEAD_MILES, WINDOW_SAMPLES)
+    void preloadPoses(map, poses, () => canPreload() && generation === windowGeneration)
   }
 
   return {
