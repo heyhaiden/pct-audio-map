@@ -41,12 +41,24 @@ interface PCTMapProps {
   currentMiles?: number
 }
 
-/** Bird's-eye overview shown at the start of the intro. */
+/** Bird's-eye overview shown at the start of the intro (desktop). */
 export const OVERVIEW_CAMERA = {
   center: [-118.4102, 38.6467] as [number, number],
   zoom: 5.49,
   pitch: 60,
   bearing: 31,
+}
+
+/**
+ * Mobile overview: top-down, north-up so the whole Mexico→Canada trail fits a
+ * portrait screen. Desktop keeps the angled `OVERVIEW_CAMERA` — selected via
+ * `getOverviewCamera()`. Center/zoom tuned to frame the full trail extent.
+ */
+export const OVERVIEW_CAMERA_MOBILE = {
+  center: [-119.5, 40.8] as [number, number],
+  zoom: 4.3,
+  pitch: 0,
+  bearing: 0,
 }
 
 /** Mexico border / trailhead — journey always begins here. */
@@ -79,6 +91,11 @@ const TRAIL_FOG = {
 function preferReducedGpu(): boolean {
   if (typeof window === "undefined") return false
   return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches
+}
+
+/** Top-down full-trail overview on mobile; angled bird's-eye on desktop. */
+function getOverviewCamera() {
+  return preferReducedGpu() ? OVERVIEW_CAMERA_MOBILE : OVERVIEW_CAMERA
 }
 
 export function PCTMap({
@@ -253,13 +270,14 @@ export function PCTMap({
         accessTokenRef.current = token
 
         const reducedGpu = preferReducedGpu()
+        const overview = getOverviewCamera()
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo?optimize=true",
-          center: OVERVIEW_CAMERA.center,
-          zoom: OVERVIEW_CAMERA.zoom,
-          pitch: OVERVIEW_CAMERA.pitch,
-          bearing: OVERVIEW_CAMERA.bearing,
+          center: overview.center,
+          zoom: overview.zoom,
+          pitch: overview.pitch,
+          bearing: overview.bearing,
           antialias: !reducedGpu,
           interactive: false,
           attributionControl: false,
@@ -529,11 +547,12 @@ export function PCTMap({
       prefetchRef.current?.cancel()
       introPhaseRef.current = "overview"
 
+      const overview = getOverviewCamera()
       map.current.jumpTo({
-        center: OVERVIEW_CAMERA.center,
-        zoom: OVERVIEW_CAMERA.zoom,
-        pitch: OVERVIEW_CAMERA.pitch,
-        bearing: OVERVIEW_CAMERA.bearing,
+        center: overview.center,
+        zoom: overview.zoom,
+        pitch: overview.pitch,
+        bearing: overview.bearing,
       })
 
       // Wait for overview tiles before parent fades splash — prevents mid-trail / black flash

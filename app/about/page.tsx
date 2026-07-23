@@ -25,16 +25,6 @@ function AbstractTrailIcon({ className }: { className?: string }) {
         fill="none"
         className="text-[#ff6b9d]"
       />
-      <path
-        d="M65 190
-           C50 175, 80 162, 60 147
-           C40 132, 85 117, 70 102"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="round"
-        fill="none"
-        className="text-[#ff6b9d]/30"
-      />
     </svg>
   )
 }

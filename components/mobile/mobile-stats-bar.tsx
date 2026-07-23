@@ -9,7 +9,6 @@ interface MobileStatsBarProps {
 }
 
 export function MobileStatsBar({ currentMiles, totalMiles, currentSection }: MobileStatsBarProps) {
-  const progress = (currentMiles / totalMiles) * 100
   const [isScrolling, setIsScrolling] = useState(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -29,19 +28,8 @@ export function MobileStatsBar({ currentMiles, totalMiles, currentSection }: Mob
 
   return (
     <>
-      {/* Minimal bottom progress bar - edge to edge */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 safe-area-inset-bottom">
-        {/* Progress bar at very bottom */}
-        <div className="h-[3px] bg-stone-900/50">
-          <div 
-            className="h-full bg-[#ff6b9d] transition-all duration-300 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-
       {/* Miles counter - subtle floating pill at top left, fades while scrolling */}
-      <div 
+      <div
         className={`md:hidden fixed top-3 left-3 z-30 transition-opacity duration-300 ${
           isScrolling ? "opacity-20" : "opacity-100"
         }`}
