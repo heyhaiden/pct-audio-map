@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
-import { PCTMap } from "@/components/map/pct-map"
+import dynamic from "next/dynamic"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
 import { TrailStats } from "@/components/stats/trail-stats"
@@ -22,9 +22,21 @@ import {
   cancelFreeCameraAnimation,
   readFreeCameraPose,
 } from "@/lib/node-camera"
+import { PerfDebugPanel } from "@/components/debug/perf-debug-panel"
 import { useChapterIntro } from "@/hooks/use-chapter-intro"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import type { AudioMarker } from "@/types/map"
+
+/**
+ * Code-split the map so mapbox-gl (~250KB gz) isn't in the initial bundle. The
+ * splash paints from the initial chunk, then this loads behind it and warms —
+ * PCTMap is always mounted in the z-0 layer, so mounting isn't gated on splash
+ * dismissal. ssr:false: the map is browser-only. node-camera and audio-markers
+ * were decoupled from mapbox-gl so PCTMap is the sole path to the library.
+ */
+const PCTMap = dynamic(() => import("@/components/map/pct-map").then((m) => m.PCTMap), {
+  ssr: false,
+})
 
 /** Early Oregon — content ends here for now. */
 const WIP_MILE = 1700
@@ -51,6 +63,7 @@ export default function Home() {
   const [totalMiles, setTotalMiles] = useState(2650)
   const [introComplete, setIntroComplete] = useState(false)
   const [showSplash, setShowSplash] = useState(true)
+  const [revealMap, setRevealMap] = useState(false)
   const [journeyStarted, setJourneyStarted] = useState(false)
   const [trailheadReady, setTrailheadReady] = useState(false)
   const [trailheadProgress, setTrailheadProgress] = useState(0)
@@ -110,12 +123,22 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    // Always restart at the beginning — under splash so camera reset is invisible
     setCurrentMiles(0)
     setHasScrolled(false)
+    setShowWip(false)
+    setIntroComplete(false)
+    setRevealMap(false)
     window.scrollTo({ top: 0, behavior: "instant" })
 
-    setShowSplash(false)
+    // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
+  }, [])
+
+  const handleOverviewReady = useCallback(() => {
+    // Overview camera + tiles settled — fade splash while it stays mounted
+    setRevealMap(true)
+    window.setTimeout(() => setShowSplash(false), 750)
   }, [])
 
   const handleRestart = useCallback(() => {
@@ -172,7 +195,7 @@ export default function Home() {
     setCurrentMiles(targetMile)
     setIsChapterTransitioning(true)
     setForceChapterVisible(true)
-    triggerIntro(chapterIndex, targetMile)
+    triggerIntro(chapterIndex)
 
     setTimeout(() => {
       window.scrollTo({
@@ -351,6 +374,7 @@ export default function Home() {
           onEnter={handleSplashEnter}
           trailheadReady={trailheadReady}
           trailheadProgress={trailheadProgress}
+          revealMap={revealMap}
         />
       )}
 
@@ -370,16 +394,19 @@ export default function Home() {
             scrollControlRef.current = controls
           }}
           onIntroComplete={handleIntroComplete}
+          onOverviewReady={handleOverviewReady}
           onTrailheadReady={handleTrailheadReady}
           onTrailheadProgress={handleTrailheadProgress}
           startIntro={journeyStarted}
-          hideLoading={showSplash}
+          hideLoading={true}
           currentMiles={currentMiles}
         />
         {map && (
           <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />
         )}
       </div>
+
+      <PerfDebugPanel map={map} />
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
 

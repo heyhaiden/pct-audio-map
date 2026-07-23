@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState, useMemo } from "react"
+import mapboxgl from "mapbox-gl"
+import "mapbox-gl/dist/mapbox-gl.css"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
@@ -10,17 +12,6 @@ import {
   type PrefetchController,
 } from "@/lib/tile-prefetch"
 import { isTrailPrepCached, markTrailPrepCached } from "@/lib/trail-prep-cache"
-
-declare global {
-  interface Window {
-    mapboxgl: any
-    turf: any
-  }
-}
-
-const MAPBOX_GL_JS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"
-const MAPBOX_GL_CSS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css"
-const TURF_JS = "https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"
 
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
@@ -38,6 +29,8 @@ interface PCTMapProps {
     getProgressFromCoordinates: (coordinates: [number, number]) => number
   }) => void
   onIntroComplete?: () => void
+  /** Fired after prefetch is cancelled and camera is jumped to overview — safe to reveal map. */
+  onOverviewReady?: () => void
   /** Fired when trailhead tiles are warm enough (or soft-timeout). */
   onTrailheadReady?: () => void
   /** 0–1 progress while warming the trailhead corridor. */
@@ -48,11 +41,52 @@ interface PCTMapProps {
   currentMiles?: number
 }
 
+/** Bird's-eye overview shown at the start of the intro. */
+export const OVERVIEW_CAMERA = {
+  center: [-118.4102, 38.6467] as [number, number],
+  zoom: 5.49,
+  pitch: 60,
+  bearing: 31,
+}
+
+/** Mexico border / trailhead — journey always begins here. */
+export const TRAILHEAD_CAMERA = {
+  center: [-116.467, 32.5897] as [number, number],
+  zoom: 9.55,
+  pitch: 0,
+  bearing: -5,
+}
+
+/**
+ * Distance fog. Load-bearing for perf, not just look: Mapbox culls tiles once
+ * they're ~98% fogged (past `range[1]`), so at our 60°-pitch / ~26 km-altitude
+ * cruise the frustum stops demanding the huge fan of far-horizon terrain that no
+ * preloader can keep ahead of on a real network — and whatever does lag renders
+ * as atmospheric haze instead of a white/black tear. `range` is camera-relative
+ * (map center = 0); pulling `range[1]` in culls more aggressively. Cool-neutral
+ * aerial-perspective palette — safe to warm up to taste without changing perf.
+ */
+const TRAIL_FOG = {
+  range: [1.5, 10] as [number, number],
+  "horizon-blend": 0.1,
+  color: "#dbe4ec",
+  "high-color": "#b0cdea",
+  "space-color": "#c5d6e8",
+  "star-intensity": 0,
+}
+
+/** Decided once at map construction — never toggled during scroll. */
+function preferReducedGpu(): boolean {
+  if (typeof window === "undefined") return false
+  return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches
+}
+
 export function PCTMap({
   onMapLoad,
   onMilesUpdate,
   onScrollControlReady,
   onIntroComplete,
+  onOverviewReady,
   onTrailheadReady,
   onTrailheadProgress,
   startIntro = false,
@@ -66,7 +100,6 @@ export function PCTMap({
   const [introPhase, setIntroPhase] = useState<"waiting" | "overview" | "flying" | "done">("waiting")
   const [currentSegment, setCurrentSegment] = useState(0)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
-  const [scriptsLoaded, setScriptsLoaded] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
   const [trailData, setTrailData] = useState<any>(null)
   const [debugMode, setDebugMode] = useState(false)
@@ -78,6 +111,7 @@ export function PCTMap({
   const trailheadReadyRef = useRef(false)
   const onTrailheadReadyRef = useRef(onTrailheadReady)
   const onTrailheadProgressRef = useRef(onTrailheadProgress)
+  const onOverviewReadyRef = useRef(onOverviewReady)
 
   useEffect(() => {
     introPhaseRef.current = introPhase
@@ -90,6 +124,10 @@ export function PCTMap({
   useEffect(() => {
     onTrailheadProgressRef.current = onTrailheadProgress
   }, [onTrailheadProgress])
+
+  useEffect(() => {
+    onOverviewReadyRef.current = onOverviewReady
+  }, [onOverviewReady])
 
   const notifyTrailheadReady = () => {
     if (trailheadReadyRef.current) return
@@ -193,58 +231,8 @@ export function PCTMap({
   }, [currentMiles, totalMiles, onMilesUpdate])
 
   useEffect(() => {
-    const ensureStylesheet = () => {
-      if (document.querySelector(`link[href="${MAPBOX_GL_CSS}"]`)) return
-      const cssLink = document.createElement("link")
-      cssLink.rel = "stylesheet"
-      cssLink.href = MAPBOX_GL_CSS
-      document.head.appendChild(cssLink)
-    }
-
-    const loadScript = (src: string) =>
-      new Promise<void>((resolve, reject) => {
-        const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null
-        if (existing) {
-          if ((src.includes("mapbox-gl") && window.mapboxgl) || (src.includes("turf") && window.turf)) {
-            resolve()
-            return
-          }
-          existing.addEventListener("load", () => resolve(), { once: true })
-          existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), {
-            once: true,
-          })
-          return
-        }
-        const script = document.createElement("script")
-        script.src = src
-        script.async = true
-        script.onload = () => resolve()
-        script.onerror = () => reject(new Error(`Failed to load ${src}`))
-        document.head.appendChild(script)
-      })
-
-    const loadMapboxScripts = async () => {
-      ensureStylesheet()
-      try {
-        await Promise.all([loadScript(TURF_JS), loadScript(MAPBOX_GL_JS)])
-        setScriptsLoaded(true)
-      } catch {
-        console.error("[v0] Failed to load Mapbox scripts")
-        setMapboxError("Failed to load Mapbox scripts. Please check your internet connection.")
-        notifyTrailheadReady()
-      }
-    }
-
-    if (window.mapboxgl) {
-      setScriptsLoaded(true)
-    } else if (!scriptsLoaded) {
-      void loadMapboxScripts()
-    }
-  }, [scriptsLoaded])
-
-  useEffect(() => {
     const initializeMap = async () => {
-      if (!scriptsLoaded || !window.mapboxgl || !trailData) {
+      if (!trailData) {
         return
       }
 
@@ -261,22 +249,35 @@ export function PCTMap({
           return
         }
 
-        window.mapboxgl.accessToken = token
+        mapboxgl.accessToken = token
         accessTokenRef.current = token
 
-        map.current = new window.mapboxgl.Map({
+        const reducedGpu = preferReducedGpu()
+        map.current = new mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo?optimize=true",
-          center: [-118.4102, 38.6467],
-          zoom: 5.49,
-          pitch: 60,
-          bearing: 31,
-          antialias: true,
+          center: OVERVIEW_CAMERA.center,
+          zoom: OVERVIEW_CAMERA.zoom,
+          pitch: OVERVIEW_CAMERA.pitch,
+          bearing: OVERVIEW_CAMERA.bearing,
+          antialias: !reducedGpu,
           interactive: false,
           attributionControl: false,
-          fadeDuration: 0,
+          // Crossfade tile refinement instead of hard-popping blurry→sharp. Was
+          // 0 (set in the Jan "terrain perf" commit) — invisible while the camera
+          // was static, but during the continuous flythrough every tile upgrade
+          // snapped in, reading as jerky upresolution, worst in mountains. 300 is
+          // the Mapbox default; the splash covers the intro so no flash leaks.
+          fadeDuration: 300,
           trackResize: true,
           refreshExpiredTiles: false,
+          // Mapbox sizes each source's tile cache from viewport area only
+          // (~60 tiles at 1400×900), ignoring that a 60°-pitch terrain frustum
+          // sees far more — and that our rolling preload window needs to stay
+          // resident until the camera arrives. Raise the floor on desktop;
+          // keep mobile capped for GPU memory.
+          minTileCacheSize: reducedGpu ? undefined : 150,
+          maxTileCacheSize: reducedGpu ? 80 : 300,
         })
 
         map.current.on("load", () => {
@@ -293,6 +294,8 @@ export function PCTMap({
             source: "mapbox-terrain-rgb",
             exaggeration: 1.8,
           })
+
+          map.current.setFog(TRAIL_FOG)
 
           const cameraTrackingGeometry = {
             ...trailData,
@@ -393,7 +396,6 @@ export function PCTMap({
           prefetchRef.current = startPathTilePrefetch({
             map: map.current,
             trailCoordinates: trailData.geometry.coordinates,
-            accessToken: accessTokenRef.current,
             // Camera jumps are safe while splash/waiting still covers the map
             canMoveCamera: () => introPhaseRef.current === "waiting",
             onTrailheadWarm: () => {
@@ -402,6 +404,9 @@ export function PCTMap({
             },
             onTrailheadProgress: (progress) => onTrailheadProgressRef.current?.(progress),
             trailheadAlreadyCached: isTrailPrepCached(),
+            reducedGpu,
+            // Any easeTo/jumpTo (even preloadOnly) would cancel the intro flyTo mid-flight
+            isIntroFlying: () => introPhaseRef.current === "flying",
           })
         })
 
@@ -427,15 +432,28 @@ export function PCTMap({
         map.current = null
       }
     }
-  }, [scriptsLoaded, onMapLoad, trailData])
+  }, [onMapLoad, trailData])
 
-  // Ahead-of-scroll DEM warm — throttled so it doesn't run on every miles tick
+  // Ahead-of-scroll tile warm. Throttle (fire DURING motion), not debounce:
+  // currentMiles republishes ~10/s while scrolling, so a trailing-only timer
+  // would keep resetting and never fire until the user stops — starving the
+  // rolling window in exactly the fast-scroll case. warmAhead is internally
+  // cheap and idempotent (12mi re-arm gate), so leading-edge calls are safe.
+  const lastWarmAtRef = useRef(0)
   useEffect(() => {
     if (!mapLoaded || !prefetchRef.current) return
-    const miles = externalMiles || currentMiles
+    const now = performance.now()
+    const sinceLast = now - lastWarmAtRef.current
+    if (sinceLast >= 250) {
+      lastWarmAtRef.current = now
+      prefetchRef.current.warmAhead(externalMiles || currentMiles)
+      return
+    }
+    // Trailing call so the final resting position still gets warmed.
     const timer = setTimeout(() => {
-      prefetchRef.current?.warmAhead(miles)
-    }, 400)
+      lastWarmAtRef.current = performance.now()
+      prefetchRef.current?.warmAhead(externalMiles || currentMiles)
+    }, 250 - sinceLast)
     return () => clearTimeout(timer)
   }, [externalMiles, currentMiles, mapLoaded])
 
@@ -504,33 +522,54 @@ export function PCTMap({
 
   const scrollControlReadyCalledRef = useRef(false)
 
-  // Start intro animation when startIntro becomes true
+  // Start intro: cancel warm, restore overview UNDER splash, then reveal + fly to trailhead.
   useEffect(() => {
     if (startIntro && introPhase === "waiting" && mapLoaded && map.current) {
-      // Flip ref immediately so in-flight prefetch stops before we restore bird's-eye.
+      // Stop any in-flight camera warm immediately
+      prefetchRef.current?.cancel()
       introPhaseRef.current = "overview"
+
       map.current.jumpTo({
-        center: [-118.4102, 38.6467],
-        zoom: 5.49,
-        pitch: 60,
-        bearing: 31,
+        center: OVERVIEW_CAMERA.center,
+        zoom: OVERVIEW_CAMERA.zoom,
+        pitch: OVERVIEW_CAMERA.pitch,
+        bearing: OVERVIEW_CAMERA.bearing,
       })
-      setIntroPhase("overview")
+
+      // Wait for overview tiles before parent fades splash — prevents mid-trail / black flash
+      const reveal = () => {
+        onOverviewReadyRef.current?.()
+        setIntroPhase("overview")
+      }
+
+      let revealed = false
+      const safeReveal = () => {
+        if (revealed) return
+        revealed = true
+        reveal()
+      }
+
+      map.current.once("idle", safeReveal)
+      // Fallback if idle is slow (cached tiles may already be warm)
+      const fallback = setTimeout(safeReveal, 700)
+      return () => {
+        clearTimeout(fallback)
+      }
     }
   }, [startIntro, introPhase, mapLoaded])
 
   useEffect(() => {
     if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return
 
-    // Wait briefly at the overview before the crane shot to the trailhead.
+    // Brief hold on overview, then crane to trailhead (always start of map)
     const timer = setTimeout(() => {
       setIntroPhase("flying")
 
       map.current.flyTo({
-        center: [-116.467, 32.5897],
-        zoom: 9.55,
-        pitch: 0,
-        bearing: -5,
+        center: TRAILHEAD_CAMERA.center,
+        zoom: TRAILHEAD_CAMERA.zoom,
+        pitch: TRAILHEAD_CAMERA.pitch,
+        bearing: TRAILHEAD_CAMERA.bearing,
         duration: 8000,
         essential: true,
         easing: (t: number) =>
@@ -538,17 +577,16 @@ export function PCTMap({
       })
 
       map.current.once("moveend", () => {
-        // Small delay to ensure camera is fully settled before handoff
         setTimeout(() => {
           setIntroPhase("done")
           setInitialAnimationDone(true)
           onIntroComplete?.()
         }, 100)
       })
-    }, 600)
+    }, 500)
 
     return () => clearTimeout(timer)
-  }, [introPhase, mapLoaded, debugMode])
+  }, [introPhase, mapLoaded, debugMode, onIntroComplete])
 
   if (mapboxError) {
     return (
@@ -575,17 +613,14 @@ export function PCTMap({
     <div className="relative h-full w-full">
       <div ref={mapContainer} className="h-full w-full" />
 
-      {!hideLoading && (!scriptsLoaded || !trailData || !mapLoaded) && (
+      {/* Never flash this during splash→intro — hideLoading covers that path */}
+      {!hideLoading && (!trailData || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-white text-xl">
-            {!scriptsLoaded ? "Loading Mapbox..." : !trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
+            {!trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
           </div>
         </div>
       )}
-
-
-
-
     </div>
   )
 }

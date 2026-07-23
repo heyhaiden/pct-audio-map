@@ -1,6 +1,11 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
+import mapboxgl from "mapbox-gl"
+import along from "@turf/along"
+import bearing from "@turf/bearing"
+import length from "@turf/length"
+import { lineString } from "@turf/helpers"
 import {
   CAMERA_PATH_POINTS,
   PCT_TOTAL_MILES,
@@ -48,6 +53,9 @@ export function useTrailScroll({
   const pendingSyncRef = useRef<[number, number] | null>(null)
   const cameraPathRef = useRef<CameraPathPoint[] | null>(null)
   const isBlockedRef = useRef(false)
+  // After a sync/resume, the GL camera may not match cameraStateRef — force one
+  // write even if the state already reads as settled.
+  const forceCameraWriteRef = useRef(false)
 
   const onProgressChangeRef = useRef(onProgressChange)
   const trailCoordinatesRef = useRef(trailCoordinates)
@@ -103,6 +111,7 @@ export function useTrailScroll({
     cameraStateRef.current.bearing = railing.bearing
     cameraStateRef.current.pitch = railing.pitch
     cameraStateRef.current.altitude = railing.altitude
+    forceCameraWriteRef.current = true
 
     window.scrollTo({
       top: targetScroll,
@@ -169,32 +178,27 @@ export function useTrailScroll({
     if (!trailCoordinates || trailCoordinates.length < 2) return
 
     const buildCameraPath = () => {
-      if (typeof window === "undefined" || !window.turf) {
-        setTimeout(buildCameraPath, 100)
-        return
-      }
-
       try {
-        const line = window.turf.lineString(trailCoordinates)
-        const totalLength = window.turf.length(line, { units: "kilometers" })
+        const line = lineString(trailCoordinates)
+        const totalLength = length(line, { units: "kilometers" })
 
         const points: CameraPathPoint[] = []
 
         for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
           const distance = (i / CAMERA_PATH_POINTS) * totalLength
-          const point = window.turf.along(line, distance, { units: "kilometers" })
+          const point = along(line, distance, { units: "kilometers" })
           const coords = point.geometry.coordinates
 
           const bearingLookAheadKilometers = 16
           const nextDistance = Math.min(distance + bearingLookAheadKilometers, totalLength)
-          const nextPoint = window.turf.along(line, nextDistance, { units: "kilometers" })
-          const bearing = window.turf.bearing(point, nextPoint)
+          const nextPoint = along(line, nextDistance, { units: "kilometers" })
+          const pointBearing = bearing(point, nextPoint)
 
           points.push({
             lng: coords[0],
             lat: coords[1],
-            bearing: bearing,
-            smoothedBearing: bearing,
+            bearing: pointBearing,
+            smoothedBearing: pointBearing,
           })
         }
 
@@ -232,17 +236,28 @@ export function useTrailScroll({
     let animationFrame: number
     let lastUiPublishMs = 0
     let lastPublishedMiles = -1
+    let lastScrollTop = typeof window !== "undefined" ? window.scrollY : 0
+    let lastScrollChangeMs = 0
+    let frameIndex = 0
+    let reusableCamera: any = null
 
     const updateCamera = (frameTime: number) => {
       const currentMap = mapRef.current
 
-      if (!currentMap || !window.mapboxgl) {
+      if (!currentMap) {
         animationFrame = requestAnimationFrame(updateCamera)
         return
       }
 
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
       const scrollTop = window.scrollY
+      const scrollDelta = Math.abs(scrollTop - lastScrollTop)
+      if (scrollDelta > 0.5) {
+        lastScrollTop = scrollTop
+        lastScrollChangeMs = frameTime
+      }
+      const isScrolling = frameTime - lastScrollChangeMs < 150
+
       const rawPhase = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0
       const miles = rawPhase * PCT_TOTAL_MILES
 
@@ -302,24 +317,45 @@ export function useTrailScroll({
       state.pitch += (targetPitch - state.pitch) * positionFactor
       state.altitude += (targetAltitude - state.altitude) * positionFactor
 
-      try {
-        if (typeof currentMap.getFreeCameraOptions !== "function") {
-          animationFrame = requestAnimationFrame(updateCamera)
-          return
+      // Once converged with no scroll motion, stop dirtying the map so it can
+      // actually go idle — otherwise every frame forces a full terrain repaint.
+      const lngErr = Math.abs(targetLng - state.lng)
+      const latErr = Math.abs(targetLat - state.lat)
+      const bearingErr = Math.abs(((targetBearing - state.bearing + 540) % 360) - 180)
+      const pitchErr = Math.abs(targetPitch - state.pitch)
+      const altErr = Math.abs(targetAltitude - state.altitude)
+      const settled =
+        !isScrolling &&
+        lngErr < 0.000008 &&
+        latErr < 0.000008 &&
+        bearingErr < 0.08 &&
+        pitchErr < 0.08 &&
+        altErr < 3
+
+      frameIndex += 1
+      // Only decimate writes when the previous frame ran over budget — keeps
+      // 60Hz camera motion on machines that can sustain it.
+      const decimate = isScrolling && deltaSeconds > 0.02
+      const shouldWriteCamera =
+        forceCameraWriteRef.current || (!settled && (!decimate || frameIndex % 2 === 0))
+
+      if (shouldWriteCamera) {
+        forceCameraWriteRef.current = false
+        try {
+          if (typeof currentMap.setFreeCameraOptions === "function") {
+            if (!reusableCamera) {
+              reusableCamera = new mapboxgl.FreeCameraOptions()
+            }
+            reusableCamera.position = mapboxgl.MercatorCoordinate.fromLngLat(
+              { lng: state.lng, lat: state.lat },
+              state.altitude,
+            )
+            reusableCamera.setPitchBearing(state.pitch, state.bearing)
+            currentMap.setFreeCameraOptions(reusableCamera)
+          }
+        } catch (error) {
+          console.error("[v0] Camera update error:", error)
         }
-
-        const camera = currentMap.getFreeCameraOptions()
-
-        camera.position = window.mapboxgl.MercatorCoordinate.fromLngLat(
-          { lng: state.lng, lat: state.lat },
-          state.altitude,
-        )
-
-        camera.setPitchBearing(state.pitch, state.bearing)
-
-        currentMap.setFreeCameraOptions(camera)
-      } catch (error) {
-        console.error("[v0] Camera update error:", error)
       }
 
       animationFrame = requestAnimationFrame(updateCamera)
