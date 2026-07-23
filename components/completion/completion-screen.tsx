@@ -38,7 +38,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
+      className={`fixed inset-0 z-[60] flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
         showContent ? "opacity-100" : "opacity-0"
       }`}
     >

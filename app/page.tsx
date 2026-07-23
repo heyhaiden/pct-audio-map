@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
 import dynamic from "next/dynamic"
 import { AudioMarkers } from "@/components/map/audio-markers"
-import { ScrollIndicator } from "@/components/scroll/scroll-indicator"
+import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
 import { TrailStats } from "@/components/stats/trail-stats"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
@@ -12,6 +12,7 @@ import { MobileStatsBar } from "@/components/mobile/mobile-stats-bar"
 import { MobileChapterToast } from "@/components/mobile/mobile-chapter-toast"
 import { AboutSocial } from "@/components/navigation/about-social"
 import { WipScreen } from "@/components/completion/wip-screen"
+import { CompletionScreen } from "@/components/completion/completion-screen"
 import { pctSegments } from "@/data/pct-segments"
 import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
@@ -23,7 +24,7 @@ import {
   readFreeCameraPose,
 } from "@/lib/node-camera"
 import { PerfDebugPanel } from "@/components/debug/perf-debug-panel"
-import { useChapterIntro } from "@/hooks/use-chapter-intro"
+import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import type { AudioMarker } from "@/types/map"
 
@@ -38,8 +39,17 @@ const PCTMap = dynamic(() => import("@/components/map/pct-map").then((m) => m.PC
   ssr: false,
 })
 
-/** Early Oregon — content ends here for now. */
+/** Early Oregon — produced audio content ends here for now (informational notice). */
 const WIP_MILE = 1700
+
+/** Near the Canadian border — reaching here shows the end-of-trail screen. */
+const END_MILE = 2640
+
+/** Mobile card covers the map, so it fades fast; desktop sits off-screen and can linger. */
+const MOBILE_INTRO_HOLD = 8
+const MOBILE_INTRO_FADE = 12
+const DESKTOP_INTRO_HOLD = 40
+const DESKTOP_INTRO_FADE = 70
 
 const ACTIVE_CHAPTERS = new Set(["southern-california", "sierra-nevada", "northern-california"])
 
@@ -68,9 +78,12 @@ export default function Home() {
   const [trailheadReady, setTrailheadReady] = useState(false)
   const [trailheadProgress, setTrailheadProgress] = useState(0)
   const [showWip, setShowWip] = useState(false)
+  const [wipDismissed, setWipDismissed] = useState(false)
+  const [showCompletion, setShowCompletion] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
-  const [forceChapterVisible, setForceChapterVisible] = useState(false)
   const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
+  // Chapter index whose mobile intro card the user manually dismissed.
+  const [toastDismissedChapter, setToastDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
   const lastChapterRef = useRef(0)
   const scrollControlRef = useRef<ScrollControls | null>(null)
@@ -95,14 +108,46 @@ export default function Home() {
 
   const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
 
-  const { intro: chapterIntro, triggerIntro } = useChapterIntro(
-    currentMiles,
-    introComplete && journeyStarted,
-  )
+  const chapterIntro = useChapterIntro(currentMiles, introComplete && journeyStarted)
 
   const introChapterIndex = chapterIntro?.index ?? currentChapter
   const introChapter = pctSegments[introChapterIndex] ?? pctSegments[0]
-  const introOpacity = chapterIntro?.opacity ?? 0
+  const desktopIntroOpacity = chapterIntro
+    ? introOpacity(chapterIntro.milesIn, DESKTOP_INTRO_HOLD, DESKTOP_INTRO_FADE)
+    : 0
+  const mobileIntroOpacity =
+    chapterIntro && toastDismissedChapter !== introChapterIndex
+      ? introOpacity(chapterIntro.milesIn, MOBILE_INTRO_HOLD, MOBILE_INTRO_FADE)
+      : 0
+
+  // Reset the manual mobile-card dismissal when we move to a different chapter.
+  useEffect(() => {
+    setToastDismissedChapter(null)
+  }, [introChapterIndex])
+
+  const atEnd = currentMiles >= END_MILE
+
+  // Timeline nodes: the five chapters plus a trailing "End" node.
+  const timelineNodes = useMemo(
+    () => [
+      ...pctSegments.map((c) => ({ id: c.id, title: c.title })),
+      { id: "end", title: "End of Trail" },
+    ],
+    [],
+  )
+  const activeNodeIndex = atEnd ? pctSegments.length : currentChapter
+
+  // Continuous progress along the dot track (0 = first node, 1 = the End node).
+  // Advances smoothly within each chapter so the pink connector line reads as
+  // the horizontal scroll-progress indicator. Denominator is the chapter count
+  // because the End node sits one step past the last chapter start.
+  const timelineProgress = useMemo(() => {
+    const lastNode = pctSegments.length
+    if (lastNode <= 0) return 0
+    const range = CHAPTER_MILE_RANGES[currentChapter]
+    const within = range ? (currentMiles - range.start) / (range.end - range.start) : 0
+    return Math.max(0, Math.min(1, (currentChapter + Math.max(0, Math.min(1, within))) / lastNode))
+  }, [currentChapter, currentMiles])
 
   const handleMilesUpdate = useCallback((miles: number, total: number) => {
     setCurrentMiles(miles)
@@ -123,10 +168,25 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    // Best-effort immersive fullscreen — this runs inside the button's user
+    // gesture so Android Chrome allows it and drops its address/footer bars.
+    // iOS Safari doesn't support element fullscreen, so it silently no-ops.
+    try {
+      const el = document.documentElement as HTMLElement & {
+        webkitRequestFullscreen?: () => Promise<void> | void
+      }
+      if (el.requestFullscreen) void el.requestFullscreen().catch(() => {})
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+    } catch {
+      /* ignore — fullscreen is a nice-to-have */
+    }
+
     // Always restart at the beginning — under splash so camera reset is invisible
     setCurrentMiles(0)
     setHasScrolled(false)
     setShowWip(false)
+    setWipDismissed(false)
+    setShowCompletion(false)
     setIntroComplete(false)
     setRevealMap(false)
     window.scrollTo({ top: 0, behavior: "instant" })
@@ -143,9 +203,27 @@ export default function Home() {
 
   const handleRestart = useCallback(() => {
     setShowWip(false)
+    setWipDismissed(false)
+    setShowCompletion(false)
     setCurrentMiles(0)
     setHasScrolled(false)
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    // Instant so the long sweep back to the start can't flash the WIP notice.
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior })
+  }, [])
+
+  // Close the WIP notice and keep exploring the map from the current position.
+  const handleDismissWip = useCallback(() => {
+    setShowWip(false)
+    setWipDismissed(true)
+  }, [])
+
+  // Jump to the very end of the trail (final node) → end-of-trail screen.
+  // Instant so the mile sweep can't briefly trip the mid-trail WIP notice.
+  const handleEndClick = useCallback(() => {
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+    setIsChapterTransitioning(true)
+    window.scrollTo({ top: scrollHeight, behavior: "instant" as ScrollBehavior })
+    setTimeout(() => setIsChapterTransitioning(false), 600)
   }, [])
 
   useEffect(() => {
@@ -157,12 +235,37 @@ export default function Home() {
     }
   }, [currentChapter, journeyStarted])
 
-  // WIP overlay at early Oregon — supersedes end-of-trail completion for now
+  // WIP notice at early Oregon — shows once when you first reach the content
+  // edge. It's dismissible (you can keep exploring the map past it); once
+  // dismissed it won't reappear until you scroll back before the boundary.
   useEffect(() => {
-    if (currentMiles >= WIP_MILE && journeyStarted && !showWip && !selectedAudioMarker) {
+    if (currentMiles < WIP_MILE && wipDismissed) {
+      setWipDismissed(false)
+    }
+  }, [currentMiles, wipDismissed])
+
+  useEffect(() => {
+    if (
+      currentMiles >= WIP_MILE &&
+      currentMiles < END_MILE &&
+      journeyStarted &&
+      !showWip &&
+      !wipDismissed &&
+      !selectedAudioMarker
+    ) {
       setShowWip(true)
     }
-  }, [currentMiles, journeyStarted, showWip, selectedAudioMarker])
+  }, [currentMiles, journeyStarted, showWip, wipDismissed, selectedAudioMarker])
+
+  // End-of-trail screen near the Canadian border. Resets if you scroll back.
+  useEffect(() => {
+    if (currentMiles >= END_MILE && journeyStarted && !selectedAudioMarker) {
+      setShowCompletion(true)
+      setShowWip(false)
+    } else if (currentMiles < END_MILE && showCompletion) {
+      setShowCompletion(false)
+    }
+  }, [currentMiles, journeyStarted, selectedAudioMarker, showCompletion])
 
   useEffect(() => {
     if (hasScrolled) return
@@ -175,14 +278,6 @@ export default function Home() {
 
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
-    // Don't jump past the WIP boundary into unfinished regions
-    if (chapterStartMile >= WIP_MILE) {
-      const progress = WIP_MILE / totalMiles
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
-      window.scrollTo({ top: progress * scrollHeight, behavior: "smooth" })
-      return
-    }
-
     const targetMile = chapterStartMile + 1
     const progress = targetMile / totalMiles
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
@@ -192,10 +287,10 @@ export default function Home() {
     const scrollDistance = Math.abs(targetScroll - currentScroll)
     const isLongDistance = scrollDistance > window.innerHeight * 2
 
+    // Intro card visibility is now driven by scroll position, so jumping to the
+    // chapter start makes it appear on its own — no timer to trigger.
     setCurrentMiles(targetMile)
     setIsChapterTransitioning(true)
-    setForceChapterVisible(true)
-    triggerIntro(chapterIndex)
 
     setTimeout(() => {
       window.scrollTo({
@@ -207,10 +302,6 @@ export default function Home() {
     setTimeout(() => {
       setIsChapterTransitioning(false)
     }, isLongDistance ? 600 : 1500)
-
-    setTimeout(() => {
-      setForceChapterVisible(false)
-    }, isLongDistance ? 2500 : 3500)
   }
 
   const flyToMarkerPunchIn = useCallback(
@@ -378,7 +469,9 @@ export default function Home() {
         />
       )}
 
-      <WipScreen isVisible={showWip} onRestart={handleRestart} />
+      <WipScreen isVisible={showWip} onRestart={handleRestart} onDismiss={handleDismissWip} />
+
+      <CompletionScreen isVisible={showCompletion} totalMiles={totalMiles} onRestart={handleRestart} />
 
       <div
         className={`fixed inset-0 z-20 bg-black/40 pointer-events-none transition-opacity duration-500 ${
@@ -418,11 +511,21 @@ export default function Home() {
         <MobileStatsBar currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
       </div>
 
+      <div className={`transition-opacity duration-700 ease-out delay-200 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
+        <ChapterTimeline
+          nodes={timelineNodes}
+          activeIndex={activeNodeIndex}
+          progress={timelineProgress}
+          onNodeClick={(i) => (i >= pctSegments.length ? handleEndClick() : handleChapterClick(i))}
+        />
+      </div>
+
       {introComplete && journeyStarted && (
         <MobileChapterToast
           chapter={introChapter}
           chapterIndex={introChapterIndex}
-          opacity={forceChapterVisible ? 1 : introOpacity}
+          opacity={mobileIntroOpacity}
+          onClose={() => setToastDismissedChapter(introChapterIndex)}
         />
       )}
 
@@ -431,17 +534,7 @@ export default function Home() {
           chapter={introChapter}
           chapterIndex={introChapterIndex}
           totalChapters={pctSegments.length}
-          opacity={introOpacity}
-          forceVisible={forceChapterVisible}
-        />
-      </div>
-
-      <div className={`transition-opacity duration-1000 ease-out delay-300 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
-        <ScrollIndicator
-          progress={currentMiles / totalMiles}
-          currentChapter={currentChapter}
-          totalChapters={pctSegments.length}
-          onChapterClick={handleChapterClick}
+          opacity={desktopIntroOpacity}
         />
       </div>
 
@@ -461,7 +554,7 @@ export default function Home() {
       )}
 
       <div
-        className={`hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
+        className={`hidden md:block fixed bottom-32 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
           !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
         }`}
       >
@@ -476,16 +569,16 @@ export default function Home() {
       </div>
 
       <div
-        className={`md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
+        className={`md:hidden fixed bottom-32 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
           !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
         }`}
       >
         <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
           <div className="flex items-center gap-2">
             <div className="w-3 h-5 border border-stone-500 rounded-sm relative">
-              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute top-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
+              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute bottom-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
             </div>
-            <span className="text-stone-400">Swipe to explore</span>
+            <span className="text-stone-400">Swipe up to explore</span>
           </div>
         </div>
       </div>
