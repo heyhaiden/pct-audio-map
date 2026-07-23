@@ -39,17 +39,6 @@ function AbstractTrailIcon({ className }: { className?: string }) {
         fill="none"
         className="text-[#ff6b9d]"
       />
-      {/* Subtle parallel accent line */}
-      <path
-        d="M65 190
-           C50 175, 80 162, 60 147
-           C40 132, 85 117, 70 102"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="round"
-        fill="none"
-        className="text-[#ff6b9d]/30"
-      />
     </svg>
   )
 }
@@ -275,7 +264,7 @@ export function SplashScreen({
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-stone-300 mb-0 md:mb-3 font-light">
+          <p className="text-lg md:text-xl text-stone-300 mb-3 font-light">
             An Audio Journey Along the Pacific Crest Trail
           </p>
 
@@ -288,11 +277,24 @@ export function SplashScreen({
             <span>Field recordings</span>
           </div>
 
+          {/* Compact stats line - mobile only */}
+          <div className="md:hidden flex items-center gap-3 text-xs text-stone-500 mb-5">
+            <span>2,650 mi</span>
+            <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
+            <span>Mexico to Canada</span>
+          </div>
+
           {/* Description - desktop only */}
           <p className="hidden md:block text-lg text-stone-400 leading-relaxed max-w-lg mb-10">
-            Scroll through an immersive map experience featuring ambient soundscapes 
-            recorded along the Pacific Crest Trail. Discover the sonic landscape of 
+            Scroll through an immersive map experience featuring ambient soundscapes
+            recorded along the Pacific Crest Trail. Discover the sonic landscape of
             the American West.
+          </p>
+
+          {/* Description - mobile only (condensed) */}
+          <p className="md:hidden text-base text-stone-400 leading-relaxed max-w-sm">
+            Scroll through an immersive map featuring ambient soundscapes recorded
+            along the trail — the sonic landscape of the American West.
           </p>
 
           {/* CTA Buttons - desktop only, inline with content */}
@@ -311,8 +313,8 @@ export function SplashScreen({
             </Link>
           </div>
 
-          {/* Mobile CTA - inline with content for better centering */}
-          <div className="md:hidden flex flex-col items-center gap-4 mt-10">
+          {/* Mobile CTA - pushed down into the thumb-tap zone */}
+          <div className="md:hidden flex flex-col items-center gap-4 mt-16 pb-[env(safe-area-inset-bottom)]">
             <BeginJourneyButton
               ready={trailheadReady}
               progress={trailheadProgress}

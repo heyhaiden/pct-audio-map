@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Construction, Library } from "lucide-react"
+import { Construction, Library, X, Compass } from "lucide-react"
 
 interface WipScreenProps {
   isVisible: boolean
   onRestart: () => void
+  /** Close the notice and keep exploring the map from the current position. */
+  onDismiss: () => void
 }
 
-export function WipScreen({ isVisible, onRestart }: WipScreenProps) {
+export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
   const [showContent, setShowContent] = useState(false)
 
   useEffect(() => {
@@ -27,11 +29,20 @@ export function WipScreen({ isVisible, onRestart }: WipScreenProps) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
+      className={`fixed inset-0 z-[60] flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
         showContent ? "opacity-100" : "opacity-0"
       }`}
     >
       <div className="absolute inset-0 bg-gradient-to-t from-[#ff6b9d]/10 via-transparent to-stone-950" />
+
+      {/* Close — dismiss and keep exploring the map */}
+      <button
+        onClick={onDismiss}
+        className="absolute top-4 right-4 md:top-6 md:right-6 z-20 w-10 h-10 rounded-full bg-stone-900/80 border border-stone-800/60 flex items-center justify-center text-stone-400 hover:text-white hover:border-stone-600 transition-colors"
+        aria-label="Close and keep exploring"
+      >
+        <X className="w-5 h-5" />
+      </button>
 
       <div className="flex-1 flex items-center justify-center">
         <div
@@ -57,15 +68,22 @@ export function WipScreen({ isVisible, onRestart }: WipScreenProps) {
           </p>
 
           <p className="text-stone-400 text-sm mb-8 max-w-md">
-            Thanks for exploring the PCT with us. Head back south for more audio, or browse the
-            library while we keep recording.
+            Keep exploring the map from here, browse the library, or head back south for more
+            audio while we keep recording.
           </p>
 
           <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <button
+                onClick={onDismiss}
+                className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+              >
+                <Compass className="w-4 h-4" />
+                Keep exploring
+              </button>
               <Link
                 href="/library"
-                className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-stone-800/80 hover:bg-stone-700/80 border border-stone-700 text-white font-medium rounded-full transition-colors"
               >
                 <Library className="w-4 h-4" />
                 Audio Library
@@ -76,7 +94,7 @@ export function WipScreen({ isVisible, onRestart }: WipScreenProps) {
               onClick={onRestart}
               className="px-6 py-2.5 text-sm text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full transition-colors"
             >
-              Back to the trail
+              Restart journey
             </button>
           </div>
         </div>

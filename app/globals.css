@@ -5,6 +5,16 @@
   * {
     border-color: oklch(0.922 0 0);
   }
+  /* Glue the scroll-driven experience: kill rubber-band overscroll and
+     pull-to-refresh so scrolling only drives the camera and the fixed map
+     layer never shifts (iOS Safari visually displaces fixed elements during
+     bounce). The mechanic still depends on window.scrollY — do NOT lock
+     overflow-y. */
+  html,
+  body {
+    overscroll-behavior: none;
+    overflow-x: hidden;
+  }
   body {
     background-color: oklch(0.145 0 0);
     color: oklch(0.985 0 0);
