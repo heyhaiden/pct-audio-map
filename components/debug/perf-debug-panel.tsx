@@ -82,7 +82,7 @@ export function PerfDebugPanel({ map = null }: PerfDebugPanelProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-3 left-3 z-[200] rounded bg-black/50 px-2 py-1 text-[10px] font-mono text-stone-400 hover:text-white border border-stone-700/50"
+        className="fixed top-3 right-14 md:top-auto md:right-auto md:bottom-3 md:left-3 z-[200] rounded bg-black/50 px-2 py-1 text-[10px] font-mono text-stone-400 hover:text-white border border-stone-700/50"
         aria-label="Show performance panel"
         title="Toggle perf panel (`)"
       >
@@ -92,7 +92,7 @@ export function PerfDebugPanel({ map = null }: PerfDebugPanelProps) {
   }
 
   return (
-    <div className="fixed bottom-3 left-3 z-[200] rounded-lg bg-black/80 backdrop-blur-md border border-stone-700/60 px-3 py-2 font-mono text-[11px] text-stone-200 shadow-lg min-w-[140px]">
+    <div className="fixed top-3 right-14 md:top-auto md:right-auto md:bottom-3 md:left-3 z-[200] rounded-lg bg-black/80 backdrop-blur-md border border-stone-700/60 px-3 py-2 font-mono text-[11px] text-stone-200 shadow-lg min-w-[140px]">
       <div className="flex items-center justify-between gap-3 mb-1">
         <span className="text-stone-400 uppercase tracking-wider text-[9px]">Perf</span>
         <button
