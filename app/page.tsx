@@ -25,6 +25,7 @@ import {
 } from "@/lib/node-camera"
 import { PerfDebugPanel } from "@/components/debug/perf-debug-panel"
 import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
+import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import type { AudioMarker } from "@/types/map"
 
@@ -40,7 +41,7 @@ const PCTMap = dynamic(() => import("@/components/map/pct-map").then((m) => m.PC
 })
 
 /** Early Oregon — produced audio content ends here for now (informational notice). */
-const WIP_MILE = 1700
+const WIP_MILE = 1800
 
 /** Near the Canadian border — reaching here shows the end-of-trail screen. */
 const END_MILE = 2640
@@ -276,6 +277,10 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [hasScrolled])
 
+  // Touch: swipe-down advances the trail (matches trackpad "scroll down").
+  // Wheel/trackpad keep native direction. Body overflow/touchAction locks still win.
+  useInvertedTouchScroll(journeyStarted && !showSplash && !selectedAudioMarker && !isNodeCameraBusy)
+
   const handleChapterClick = (chapterIndex: number) => {
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
     const targetMile = chapterStartMile + 1
@@ -411,16 +416,7 @@ export default function Home() {
   const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < navigableMarkers.length - 1
   const hasPreviousMarker = currentMarkerIndex > 0
 
-  let currentSection = "Southern California"
-  if (currentMiles >= 2250) {
-    currentSection = "Washington Cascades"
-  } else if (currentMiles >= 1700) {
-    currentSection = "Oregon Cascades"
-  } else if (currentMiles >= 1100) {
-    currentSection = "Northern California"
-  } else if (currentMiles >= 700) {
-    currentSection = "Sierra Nevada"
-  }
+  const currentSection = pctSegments[currentChapter]?.title ?? "Southern California"
 
   useEffect(() => {
     if (selectedAudioMarker || isNodeCameraBusy) {
@@ -576,9 +572,9 @@ export default function Home() {
         <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
           <div className="flex items-center gap-2">
             <div className="w-3 h-5 border border-stone-500 rounded-sm relative">
-              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute bottom-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
+              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute top-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
             </div>
-            <span className="text-stone-400">Swipe up to explore</span>
+            <span className="text-stone-400">Swipe down to explore</span>
           </div>
         </div>
       </div>

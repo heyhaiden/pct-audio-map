@@ -1,7 +1,7 @@
 import type { AudioMarker } from "@/types/map"
 
 export const audioMarkers: AudioMarker[] = [
-  // Southern California Desert
+  // Southern California
   {
     id: "marker-1",
     name: "Campo Trailhead",
@@ -392,7 +392,7 @@ export const audioMarkers: AudioMarker[] = [
     recordingDate: "July 18, 2024",
   },
 
-  // Oregon Cascades
+  // Oregon
   {
     id: "forest-rain",
     name: "Pacific Northwest Rain",
@@ -427,7 +427,7 @@ export const audioMarkers: AudioMarker[] = [
     recordingDate: "August 15, 2024",
   },
 
-  // Washington Cascades
+  // Washington
   {
     id: "glacier-melt",
     name: "Glacier Meltwater",

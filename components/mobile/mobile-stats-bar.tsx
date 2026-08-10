@@ -36,9 +36,9 @@ export function MobileStatsBar({ currentMiles, totalMiles, currentSection }: Mob
       >
         <div className="bg-stone-950/70 backdrop-blur-sm rounded-full px-3 py-1.5 border border-stone-800/30">
           <span className="text-[11px] font-medium text-white tabular-nums">
-            {Math.round(currentMiles).toLocaleString()}
+            {Math.round(currentMiles).toLocaleString("en-US")}
           </span>
-          <span className="text-[11px] text-stone-500"> / {totalMiles.toLocaleString()} mi</span>
+          <span className="text-[11px] text-stone-500"> / {totalMiles.toLocaleString("en-US")} mi</span>
         </div>
       </div>
     </>

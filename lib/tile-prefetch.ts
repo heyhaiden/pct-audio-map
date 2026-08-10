@@ -13,7 +13,7 @@ import {
 import { applyFreeCameraPose } from "@/lib/node-camera"
 
 /** Warm style + terrain out to early Oregon; content ends there for now. */
-export const PREFETCH_END_MILES = 1700
+export const PREFETCH_END_MILES = 1800
 /** Gate "Begin Journey" once this corridor is warm. */
 export const TRAILHEAD_WARM_MILES = 120
 /** Background preload target while splash is up (no visible camera walking). */
