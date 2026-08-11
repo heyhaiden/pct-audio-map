@@ -131,7 +131,7 @@ export function AudioPlayer({
                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                {marker.elevation.toLocaleString()} ft
+                {marker.elevation.toLocaleString("en-US")} ft
               </span>
             )}
           </div>

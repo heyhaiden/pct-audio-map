@@ -3,7 +3,7 @@ import type { PCTChapter } from "@/types/map"
 export const pctSegments: PCTChapter[] = [
   {
     id: "southern-california",
-    title: "Southern California Desert",
+    title: "Southern California",
     description:
       "From the Mexican border through the Sonoran Desert, featuring sparse vegetation and extreme heat. The trail winds through chaparral-covered mountains and desert valleys.",
     camera: {
@@ -20,7 +20,7 @@ export const pctSegments: PCTChapter[] = [
   },
   {
     id: "sierra-nevada",
-    title: "Sierra Nevada Range",
+    title: "Sierra Nevada",
     description:
       "The crown jewel of the PCT, featuring dramatic granite peaks, alpine lakes, and the highest elevations on the trail. Home to Mount Whitney and countless wilderness areas.",
     camera: {
@@ -37,7 +37,7 @@ export const pctSegments: PCTChapter[] = [
   },
   {
     id: "northern-california",
-    title: "Northern California Volcanoes",
+    title: "Northern California",
     description:
       "Volcanic landscapes featuring Mount Shasta and Lassen Peak, with diverse forests transitioning from Sierra granite to Cascade volcanoes.",
     camera: {
@@ -54,7 +54,7 @@ export const pctSegments: PCTChapter[] = [
   },
   {
     id: "oregon-cascades",
-    title: "Oregon Cascades",
+    title: "Oregon",
     description:
       "Dense forests, volcanic peaks, and pristine lakes. The trail passes near Crater Lake and through old-growth forests with incredible biodiversity.",
     camera: {
@@ -71,7 +71,7 @@ export const pctSegments: PCTChapter[] = [
   },
   {
     id: "washington-cascades",
-    title: "Washington Cascades",
+    title: "Washington",
     description:
       "The final stretch through temperate rainforests, glaciated peaks, and the dramatic North Cascades. Ending at the Canadian border in Manning Park.",
     camera: {
@@ -99,7 +99,7 @@ export const pctTrailGeometry = {
   geometry: {
     type: "LineString",
     coordinates: [
-      // Southern California - Desert Section
+      // Southern California
       [-116.465, 32.599], // Campo (Southern Terminus)
       [-116.52, 32.68], // Hauser Creek
       [-116.85, 33.31], // Mount Laguna
@@ -130,7 +130,7 @@ export const pctTrailGeometry = {
       [-122.31, 41.31], // Mount Shasta area
       [-122.37, 41.81], // Oregon border
 
-      // Oregon Cascades
+      // Oregon
       [-122.11, 42.04], // Siskiyou Mountains
       [-122.12, 43.07], // Crater Lake area
       [-121.78, 43.76], // Diamond Lake
@@ -141,7 +141,7 @@ export const pctTrailGeometry = {
       [-121.71, 45.53], // Timberline Lodge
       [-121.86, 45.79], // Bridge of the Gods
 
-      // Washington Cascades
+      // Washington
       [-121.52, 46.25], // Mount Adams area
       [-121.31, 46.76], // White Pass
       [-121.52, 47.1], // Snoqualmie Pass

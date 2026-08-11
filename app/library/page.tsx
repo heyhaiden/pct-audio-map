@@ -10,8 +10,8 @@ const chapterNames: Record<string, string> = {
   "southern-california": "Southern California",
   "sierra-nevada": "Sierra Nevada",
   "northern-california": "Northern California",
-  "oregon-cascades": "Oregon Cascades",
-  "washington-cascades": "Washington Cascades",
+  "oregon-cascades": "Oregon",
+  "washington-cascades": "Washington",
 }
 
 // Group markers by chapter
@@ -209,7 +209,7 @@ export default function LibraryPage() {
                               <div className="hidden sm:flex flex-col items-end text-right">
                                 <div className="flex items-center gap-1 text-xs text-stone-500">
                                   <MapPin className="w-3 h-3" />
-                                  {marker.elevation.toLocaleString()} ft
+                                  {marker.elevation.toLocaleString("en-US")} ft
                                 </div>
                                 <p className="text-xs text-stone-600">{marker.recordingDate}</p>
                               </div>

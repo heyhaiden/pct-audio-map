@@ -70,13 +70,13 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
         </p>
 
         <p className="text-stone-400 mb-8">
-          You've traveled {totalMiles.toLocaleString()} miles from Mexico to Canada
+          You've traveled {totalMiles.toLocaleString("en-US")} miles from Mexico to Canada
         </p>
 
         {/* Stats summary */}
         <div className="flex items-center justify-center gap-8 mb-10 text-center">
           <div>
-            <p className="text-2xl md:text-3xl font-semibold text-white">{totalMiles.toLocaleString()}</p>
+            <p className="text-2xl md:text-3xl font-semibold text-white">{totalMiles.toLocaleString("en-US")}</p>
             <p className="text-xs text-stone-500">Miles</p>
           </div>
           <div className="w-px h-10 bg-stone-800" />
