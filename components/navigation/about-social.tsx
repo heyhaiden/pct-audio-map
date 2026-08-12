@@ -3,17 +3,18 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import {
-  Headphones,
-  HeartHandshake,
-  Info,
   Instagram,
-  MapPinned,
   Menu,
   Twitter,
   Volume2,
   VolumeX,
   X,
 } from "lucide-react"
+import {
+  exitDocumentFullscreen,
+  markNavigatedFromMap,
+  setResumeIntent,
+} from "@/lib/map-session"
 
 interface AboutSocialProps {
   className?: string
@@ -22,44 +23,69 @@ interface AboutSocialProps {
 }
 
 const controlClass =
-  "grid h-11 w-11 place-items-center rounded-full border border-stone-700/60 bg-stone-950/75 text-stone-300 shadow-lg backdrop-blur-md transition hover:border-stone-500 hover:bg-stone-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6b9d] md:h-10 md:w-10"
+  "pct-glass-control grid h-11 w-11 place-items-center rounded-full transition hover:border-[#d9cba8]/45 hover:text-[#d9cba8] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8] md:h-10 md:w-10"
 
 export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSocialProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isScrolling, setIsScrolling] = useState(false)
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolling(true)
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
-      scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 200)
-    }
-
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
-    }
-  }, [])
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const menuCloseRef = useRef<HTMLButtonElement>(null)
+  const menuWasOpenRef = useRef(false)
 
   useEffect(() => {
     if (!isMenuOpen) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsMenuOpen(false)
+    const focusFrame = requestAnimationFrame(() => menuCloseRef.current?.focus())
+    const handleMenuKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        setIsMenuOpen(false)
+        return
+      }
+      if (event.key !== "Tab") return
+
+      const menu = document.getElementById("journey-menu")
+      const focusable = Array.from(
+        menu?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [],
+      ).filter((element) => element.getClientRects().length > 0)
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
-    window.addEventListener("keydown", closeOnEscape)
-    return () => window.removeEventListener("keydown", closeOnEscape)
+    window.addEventListener("keydown", handleMenuKeydown)
+    return () => {
+      cancelAnimationFrame(focusFrame)
+      window.removeEventListener("keydown", handleMenuKeydown)
+    }
+  }, [isMenuOpen])
+
+  useEffect(() => {
+    if (isMenuOpen) {
+      menuWasOpenRef.current = true
+      return
+    }
+    if (!menuWasOpenRef.current) return
+    menuWasOpenRef.current = false
+    menuTriggerRef.current?.focus()
   }, [isMenuOpen])
 
   return (
     <>
       <div
-        className={`fixed right-3 top-3 z-50 flex items-center gap-2 transition-opacity duration-300 md:right-6 md:top-6 ${
-          isScrolling && !isMenuOpen ? "opacity-25" : "opacity-100"
+        aria-hidden={isMenuOpen}
+        inert={isMenuOpen}
+        className={`fixed left-3 top-3 z-50 transition-opacity duration-300 md:left-[22px] md:top-5 ${
+          isMenuOpen ? "pointer-events-none opacity-0" : "opacity-100"
         } ${className ?? ""}`}
       >
         <button
+          ref={menuTriggerRef}
           type="button"
           onClick={onSoundToggle}
           aria-label={soundEnabled ? "Mute journey audio" : "Unmute journey audio"}
@@ -68,11 +94,15 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
         >
           {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
         </button>
+      </div>
 
-        <Link href="/library" aria-label="Open Audio Library" className={controlClass}>
-          <Headphones className="h-4 w-4" />
-        </Link>
-
+      <div
+        aria-hidden={isMenuOpen}
+        inert={isMenuOpen}
+        className={`fixed right-3 top-3 z-50 transition-opacity duration-300 md:right-[22px] md:top-5 ${
+          isMenuOpen ? "pointer-events-none opacity-0" : "opacity-100"
+        } ${className ?? ""}`}
+      >
         <button
           type="button"
           onClick={() => setIsMenuOpen((open) => !open)}
@@ -88,73 +118,102 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
       <div
         aria-hidden={!isMenuOpen}
         inert={!isMenuOpen}
-        className={`fixed inset-0 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[80] bg-[rgba(10,9,7,0.94)] backdrop-blur-[18px] transition-opacity duration-500 ${
           isMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
-        <button
-          type="button"
-          aria-label="Close menu"
-          className="absolute inset-0 h-full w-full bg-black/60"
-          onClick={() => setIsMenuOpen(false)}
-        />
-
         <aside
+          role="dialog"
+          aria-modal="true"
           id="journey-menu"
           aria-label="Journey menu"
-          className={`absolute right-0 top-0 h-full w-72 border-l border-stone-800 bg-stone-950 shadow-2xl transition-transform duration-300 md:right-6 md:top-20 md:h-auto md:rounded-xl md:border ${
-            isMenuOpen ? "translate-x-0 md:translate-y-0" : "translate-x-full md:translate-x-0 md:-translate-y-2"
+          className={`flex h-full w-full flex-col items-center overflow-y-auto px-[30px] py-[34px] transition-transform duration-500 ${
+            isMenuOpen ? "translate-y-0" : "translate-y-2"
           }`}
         >
-          <div className="p-6 pt-24 md:pt-6">
-            <h2 className="text-xl font-semibold text-white">PCT Soundscapes</h2>
-            <p className="mb-8 mt-2 text-sm text-stone-400">
-              An immersive audio journey along the Pacific Crest Trail.
+          <button
+            ref={menuCloseRef}
+            type="button"
+            onClick={() => setIsMenuOpen(false)}
+            aria-label="Close menu"
+            className={`${controlClass} absolute right-3 top-3 md:right-[22px] md:top-5`}
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <div className="my-auto w-full max-w-sm py-10">
+            <p className="mb-5 font-mono text-[8.5px] uppercase tracking-[0.24em] text-[#8b8271]">
+              PCT Soundscapes
             </p>
 
-            <nav className="space-y-2">
+            <nav>
               <Link
                 href="/"
-                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  exitDocumentFullscreen()
+                  setResumeIntent()
+                }}
+                className="pct-display flex items-center justify-between border-b border-[#d9cba8]/15 py-[13px] text-[27px] text-[#f0eadc] transition hover:text-[#d9cba8]"
               >
-                <span>Listen</span>
-                <MapPinned className="h-4 w-4" />
+                <span>Map</span>
+                <span className="font-mono text-[9px] tracking-[0.16em] text-[#8b8271]">01</span>
               </Link>
               <Link
                 href="/about"
-                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  exitDocumentFullscreen()
+                  markNavigatedFromMap()
+                }}
+                className="pct-display flex items-center justify-between border-b border-[#d9cba8]/15 py-[13px] text-[27px] text-[#f0eadc] transition hover:text-[#d9cba8]"
               >
                 <span>About</span>
-                <Info className="h-4 w-4" />
+                <span className="font-mono text-[9px] tracking-[0.16em] text-[#8b8271]">02</span>
+              </Link>
+              <Link
+                href="/resources"
+                onClick={() => {
+                  exitDocumentFullscreen()
+                  markNavigatedFromMap()
+                }}
+                className="pct-display flex items-center justify-between border-b border-[#d9cba8]/15 py-[13px] text-[27px] text-[#f0eadc] transition hover:text-[#d9cba8]"
+              >
+                <span>Resources</span>
+                <span className="font-mono text-[9px] tracking-[0.16em] text-[#8b8271]">03</span>
               </Link>
               <Link
                 href="/about#get-involved"
-                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  exitDocumentFullscreen()
+                  markNavigatedFromMap()
+                }}
+                className="pct-display flex items-center justify-between border-b border-[#d9cba8]/15 py-[13px] text-[27px] text-[#f0eadc] transition hover:text-[#d9cba8]"
               >
                 <span>Get involved</span>
-                <HeartHandshake className="h-4 w-4" />
+                <span className="font-mono text-[9px] tracking-[0.16em] text-[#8b8271]">04</span>
               </Link>
               <Link
                 href="/library"
-                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  exitDocumentFullscreen()
+                  markNavigatedFromMap()
+                }}
+                className="pct-display flex items-center justify-between border-b border-[#d9cba8]/15 py-[13px] text-[27px] text-[#f0eadc] transition hover:text-[#d9cba8]"
               >
-                <span>Audio Library</span>
-                <Headphones className="h-4 w-4" />
+                <span>Audio library</span>
+                <span className="font-mono text-[9px] tracking-[0.16em] text-[#8b8271]">05</span>
               </Link>
             </nav>
 
-            <div className="mt-8 border-t border-stone-800 pt-6">
-              <p className="mb-4 text-xs text-stone-500">Follow the journey</p>
+            <div className="mt-8 pt-5">
+              <p className="mb-3 font-mono text-[8.5px] uppercase tracking-[0.16em] text-[#6b6455]">
+                Follow the journey
+              </p>
               <div className="flex items-center gap-3">
                 <a
                   href="https://instagram.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="grid h-10 w-10 place-items-center rounded-full bg-stone-900 text-stone-400 transition hover:text-white"
+                  className={`${controlClass} h-10 w-10`}
                   aria-label="Instagram"
                 >
                   <Instagram className="h-5 w-5" />
@@ -163,7 +222,7 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
                   href="https://twitter.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="grid h-10 w-10 place-items-center rounded-full bg-stone-900 text-stone-400 transition hover:text-white"
+                  className={`${controlClass} h-10 w-10`}
                   aria-label="Twitter"
                 >
                   <Twitter className="h-5 w-5" />

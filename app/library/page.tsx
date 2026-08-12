@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Play, Pause, MapPin, Mountain, ChevronDown } from "lucide-react"
 import { audioMarkers } from "@/data/audio-markers"
-import { SiteHeader } from "@/components/navigation/site-header"
+import { SitePage } from "@/components/navigation/site-page"
 
 // Chapter display names
 const chapterNames: Record<string, string> = {
@@ -98,27 +98,13 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-950 animate-in fade-in duration-500">
-      {/* Background pattern */}
-      <div
-        className="fixed inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 60 Q25 40 50 60 T100 60' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 70 Q25 50 50 70 T100 70' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3C/svg%3E")`,
-          backgroundSize: "200px 200px",
-        }}
-      />
-
-      <div className="relative z-10">
-        <SiteHeader current="library" />
-
-        {/* Main content */}
-        <main className="max-w-4xl mx-auto px-6 py-12 md:py-20">
-          {/* Hero section */}
-          <section className="text-center mb-12 md:mb-16">
-            <h1 className="text-3xl md:text-5xl font-light text-white mb-4">
-              Audio <span className="font-semibold text-[#ff6b9d]">Library</span>
+    <SitePage current="library">
+        <main className="mx-auto max-w-4xl px-6 py-12 md:py-20">
+          <section className="mb-12 text-center md:mb-16">
+            <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
+              Audio <span className="text-[#d9cba8]">Library</span>
             </h1>
-            <p className="text-lg text-stone-400 max-w-2xl mx-auto">
+            <p className="pct-display mx-auto max-w-xl text-[13.5px] font-light leading-[1.65] text-[#b4aa9b]">
               Browse and listen to all {audioMarkers.length} field recordings from the Pacific Crest Trail.
             </p>
           </section>
@@ -134,23 +120,23 @@ export default function LibraryPage() {
               return (
                 <section
                   key={chapterKey}
-                  className="border border-stone-800/50 rounded-xl overflow-hidden bg-stone-900/30"
+                  className="pct-glass-panel overflow-hidden"
                 >
                   <button
                     type="button"
                     onClick={() => toggleChapter(chapterKey)}
                     aria-expanded={isExpanded}
-                    className="w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-stone-900/50 transition-colors"
+                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-white/[0.035]"
                   >
-                    <Mountain className="w-5 h-5 text-[#ff6b9d] flex-shrink-0" />
-                    <h2 className="text-xl font-semibold text-white flex-1 min-w-0">
+                    <Mountain className="h-5 w-5 flex-shrink-0 text-[#d9cba8]" />
+                    <h2 className="pct-display min-w-0 flex-1 text-xl font-medium text-[#ede8dc]">
                       {chapterNames[chapterKey]}
                       <span className="ml-2 text-sm font-normal text-stone-500">
                         ({markers.length} recordings)
                       </span>
                     </h2>
                     <ChevronDown
-                      className={`w-5 h-5 text-stone-400 flex-shrink-0 transition-transform duration-200 ${
+                      className={`h-5 w-5 flex-shrink-0 text-[#8b8271] transition-transform duration-200 ${
                         isExpanded ? "rotate-180" : ""
                       }`}
                     />
@@ -165,15 +151,15 @@ export default function LibraryPage() {
                         return (
                           <div
                             key={marker.id}
-                            className={`relative bg-stone-900/50 border rounded-xl p-4 transition-all duration-300 ${
+                            className={`relative overflow-hidden rounded-[6px] border p-4 backdrop-blur-[14px] transition-all duration-300 ${
                               isPlaying
-                                ? "border-[#ff6b9d]/50 bg-stone-900/80"
-                                : "border-stone-800/50 hover:border-stone-700/50"
+                                ? "border-[#d9cba8]/35 bg-[rgba(15,14,12,0.88)]"
+                                : "border-white/10 bg-[rgba(15,14,12,0.62)] hover:border-white/20"
                             }`}
                           >
                             {/* Progress bar background */}
                             <div
-                              className="absolute inset-0 bg-[#ff6b9d]/10 rounded-xl transition-all duration-200"
+                              className="absolute inset-0 bg-[#d9cba8]/10 transition-all duration-200"
                               style={{ width: `${currentProgress}%` }}
                             />
 
@@ -181,10 +167,10 @@ export default function LibraryPage() {
                               {/* Play button */}
                               <button
                                 onClick={() => handlePlayPause(marker.id, marker.audioUrl)}
-                                className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
                                   isPlaying
-                                    ? "bg-[#ff6b9d] text-white"
-                                    : "bg-stone-800 text-stone-400 hover:bg-stone-700 hover:text-white"
+                                    ? "border-[#d9cba8] bg-[#d9cba8] text-[#3e3527]"
+                                    : "border-white/20 bg-[rgba(12,11,9,0.62)] text-[#ada396] hover:border-[#d9cba8]/45 hover:text-[#d9cba8]"
                                 }`}
                                 aria-label={isPlaying ? "Pause" : "Play"}
                               >
@@ -197,10 +183,10 @@ export default function LibraryPage() {
 
                               {/* Info */}
                               <div className="flex-1 min-w-0">
-                                <h3 className="text-white font-medium truncate">
+                                <h3 className="pct-display truncate text-[18px] font-medium text-[#ede8dc]">
                                   {marker.name}
                                 </h3>
-                                <p className="text-sm text-stone-400 truncate">
+                                <p className="pct-display truncate text-[12.5px] font-light text-[#ada396]">
                                   {marker.description}
                                 </p>
                               </div>
@@ -225,15 +211,13 @@ export default function LibraryPage() {
           </div>
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-stone-800/50 py-8 mt-12">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <p className="text-xs text-stone-600">
-              PCT Soundscapes - Field recordings collected 2025
+        <footer className="mt-12 border-t border-[#d9cba8]/10 py-8">
+          <div className="mx-auto max-w-4xl px-6 text-center">
+            <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6b6455]">
+              PCT Soundscapes · Field recordings collected 2025
             </p>
           </div>
         </footer>
-      </div>
-    </div>
+    </SitePage>
   )
 }
