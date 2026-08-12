@@ -165,7 +165,6 @@ export function SplashScreen({
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Lock scroll when splash is visible
   useEffect(() => {
@@ -177,49 +176,9 @@ export function SplashScreen({
     }
   }, [isVisible])
 
-  // Initialize and play ambient wind audio
-  useEffect(() => {
-    const audio = new Audio("/audio/ambient-wind.mp3")
-    audio.loop = true
-    audio.volume = 0.15 // Light ambient volume
-    audioRef.current = audio
-
-    const playAudio = async () => {
-      try {
-        await audio.play()
-      } catch {
-        const startOnInteraction = () => {
-          audio.play().catch(() => {})
-          document.removeEventListener("click", startOnInteraction)
-          document.removeEventListener("touchstart", startOnInteraction)
-        }
-        document.addEventListener("click", startOnInteraction, { once: true })
-        document.addEventListener("touchstart", startOnInteraction, { once: true })
-      }
-    }
-    playAudio()
-
-    return () => {
-      audio.pause()
-      audio.src = ""
-    }
-  }, [])
-
   // Parent signals overview camera is ready — now fade splash (map is already correct underneath)
   useEffect(() => {
     if (!revealMap || isExiting || !hasStarted) return
-
-    if (audioRef.current) {
-      const audio = audioRef.current
-      const fadeOut = setInterval(() => {
-        if (audio.volume > 0.02) {
-          audio.volume = Math.max(0, audio.volume - 0.02)
-        } else {
-          clearInterval(fadeOut)
-          audio.pause()
-        }
-      }, 50)
-    }
 
     setIsExiting(true)
     const t = setTimeout(() => setIsVisible(false), 700)

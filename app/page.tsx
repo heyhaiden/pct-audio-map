@@ -14,7 +14,6 @@ import { AboutSocial } from "@/components/navigation/about-social"
 import { WipScreen } from "@/components/completion/wip-screen"
 import { CompletionScreen } from "@/components/completion/completion-screen"
 import { pctSegments } from "@/data/pct-segments"
-import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import { computePunchInPose, type CameraPathPoint, type FreeCameraPose } from "@/lib/railing-camera"
 import {
@@ -26,6 +25,7 @@ import {
 import { PerfDebugPanel } from "@/components/debug/perf-debug-panel"
 import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
+import { useAudioPlayer } from "@/hooks/use-audio-player"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import type { AudioMarker } from "@/types/map"
 
@@ -53,8 +53,12 @@ const DESKTOP_INTRO_HOLD = 40
 const DESKTOP_INTRO_FADE = 70
 
 const ACTIVE_CHAPTERS = new Set(["southern-california", "sierra-nevada", "northern-california"])
-
-const navigableMarkers = audioMarkers.filter((m) => ACTIVE_CHAPTERS.has(m.chapter))
+const AMBIENT_TRACK = {
+  id: "ambient-wind",
+  url: "/audio/ambient-wind.mp3",
+  volume: 0.15,
+  loop: true,
+}
 
 type ScrollControls = {
   pauseScrollAnimation: () => void
@@ -68,6 +72,7 @@ type ScrollControls = {
 }
 
 export default function Home() {
+  const { transitionToTrack, isLoading: isAudioLoading, error: audioError } = useAudioPlayer()
   const [map, setMap] = useState<any>(null)
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
@@ -170,6 +175,8 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    void transitionToTrack(AMBIENT_TRACK)
+
     // Best-effort immersive fullscreen — this runs inside the button's user
     // gesture so Android Chrome allows it and drops its address/footer bars.
     // iOS Safari doesn't support element fullscreen, so it silently no-ops.
@@ -195,7 +202,7 @@ export default function Home() {
 
     // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
-  }, [])
+  }, [transitionToTrack])
 
   const handleOverviewReady = useCallback(() => {
     // Overview camera + tiles settled — fade splash while it stays mounted
@@ -357,9 +364,35 @@ export default function Home() {
     [map],
   )
 
+  const activateNode = useCallback(
+    (marker: AudioMarker, durationMs: number) => {
+      if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
+
+      markDirectNavigation()
+      void transitionToTrack({
+        id: marker.id,
+        url: marker.audioUrl,
+        volume: 0.7,
+        loop: true,
+      })
+
+      if (map) {
+        cancelFreeCameraAnimation()
+        scrollControlRef.current?.pauseScrollAnimation()
+        scrollControlRef.current?.setPendingSyncCoordinates(marker.coordinates)
+        void flyToMarkerPunchIn(marker, durationMs)
+      }
+
+      setSelectedAudioMarker(marker)
+    },
+    [flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack],
+  )
+
   const handleCloseAudio = async () => {
     const marker = selectedAudioMarker
     if (!marker) return
+
+    void transitionToTrack(AMBIENT_TRACK)
 
     // Keep scroll locked while we ease back to the railing (player UI can dismiss)
     setIsNodeCameraBusy(true)
@@ -393,59 +426,9 @@ export default function Home() {
     setIsNodeCameraBusy(false)
   }
 
-  const handleNextMarker = () => {
-    if (!selectedAudioMarker) return
-
-    const currentIndex = navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
-    if (currentIndex < navigableMarkers.length - 1) {
-      markDirectNavigation()
-      const nextMarker = navigableMarkers[currentIndex + 1]
-      setSelectedAudioMarker(nextMarker)
-
-      if (map) {
-        scrollControlRef.current?.pauseScrollAnimation()
-        scrollControlRef.current?.setPendingSyncCoordinates(nextMarker.coordinates)
-        void flyToMarkerPunchIn(nextMarker, 2800)
-      }
-    }
-  }
-
-  const handlePreviousMarker = () => {
-    if (!selectedAudioMarker) return
-
-    const currentIndex = navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
-    if (currentIndex > 0) {
-      markDirectNavigation()
-      const previousMarker = navigableMarkers[currentIndex - 1]
-      setSelectedAudioMarker(previousMarker)
-
-      if (map) {
-        scrollControlRef.current?.pauseScrollAnimation()
-        scrollControlRef.current?.setPendingSyncCoordinates(previousMarker.coordinates)
-        void flyToMarkerPunchIn(previousMarker, 2800)
-      }
-    }
-  }
-
   const handleAudioMarkerClick = (marker: AudioMarker) => {
-    if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
-
-    markDirectNavigation()
-    if (map) {
-      cancelFreeCameraAnimation()
-      scrollControlRef.current?.pauseScrollAnimation()
-      scrollControlRef.current?.setPendingSyncCoordinates(marker.coordinates)
-      void flyToMarkerPunchIn(marker, 2400)
-    }
-
-    setSelectedAudioMarker(marker)
+    activateNode(marker, 2400)
   }
-
-  const currentMarkerIndex = selectedAudioMarker
-    ? navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
-    : -1
-  const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < navigableMarkers.length - 1
-  const hasPreviousMarker = currentMarkerIndex > 0
 
   const currentSection = pctSegments[currentChapter]?.title ?? "Southern California"
 
@@ -574,10 +557,8 @@ export default function Home() {
         <AudioPlayer
           marker={selectedAudioMarker}
           onClose={handleCloseAudio}
-          onNextMarker={handleNextMarker}
-          onPreviousMarker={handlePreviousMarker}
-          hasNext={hasNextMarker}
-          hasPrevious={hasPreviousMarker}
+          isLoading={isAudioLoading}
+          error={audioError}
         />
       )}
 
