@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import {
   Headphones,
+  HeartHandshake,
   Info,
   Instagram,
+  MapPinned,
   Menu,
   Twitter,
   Volume2,
@@ -112,6 +114,14 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
 
             <nav className="space-y-2">
               <Link
+                href="/"
+                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span>Listen</span>
+                <MapPinned className="h-4 w-4" />
+              </Link>
+              <Link
                 href="/about"
                 className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
                 onClick={() => setIsMenuOpen(false)}
@@ -120,11 +130,19 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
                 <Info className="h-4 w-4" />
               </Link>
               <Link
+                href="/about#get-involved"
+                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span>Get involved</span>
+                <HeartHandshake className="h-4 w-4" />
+              </Link>
+              <Link
                 href="/library"
                 className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
                 onClick={() => setIsMenuOpen(false)}
               >
-                <span>Audio library</span>
+                <span>Audio Library</span>
                 <Headphones className="h-4 w-4" />
               </Link>
             </nav>

@@ -267,7 +267,7 @@ export default function AboutPage() {
           </section>
 
           {/* Contact */}
-          <section className="mb-16">
+          <section id="get-involved" className="mb-16 scroll-mt-24">
             <h2 className="text-xl md:text-2xl font-semibold text-white mb-6 flex items-center gap-3">
               <span className="w-8 h-[2px] bg-[#ff6b9d]" />
               Press & Inquiries

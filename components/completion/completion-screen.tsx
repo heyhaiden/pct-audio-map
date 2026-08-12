@@ -2,7 +2,15 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Mountain, Linkedin, Library } from "lucide-react"
+import {
+  ArrowRight,
+  Headphones,
+  HeartHandshake,
+  Info,
+  Linkedin,
+  Mountain,
+  RotateCcw,
+} from "lucide-react"
 
 // X/Twitter icon component (lucide doesn't have the new X logo)
 function XIcon({ className }: { className?: string }) {
@@ -38,7 +46,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
+      className={`fixed inset-0 z-[60] overflow-y-auto bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
         showContent ? "opacity-100" : "opacity-0"
       }`}
     >
@@ -47,7 +55,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
       <div className="absolute inset-0 bg-gradient-to-t from-[#ff6b9d]/10 via-transparent to-stone-950" />
 
       {/* Content - centered in remaining space */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex min-h-full items-center justify-center py-12">
         <div
           className={`relative z-10 flex flex-col items-center text-center px-6 max-w-xl transition-all duration-1000 delay-300 ${
             showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -98,44 +106,71 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
         </p>
 
         {/* Actions */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex w-full max-w-sm flex-col items-center gap-6">
+          <div className="w-full border-y border-stone-800 text-left">
+            <Link
+              href="/about"
+              className="flex items-center justify-between border-b border-stone-800 px-1 py-3.5 font-mono text-xs uppercase tracking-[0.14em] text-stone-200 transition hover:text-[#ff6b9d]"
+            >
+              <span className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                About the project
+              </span>
+              <ArrowRight className="h-4 w-4 text-stone-500" />
+            </Link>
+            <Link
+              href="/about#get-involved"
+              className="flex items-center justify-between border-b border-stone-800 px-1 py-3.5 font-mono text-xs uppercase tracking-[0.14em] text-stone-200 transition hover:text-[#ff6b9d]"
+            >
+              <span className="flex items-center gap-2">
+                <HeartHandshake className="h-4 w-4" />
+                Get involved
+              </span>
+              <ArrowRight className="h-4 w-4 text-stone-500" />
+            </Link>
             <Link
               href="/library"
-              className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+              className="flex items-center justify-between border-b border-stone-800 px-1 py-3.5 font-mono text-xs uppercase tracking-[0.14em] text-stone-200 transition hover:text-[#ff6b9d]"
             >
-              <Library className="w-4 h-4" />
-              Audio Library
+              <span className="flex items-center gap-2">
+                <Headphones className="h-4 w-4" />
+                Audio Library
+              </span>
+              <ArrowRight className="h-4 w-4 text-stone-500" />
             </Link>
-
-            <div className="flex items-center gap-3">
-              <a
-                href="https://www.linkedin.com/shareArticle?mini=true&url=https://pctsoundscapes.com&title=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey!&summary=2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-                aria-label="Share on LinkedIn"
-              >
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a
-                href="https://twitter.com/intent/tweet?text=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey%20%F0%9F%8F%94%EF%B8%8F%0A%0A2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before.&url=https://pctsoundscapes.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-                aria-label="Share on X"
-              >
-                <XIcon className="w-5 h-5" />
-              </a>
-            </div>
+            <button
+              type="button"
+              onClick={onRestart}
+              className="flex w-full items-center justify-between px-1 py-3.5 font-mono text-xs uppercase tracking-[0.14em] text-stone-200 transition hover:text-[#ff6b9d]"
+            >
+              <span className="flex items-center gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Start over
+              </span>
+              <RotateCcw className="h-4 w-4 text-stone-500" />
+            </button>
           </div>
 
-          <button
-            onClick={onRestart}
-            className="px-6 py-2.5 text-sm text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full transition-colors"
-          >
-            Back to Home
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://www.linkedin.com/shareArticle?mini=true&url=https://pctsoundscapes.com&title=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey!&summary=2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-800 text-stone-400 transition-colors hover:bg-stone-700 hover:text-white"
+              aria-label="Share on LinkedIn"
+            >
+              <Linkedin className="h-5 w-5" />
+            </a>
+            <a
+              href="https://twitter.com/intent/tweet?text=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey%20%F0%9F%8F%94%EF%B8%8F%0A%0A2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before.&url=https://pctsoundscapes.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-800 text-stone-400 transition-colors hover:bg-stone-700 hover:text-white"
+              aria-label="Share on X"
+            >
+              <XIcon className="h-5 w-5" />
+            </a>
+          </div>
         </div>
         </div>
       </div>
