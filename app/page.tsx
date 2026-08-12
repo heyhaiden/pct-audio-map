@@ -83,6 +83,7 @@ export default function Home() {
   const [showCompletion, setShowCompletion] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
+  const [isTimelineTucked, setIsTimelineTucked] = useState(false)
   // Chapter index whose mobile intro card the user manually dismissed.
   const [toastDismissedChapter, setToastDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
@@ -218,14 +219,40 @@ export default function Home() {
     setWipDismissed(true)
   }, [])
 
+  const markDirectNavigation = useCallback(() => {
+    setIsTimelineTucked(true)
+  }, [])
+
+  useEffect(() => {
+    const restoreTimeline = () => setIsTimelineTucked(false)
+    const restoreTimelineFromKey = (event: KeyboardEvent) => {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) {
+        restoreTimeline()
+      }
+    }
+
+    window.addEventListener("wheel", restoreTimeline, { passive: true })
+    window.addEventListener("touchstart", restoreTimeline, { passive: true })
+    window.addEventListener("pointerdown", restoreTimeline, { passive: true })
+    window.addEventListener("keydown", restoreTimelineFromKey)
+
+    return () => {
+      window.removeEventListener("wheel", restoreTimeline)
+      window.removeEventListener("touchstart", restoreTimeline)
+      window.removeEventListener("pointerdown", restoreTimeline)
+      window.removeEventListener("keydown", restoreTimelineFromKey)
+    }
+  }, [])
+
   // Jump to the very end of the trail (final node) → end-of-trail screen.
   // Instant so the mile sweep can't briefly trip the mid-trail WIP notice.
   const handleEndClick = useCallback(() => {
+    markDirectNavigation()
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     setIsChapterTransitioning(true)
     window.scrollTo({ top: scrollHeight, behavior: "instant" as ScrollBehavior })
     setTimeout(() => setIsChapterTransitioning(false), 600)
-  }, [])
+  }, [markDirectNavigation])
 
   useEffect(() => {
     if (currentChapter !== lastChapterRef.current && journeyStarted) {
@@ -282,6 +309,7 @@ export default function Home() {
   useInvertedTouchScroll(journeyStarted && !showSplash && !selectedAudioMarker && !isNodeCameraBusy)
 
   const handleChapterClick = (chapterIndex: number) => {
+    markDirectNavigation()
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
     const targetMile = chapterStartMile + 1
     const progress = targetMile / totalMiles
@@ -370,6 +398,7 @@ export default function Home() {
 
     const currentIndex = navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
     if (currentIndex < navigableMarkers.length - 1) {
+      markDirectNavigation()
       const nextMarker = navigableMarkers[currentIndex + 1]
       setSelectedAudioMarker(nextMarker)
 
@@ -386,6 +415,7 @@ export default function Home() {
 
     const currentIndex = navigableMarkers.findIndex((m) => m.id === selectedAudioMarker.id)
     if (currentIndex > 0) {
+      markDirectNavigation()
       const previousMarker = navigableMarkers[currentIndex - 1]
       setSelectedAudioMarker(previousMarker)
 
@@ -400,6 +430,7 @@ export default function Home() {
   const handleAudioMarkerClick = (marker: AudioMarker) => {
     if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
+    markDirectNavigation()
     if (map) {
       cancelFreeCameraAnimation()
       scrollControlRef.current?.pauseScrollAnimation()
@@ -512,6 +543,7 @@ export default function Home() {
           nodes={timelineNodes}
           activeIndex={activeNodeIndex}
           progress={timelineProgress}
+          tucked={isTimelineTucked}
           onNodeClick={(i) => (i >= pctSegments.length ? handleEndClick() : handleChapterClick(i))}
         />
       </div>

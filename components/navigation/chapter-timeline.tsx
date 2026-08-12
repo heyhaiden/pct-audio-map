@@ -13,6 +13,8 @@ interface ChapterTimelineProps {
    * the pink connector line *is* the horizontal scroll-progress indicator.
    */
   progress: number
+  /** Visually tuck the timeline after an explicit node click or direct jump. */
+  tucked: boolean
   onNodeClick: (index: number) => void
 }
 
@@ -22,13 +24,18 @@ interface ChapterTimelineProps {
  * you scroll (the horizontal progress line the dots sit on); tap any node to
  * jump. The active node's name shows below. The final node is the trail's end.
  */
-export function ChapterTimeline({ nodes, activeIndex, progress, onNodeClick }: ChapterTimelineProps) {
+export function ChapterTimeline({ nodes, activeIndex, progress, tucked, onNodeClick }: ChapterTimelineProps) {
   const fill = Math.max(0, Math.min(1, progress))
   const lastIndex = nodes.length - 1
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none bg-gradient-to-t from-stone-950/85 via-stone-950/45 to-transparent">
-      <div className="mx-auto max-w-2xl px-6 pt-8 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
+      <div
+        data-tucked={tucked ? "true" : "false"}
+        className={`mx-auto px-6 pt-8 pb-[max(0.85rem,env(safe-area-inset-bottom))] origin-bottom transition-[max-width,opacity,transform] duration-500 ease-out ${
+          tucked ? "max-w-lg opacity-35 scale-x-[0.82]" : "max-w-2xl opacity-100 scale-x-100"
+        }`}
+      >
         {/* Node track */}
         <div className="relative pointer-events-auto">
           {/* Connector line — inset by half a node width so it ends on the dots */}
