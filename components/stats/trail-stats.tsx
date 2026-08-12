@@ -11,16 +11,18 @@ export function TrailStats({ currentMiles, totalMiles, currentSection }: TrailSt
   const percentComplete = (currentMiles / totalMiles) * 100
 
   return (
-    <div className="fixed top-20 right-6 z-30 hidden md:block">
-      <div className="bg-black/60 backdrop-blur-xl rounded-xl px-4 py-3 text-white">
+    <div className="fixed left-1/2 top-5 z-30 hidden -translate-x-1/2 md:block">
+      <div className="pct-glass-panel px-3.5 py-2.5">
         <div className="flex items-center gap-3">
-          {/* Miles counter */}
-          <span className="text-lg font-bold text-[#ff6b9d] tabular-nums">{currentMiles.toFixed(1)}</span>
-          <span className="text-xs text-gray-400">/ {totalMiles} mi</span>
+          <span className="font-mono text-[10px] font-semibold tracking-[0.08em] text-[#d9cba8] tabular-nums">
+            MI {currentMiles.toFixed(1)}
+          </span>
+          <span className="font-mono text-[8.5px] tracking-[0.08em] text-[#867c6e]">
+            / {totalMiles.toLocaleString("en-US")}
+          </span>
 
-          {/* Progress bar */}
-          <div className="w-16 h-1.5 bg-white/20 rounded-full overflow-hidden">
-            <div className="h-full bg-[#ff6b9d] transition-all duration-300" style={{ width: `${percentComplete}%` }} />
+          <div className="h-px w-14 overflow-hidden bg-white/15">
+            <div className="h-full bg-[#d9cba8] transition-all duration-300" style={{ width: `${percentComplete}%` }} />
           </div>
         </div>
       </div>

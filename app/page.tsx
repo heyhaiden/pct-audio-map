@@ -3,7 +3,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
 import dynamic from "next/dynamic"
 import { AudioMarkers } from "@/components/map/audio-markers"
-import { NodeNavigationControls } from "@/components/map/node-navigation-controls"
 import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
 import { TrailStats } from "@/components/stats/trail-stats"
 import { AudioPlayer } from "@/components/audio/audio-player"
@@ -24,11 +23,18 @@ import {
   cancelFreeCameraAnimation,
   readFreeCameraPose,
 } from "@/lib/node-camera"
-import { PerfDebugPanel } from "@/components/debug/perf-debug-panel"
 import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { useAudioPlayer } from "@/hooks/use-audio-player"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
+import { shouldHideChapterTimeline } from "@/lib/chapter-timeline-visibility"
+import {
+  clearMapSession,
+  consumeResumeIntent,
+  getMapSession,
+  saveMapSession,
+  type MapSessionState,
+} from "@/lib/map-session"
 import type { AudioMarker } from "@/types/map"
 
 /**
@@ -48,19 +54,13 @@ const WIP_MILE = 1800
 /** Near the Canadian border — reaching here shows the end-of-trail screen. */
 const END_MILE = 2640
 
-/** Mobile card covers the map, so it fades fast; desktop sits off-screen and can linger. */
-const MOBILE_INTRO_HOLD = 8
-const MOBILE_INTRO_FADE = 12
-const DESKTOP_INTRO_HOLD = 40
-const DESKTOP_INTRO_FADE = 70
+/** Chapter labels hold long enough to read, then clear quickly as the trail resumes. */
+const MOBILE_INTRO_HOLD = 14
+const MOBILE_INTRO_FADE = 6
+const DESKTOP_INTRO_HOLD = 60
+const DESKTOP_INTRO_FADE = 20
 
 const ACTIVE_CHAPTERS = new Set(["southern-california", "sierra-nevada", "northern-california"])
-const AMBIENT_TRACK = {
-  id: "ambient-wind",
-  url: "/audio/ambient-wind.mp3",
-  volume: 0.15,
-  loop: true,
-}
 const navigableMarkers = audioMarkers.filter((marker) => ACTIVE_CHAPTERS.has(marker.chapter))
 
 type ScrollControls = {
@@ -81,13 +81,20 @@ export default function Home() {
     error: audioError,
     isMuted,
     setMuted,
+    stop,
   } = useAudioPlayer()
+
+  // 'boot' avoids SSR/client mismatch while we read resume intent from sessionStorage.
+  const [navMode, setNavMode] = useState<"boot" | "fresh" | "resume">("boot")
+  const [resumeSession, setResumeSession] = useState<MapSessionState | null>(null)
+  const isResuming = navMode === "resume"
+
   const [map, setMap] = useState<any>(null)
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
   const [introComplete, setIntroComplete] = useState(false)
-  const [showSplash, setShowSplash] = useState(true)
+  const [showSplash, setShowSplash] = useState(false)
   const [revealMap, setRevealMap] = useState(false)
   const [journeyStarted, setJourneyStarted] = useState(false)
   const [trailheadReady, setTrailheadReady] = useState(false)
@@ -97,13 +104,41 @@ export default function Home() {
   const [showCompletion, setShowCompletion] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
-  const [isTimelineTucked, setIsTimelineTucked] = useState(false)
   // Chapter index whose mobile held-breath overlay the user manually dismissed.
   const [overlayDismissedChapter, setOverlayDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
   const lastChapterRef = useRef(0)
   const scrollControlRef = useRef<ScrollControls | null>(null)
   const cameraAnimRef = useRef(0)
+  const resumeRestoredRef = useRef(false)
+  const navInitializedRef = useRef(false)
+  const currentMilesRef = useRef(currentMiles)
+  const wipDismissedRef = useRef(wipDismissed)
+  currentMilesRef.current = currentMiles
+  wipDismissedRef.current = wipDismissed
+
+  useLayoutEffect(() => {
+    if (navInitializedRef.current) return
+    navInitializedRef.current = true
+
+    const session = consumeResumeIntent() ? getMapSession() : null
+    if (session) {
+      setResumeSession(session)
+      setNavMode("resume")
+      setCurrentMiles(session.miles)
+      setWipDismissed(session.wipDismissed)
+      setShowSplash(false)
+      setRevealMap(true)
+      setJourneyStarted(true)
+      setIntroComplete(true)
+      setHasScrolled(true)
+      return
+    }
+    setNavMode("fresh")
+    setShowSplash(true)
+    // Intentionally once on mount — resume intent is consumed and must not re-run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Restore Enter-gate from session after navigating away and back home
   useLayoutEffect(() => {
@@ -111,6 +146,21 @@ export default function Home() {
     setTrailheadProgress(1)
     setTrailheadReady(true)
   }, [])
+
+  // Restore trail scroll before the camera loop arms, otherwise it publishes mile 0.
+  useLayoutEffect(() => {
+    if (navMode !== "resume" || !resumeSession || resumeRestoredRef.current) return
+
+    const max = document.documentElement.scrollHeight - window.innerHeight
+    if (max < 500) return
+
+    const top = resumeSession.scrollRatio * max
+    window.scrollTo(0, top)
+    document.documentElement.scrollTop = top
+    if (window.scrollY > 10 || top < 10) {
+      resumeRestoredRef.current = true
+    }
+  }, [navMode, resumeSession])
 
   const currentChapter = useMemo(() => {
     for (let i = 0; i < CHAPTER_MILE_RANGES.length; i++) {
@@ -185,20 +235,11 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
-    void transitionToTrack(AMBIENT_TRACK)
+    clearMapSession()
 
-    // Best-effort immersive fullscreen — this runs inside the button's user
-    // gesture so Android Chrome allows it and drops its address/footer bars.
-    // iOS Safari doesn't support element fullscreen, so it silently no-ops.
-    try {
-      const el = document.documentElement as HTMLElement & {
-        webkitRequestFullscreen?: () => Promise<void> | void
-      }
-      if (el.requestFullscreen) void el.requestFullscreen().catch(() => {})
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
-    } catch {
-      /* ignore — fullscreen is a nice-to-have */
-    }
+    // Don't call requestFullscreen here — on Android it collapses browser chrome
+    // mid-splash and jumps the layout. Immersion comes from viewport-fit=cover +
+    // theme-color; chrome hides naturally once the user starts scrolling.
 
     // Always restart at the beginning — under splash so camera reset is invisible
     setCurrentMiles(0)
@@ -212,12 +253,18 @@ export default function Home() {
 
     // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
-  }, [transitionToTrack])
+  }, [])
 
   const handleOverviewReady = useCallback(() => {
     // Overview camera + tiles settled — fade splash while it stays mounted
     setRevealMap(true)
     window.setTimeout(() => setShowSplash(false), 750)
+  }, [])
+
+  const handleMapError = useCallback(() => {
+    // The map owns the visible error state; remove the opaque splash so it can be seen.
+    setRevealMap(true)
+    setShowSplash(false)
   }, [])
 
   const handleRestart = useCallback(() => {
@@ -237,28 +284,7 @@ export default function Home() {
   }, [])
 
   const markDirectNavigation = useCallback(() => {
-    setIsTimelineTucked(true)
-  }, [])
-
-  useEffect(() => {
-    const restoreTimeline = () => setIsTimelineTucked(false)
-    const restoreTimelineFromKey = (event: KeyboardEvent) => {
-      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) {
-        restoreTimeline()
-      }
-    }
-
-    window.addEventListener("wheel", restoreTimeline, { passive: true })
-    window.addEventListener("touchstart", restoreTimeline, { passive: true })
-    window.addEventListener("pointerdown", restoreTimeline, { passive: true })
-    window.addEventListener("keydown", restoreTimelineFromKey)
-
-    return () => {
-      window.removeEventListener("wheel", restoreTimeline)
-      window.removeEventListener("touchstart", restoreTimeline)
-      window.removeEventListener("pointerdown", restoreTimeline)
-      window.removeEventListener("keydown", restoreTimelineFromKey)
-    }
+    setHasScrolled(true)
   }, [])
 
   // Jump to the very end of the trail (final node) → end-of-trail screen.
@@ -326,10 +352,112 @@ export default function Home() {
   useInvertedTouchScroll(
     journeyStarted &&
       !showSplash &&
+      introComplete &&
       !selectedAudioMarker &&
       !isNodeCameraBusy &&
       !isMobileChapterOverlayVisible,
   )
+
+  // Keep scroll locked through the overview→trailhead intro so the first explore
+  // gesture isn't eaten while the camera is still flying.
+  useEffect(() => {
+    if (!journeyStarted || introComplete || isResuming) return
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [journeyStarted, introComplete, isResuming])
+
+  // Persist trail position while exploring so Back to Map can restore it.
+  useEffect(() => {
+    if (!journeyStarted || !introComplete || showSplash) return
+
+    const persist = () => {
+      if (isResuming && !resumeRestoredRef.current) return
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      saveMapSession({
+        scrollRatio: max > 0 ? window.scrollY / max : 0,
+        miles: currentMilesRef.current,
+        wipDismissed: wipDismissedRef.current,
+      })
+    }
+
+    let timer: number | null = null
+    const schedulePersist = () => {
+      if (timer !== null) return
+      timer = window.setTimeout(() => {
+        timer = null
+        persist()
+      }, 250)
+    }
+
+    persist()
+    window.addEventListener("scroll", schedulePersist, { passive: true })
+    window.addEventListener("pagehide", persist)
+    return () => {
+      if (timer !== null) window.clearTimeout(timer)
+      window.removeEventListener("scroll", schedulePersist)
+      window.removeEventListener("pagehide", persist)
+    }
+  }, [journeyStarted, introComplete, showSplash, isResuming])
+
+  // After resume, snap scroll once the tall map spacer exists.
+  useEffect(() => {
+    if (!isResuming || !resumeSession || !introComplete || !map || resumeRestoredRef.current) return
+
+    const restore = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      if (max < 500) return false
+
+      const fromRatio = resumeSession.scrollRatio * max
+      const fromMiles =
+        totalMiles > 0 ? (resumeSession.miles / totalMiles) * max : fromRatio
+      // Prefer miles when the saved ratio looks empty but miles were recorded.
+      const top =
+        resumeSession.miles > 1 && resumeSession.scrollRatio < 0.001 ? fromMiles : fromRatio
+
+      window.scrollTo(0, top)
+      if (Math.abs(window.scrollY - top) > 20) {
+        document.documentElement.scrollTop = top
+        document.body.scrollTop = top
+      }
+
+      if (window.scrollY < 10 && top > 50) return false
+
+      resumeRestoredRef.current = true
+      scrollControlRef.current?.setBlocked(false)
+      scrollControlRef.current?.resumeScrollAnimation()
+      return true
+    }
+
+    if (restore()) return
+
+    let frames = 0
+    let raf = 0
+    const tick = () => {
+      frames += 1
+      if (restore() || frames > 180) {
+        resumeRestoredRef.current = true
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    const delayed = window.setTimeout(() => {
+      if (!resumeRestoredRef.current) restore()
+    }, 400)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(delayed)
+    }
+  }, [isResuming, resumeSession, introComplete, map, totalMiles])
+
+  // Fresh journeys: zero scroll when intro finishes in case anything leaked through.
+  useEffect(() => {
+    if (!introComplete || isResuming) return
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior })
+  }, [introComplete, isResuming])
 
   const handleChapterClick = (chapterIndex: number) => {
     markDirectNavigation()
@@ -408,7 +536,7 @@ export default function Home() {
     const marker = selectedAudioMarker
     if (!marker) return
 
-    void transitionToTrack(AMBIENT_TRACK)
+    stop()
 
     // Keep scroll locked while we ease back to the railing (player UI can dismiss)
     setIsNodeCameraBusy(true)
@@ -463,6 +591,7 @@ export default function Home() {
   }
 
   const currentSection = pctSegments[currentChapter]?.title ?? "Southern California"
+  const hideChapterTimeline = shouldHideChapterTimeline(Boolean(selectedAudioMarker), isNodeCameraBusy)
 
   useEffect(() => {
     if (selectedAudioMarker || isNodeCameraBusy) {
@@ -500,6 +629,10 @@ export default function Home() {
     }
   }, [selectedAudioMarker, isNodeCameraBusy])
 
+  if (navMode === "boot") {
+    return <main className="relative min-h-screen bg-[#151310]" />
+  }
+
   return (
     <main className="relative">
       {showSplash && (
@@ -532,7 +665,9 @@ export default function Home() {
           onOverviewReady={handleOverviewReady}
           onTrailheadReady={handleTrailheadReady}
           onTrailheadProgress={handleTrailheadProgress}
-          startIntro={journeyStarted}
+          onMapError={handleMapError}
+          startIntro={journeyStarted && !isResuming}
+          skipIntro={isResuming}
           hideLoading={true}
           currentMiles={currentMiles}
         />
@@ -544,19 +679,6 @@ export default function Home() {
           />
         )}
       </div>
-
-      {map && selectedAudioMarker && (
-        <NodeNavigationControls
-          map={map}
-          marker={selectedAudioMarker}
-          hasPrevious={hasPreviousMarker}
-          hasNext={hasNextMarker}
-          onPrevious={handlePreviousMarker}
-          onNext={handleNextMarker}
-        />
-      )}
-
-      <PerfDebugPanel map={map} />
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
 
@@ -573,7 +695,7 @@ export default function Home() {
           nodes={timelineNodes}
           activeIndex={activeNodeIndex}
           progress={timelineProgress}
-          tucked={isTimelineTucked}
+          hidden={hideChapterTimeline}
           onNodeClick={(i) => (i >= pctSegments.length ? handleEndClick() : handleChapterClick(i))}
         />
       </div>
@@ -587,7 +709,7 @@ export default function Home() {
         />
       )}
 
-      <div className={`transition-opacity duration-1000 ease-out delay-200 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
+      <div className={`transition-opacity duration-300 ease-out ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ChapterCard
           chapter={introChapter}
           chapterIndex={introChapterIndex}
@@ -606,6 +728,10 @@ export default function Home() {
           onClose={handleCloseAudio}
           isLoading={isAudioLoading}
           error={audioError}
+          hasPrevious={hasPreviousMarker}
+          hasNext={hasNextMarker}
+          onPrevious={handlePreviousMarker}
+          onNext={handleNextMarker}
         />
       )}
 
@@ -614,12 +740,12 @@ export default function Home() {
           !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
         }`}
       >
-        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
+        <div className="pct-glass-panel px-3 py-2">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-5 border border-stone-500 rounded-sm relative">
-              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute top-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
+            <div className="relative h-5 w-3 rounded-sm border border-[#8b8271]">
+              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#d9cba8]"></div>
             </div>
-            <span className="text-stone-400">Scroll to explore</span>
+            <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#9b8e7a]">Scroll to explore</span>
           </div>
         </div>
       </div>
@@ -629,12 +755,12 @@ export default function Home() {
           !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
         }`}
       >
-        <div className="bg-stone-900/80 backdrop-blur-md rounded-lg px-3 py-1.5 text-white text-xs border border-stone-800/50">
+        <div className="pct-glass-panel px-3 py-2">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-5 border border-stone-500 rounded-sm relative">
-              <div className="w-0.5 h-1.5 bg-stone-400 rounded-full absolute top-0.5 left-1/2 -translate-x-1/2 animate-bounce"></div>
+            <div className="relative h-5 w-3 rounded-sm border border-[#8b8271]">
+              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#d9cba8]"></div>
             </div>
-            <span className="text-stone-400">Swipe down to explore</span>
+            <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#9b8e7a]">Swipe down to explore</span>
           </div>
         </div>
       </div>
