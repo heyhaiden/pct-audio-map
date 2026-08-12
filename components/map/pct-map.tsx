@@ -6,6 +6,7 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
+import { isFatalMapboxError, isMapAlive } from "@/lib/map-runtime-policy"
 import {
   startPathTilePrefetch,
   TRAILHEAD_READY_TIMEOUT_MS,
@@ -33,9 +34,13 @@ interface PCTMapProps {
   onOverviewReady?: () => void
   /** Fired when trailhead tiles are warm enough (or soft-timeout). */
   onTrailheadReady?: () => void
+  /** Fired only when map startup cannot recover without a reload/config fix. */
+  onMapError?: (message: string) => void
   /** 0–1 progress while warming the trailhead corridor. */
   onTrailheadProgress?: (progress: number) => void
   startIntro?: boolean
+  /** Skip overview→trailhead fly; used when resuming mid-trail after site pages. */
+  skipIntro?: boolean
   hideLoading?: boolean
   /** Used to warm tiles ahead of the railing camera. */
   currentMiles?: number
@@ -105,8 +110,10 @@ export function PCTMap({
   onIntroComplete,
   onOverviewReady,
   onTrailheadReady,
+  onMapError,
   onTrailheadProgress,
   startIntro = false,
+  skipIntro = false,
   hideLoading = false,
   currentMiles: externalMiles = 0,
 }: PCTMapProps) {
@@ -126,9 +133,12 @@ export function PCTMap({
   const accessTokenRef = useRef<string>("")
   const tokenPromiseRef = useRef<Promise<string> | null>(null)
   const trailheadReadyRef = useRef(false)
+  const mapLoadedRef = useRef(false)
+  const fatalErrorRef = useRef(false)
   const onTrailheadReadyRef = useRef(onTrailheadReady)
   const onTrailheadProgressRef = useRef(onTrailheadProgress)
   const onOverviewReadyRef = useRef(onOverviewReady)
+  const onMapErrorRef = useRef(onMapError)
 
   useEffect(() => {
     introPhaseRef.current = introPhase
@@ -146,8 +156,12 @@ export function PCTMap({
     onOverviewReadyRef.current = onOverviewReady
   }, [onOverviewReady])
 
+  useEffect(() => {
+    onMapErrorRef.current = onMapError
+  }, [onMapError])
+
   const notifyTrailheadReady = () => {
-    if (trailheadReadyRef.current) return
+    if (trailheadReadyRef.current || fatalErrorRef.current) return
     trailheadReadyRef.current = true
     setTilesPreloaded(true)
     onTrailheadProgressRef.current?.(1)
@@ -163,7 +177,7 @@ export function PCTMap({
     }
 
     const timer = setTimeout(() => {
-      if (trailheadReadyRef.current) return
+      if (trailheadReadyRef.current || fatalErrorRef.current) return
       trailheadReadyRef.current = true
       setTilesPreloaded(true)
       onTrailheadProgressRef.current?.(1)
@@ -248,10 +262,38 @@ export function PCTMap({
   }, [currentMiles, totalMiles, onMilesUpdate])
 
   useEffect(() => {
+    let disposed = false
+    let startupTimer: number | null = null
+
+    const failMap = (message: string, error: unknown) => {
+      if (fatalErrorRef.current || disposed) return
+      fatalErrorRef.current = true
+      if (startupTimer !== null) {
+        window.clearTimeout(startupTimer)
+        startupTimer = null
+      }
+      console.error("[v0] Fatal Mapbox error:", error)
+      prefetchRef.current?.cancel()
+      prefetchRef.current = null
+      setMapboxError(message)
+      onMapErrorRef.current?.(message)
+
+      const failedMap = map.current
+      map.current = null
+      if (failedMap && !failedMap._removed) failedMap.remove()
+    }
+
     const initializeMap = async () => {
       if (!trailData) {
         return
       }
+
+      startupTimer = window.setTimeout(() => {
+        failMap(
+          "The map took too long to start. Please check your connection and try again.",
+          new Error("Mapbox startup timed out"),
+        )
+      }, TRAILHEAD_READY_TIMEOUT_MS)
 
       try {
         if (!mapContainer.current || map.current) return
@@ -260,11 +302,14 @@ export function PCTMap({
         try {
           token = await (tokenPromiseRef.current ?? getMapboxToken())
         } catch (error) {
-          console.error("[v0] Token error:", error)
-          setMapboxError("Mapbox access token is required. Please set MAPBOX_ACCESS_TOKEN in your Project Settings.")
-          notifyTrailheadReady()
+          failMap(
+            "Mapbox access token is required. Please set MAPBOX_ACCESS_TOKEN in your Project Settings.",
+            error,
+          )
           return
         }
+
+        if (disposed || !mapContainer.current || map.current) return
 
         mapboxgl.accessToken = token
         accessTokenRef.current = token
@@ -299,7 +344,12 @@ export function PCTMap({
         })
 
         map.current.on("load", () => {
-          if (!map.current) return
+          if (disposed || !isMapAlive(map.current)) return
+          if (startupTimer !== null) {
+            window.clearTimeout(startupTimer)
+            startupTimer = null
+          }
+          mapLoadedRef.current = true
 
           map.current.addSource("mapbox-terrain-rgb", {
             type: "raster-dem",
@@ -410,12 +460,13 @@ export function PCTMap({
           setMapLoaded(true)
           onMapLoad?.(map.current)
 
+          if (disposed || !isMapAlive(map.current)) return
+
           prefetchRef.current?.cancel()
           prefetchRef.current = startPathTilePrefetch({
             map: map.current,
             trailCoordinates: trailData.geometry.coordinates,
-            // Camera jumps are safe while splash/waiting still covers the map
-            canMoveCamera: () => introPhaseRef.current === "waiting",
+            getCameraPath,
             onTrailheadWarm: () => {
               markTrailPrepCached()
               notifyTrailheadReady()
@@ -429,28 +480,34 @@ export function PCTMap({
         })
 
         map.current.on("error", (e: any) => {
-          console.error("[v0] Mapbox error:", e)
-          setMapboxError("Failed to load map. Please check your Mapbox token and internet connection.")
-          notifyTrailheadReady()
+          const error = e?.error ?? e
+          if (!isFatalMapboxError(e, mapLoadedRef.current)) {
+            console.warn("[v0] Recoverable Mapbox resource error:", error)
+            return
+          }
+          failMap("Failed to load map. Please check your Mapbox token and internet connection.", error)
         })
       } catch (error) {
-        console.error("[v0] Failed to initialize Mapbox:", error)
-        setMapboxError("Failed to load Mapbox. Please refresh the page and try again.")
-        notifyTrailheadReady()
+        failMap("Failed to load Mapbox. Please refresh the page and try again.", error)
       }
     }
 
     initializeMap()
 
     return () => {
+      disposed = true
+      if (startupTimer !== null) window.clearTimeout(startupTimer)
       prefetchRef.current?.cancel()
       prefetchRef.current = null
-      if (map.current) {
-        map.current.remove()
-        map.current = null
+      mapLoadedRef.current = false
+      const liveMap = map.current
+      map.current = null
+      // Cancel first, then remove — in-flight preloadOnly callbacks check _removed.
+      if (liveMap && !liveMap._removed) {
+        liveMap.remove()
       }
     }
-  }, [onMapLoad, trailData])
+  }, [getCameraPath, onMapLoad, trailData])
 
   // Ahead-of-scroll tile warm. Throttle (fire DURING motion), not debounce:
   // currentMiles republishes ~10/s while scrolling, so a trailing-only timer
@@ -476,7 +533,7 @@ export function PCTMap({
   }, [externalMiles, currentMiles, mapLoaded])
 
   useEffect(() => {
-    if (!map.current || !mapLoaded || !currentPosition) return
+    if (!isMapAlive(map.current) || !mapLoaded || !currentPosition) return
 
     const source = map.current.getSource("position-cursor")
     if (source) {
@@ -540,9 +597,20 @@ export function PCTMap({
 
   const scrollControlReadyCalledRef = useRef(false)
 
+  // Resume mid-trail: enable scroll camera immediately, no overview/fly sequence.
+  useEffect(() => {
+    if (!skipIntro || !mapLoaded || initialAnimationDone) return
+    prefetchRef.current?.cancel()
+    introPhaseRef.current = "done"
+    setIntroPhase("done")
+    setInitialAnimationDone(true)
+    onIntroComplete?.()
+  }, [skipIntro, mapLoaded, initialAnimationDone, onIntroComplete])
+
   // Start intro: cancel warm, restore overview UNDER splash, then reveal + fly to trailhead.
   useEffect(() => {
-    if (startIntro && introPhase === "waiting" && mapLoaded && map.current) {
+    if (skipIntro) return
+    if (startIntro && introPhase === "waiting" && mapLoaded && isMapAlive(map.current)) {
       // Stop any in-flight camera warm immediately
       prefetchRef.current?.cancel()
       introPhaseRef.current = "overview"
@@ -575,13 +643,15 @@ export function PCTMap({
         clearTimeout(fallback)
       }
     }
-  }, [startIntro, introPhase, mapLoaded])
+  }, [startIntro, skipIntro, introPhase, mapLoaded])
 
   useEffect(() => {
-    if (introPhase !== "overview" || !map.current || !mapLoaded || debugMode) return
+    if (skipIntro) return
+    if (introPhase !== "overview" || !isMapAlive(map.current) || !mapLoaded || debugMode) return
 
     // Brief hold on overview, then crane to trailhead (always start of map)
     const timer = setTimeout(() => {
+      if (!isMapAlive(map.current)) return
       setIntroPhase("flying")
 
       map.current.flyTo({
@@ -605,18 +675,20 @@ export function PCTMap({
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [introPhase, mapLoaded, debugMode, onIntroComplete])
+  }, [introPhase, mapLoaded, debugMode, onIntroComplete, skipIntro])
 
-  if (mapboxError) {
-    return (
-      <div className="relative h-full w-full">
-        <div className="absolute inset-0 bg-black flex items-center justify-center">
-          <div className="text-center text-white max-w-md px-6">
-            <div className="text-xl mb-4">⚠️ Map Loading Error</div>
-            <div className="text-sm text-gray-300 mb-6">{mapboxError}</div>
+  return (
+    <div className="relative h-full w-full">
+      <div ref={mapContainer} className="h-full w-full" />
+
+      {mapboxError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black">
+          <div className="max-w-md px-6 text-center text-white">
+            <div className="mb-4 text-xl">⚠️ Map Loading Error</div>
+            <div className="mb-6 text-sm text-gray-300">{mapboxError}</div>
             {mapboxError.includes("token") && (
-              <div className="text-xs text-gray-400 bg-gray-800 rounded p-4">
-                <div className="font-semibold mb-2">To fix this:</div>
+              <div className="rounded bg-gray-800 p-4 text-xs text-gray-400">
+                <div className="mb-2 font-semibold">To fix this:</div>
                 <div>1. Get a free Mapbox token at mapbox.com</div>
                 <div>2. Add it to your Project Settings as MAPBOX_ACCESS_TOKEN</div>
                 <div>3. Refresh the page</div>
@@ -624,16 +696,10 @@ export function PCTMap({
             )}
           </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative h-full w-full">
-      <div ref={mapContainer} className="h-full w-full" />
+      )}
 
       {/* Never flash this during splash→intro — hideLoading covers that path */}
-      {!hideLoading && (!trailData || !mapLoaded) && (
+      {!mapboxError && !hideLoading && (!trailData || !mapLoaded) && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
           <div className="text-white text-xl">
             {!trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
