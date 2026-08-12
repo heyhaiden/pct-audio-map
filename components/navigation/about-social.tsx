@@ -1,208 +1,159 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { Info, Instagram, Twitter, Menu, X, Headphones } from "lucide-react"
+import {
+  Headphones,
+  Info,
+  Instagram,
+  Menu,
+  Twitter,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react"
 
 interface AboutSocialProps {
   className?: string
+  soundEnabled: boolean
+  onSoundToggle: () => void
 }
 
-export function AboutSocial({ className }: AboutSocialProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isScrolling, setIsScrolling] = useState(false)
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+const controlClass =
+  "grid h-11 w-11 place-items-center rounded-full border border-stone-700/60 bg-stone-950/75 text-stone-300 shadow-lg backdrop-blur-md transition hover:border-stone-500 hover:bg-stone-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6b9d] md:h-10 md:w-10"
 
-  // Track scroll velocity to hide menu button while scrolling
+export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSocialProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolling(true)
-      
-      // Clear existing timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
-      
-      // Set timeout to detect when scrolling stops (same as mileage counter)
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false)
-      }, 200) // 200ms after last scroll event = stopped
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+      scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 200)
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => {
       window.removeEventListener("scroll", handleScroll)
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
     }
   }, [])
 
+  useEffect(() => {
+    if (!isMenuOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMenuOpen(false)
+    }
+    window.addEventListener("keydown", closeOnEscape)
+    return () => window.removeEventListener("keydown", closeOnEscape)
+  }, [isMenuOpen])
+
   return (
     <>
-      {/* Desktop: Hover zone in bottom-left */}
-      <div className={`hidden md:block fixed bottom-6 left-6 z-40 ${className}`}>
-        <div
-          className="relative"
-          onMouseEnter={() => setIsExpanded(true)}
-          onMouseLeave={() => setIsExpanded(false)}
-        >
-          {/* Trigger button */}
-          <button
-            className={`w-10 h-10 rounded-full bg-stone-900/80 backdrop-blur-md border border-stone-800/50 flex items-center justify-center transition-all duration-300 hover:bg-stone-800/80 ${
-              isExpanded ? "opacity-0 scale-90" : "opacity-100 scale-100"
-            }`}
-            aria-label="About and social links"
-          >
-            <Info className="w-4 h-4 text-stone-400" />
-          </button>
-
-          {/* Expanded panel */}
-          <div
-            className={`absolute bottom-0 left-0 bg-stone-900/95 backdrop-blur-md rounded-xl border border-stone-800/50 overflow-hidden transition-all duration-300 ${
-              isExpanded
-                ? "opacity-100 translate-y-0 pointer-events-auto"
-                : "opacity-0 translate-y-2 pointer-events-none"
-            }`}
-          >
-            <div className="p-4 min-w-[200px]">
-              <h3 className="text-sm font-semibold text-white mb-3">PCT Soundscapes</h3>
-              
-              <div className="space-y-2 mb-4">
-                <Link
-                  href="/about"
-                  className="flex items-center gap-2 text-sm text-stone-400 hover:text-white transition-colors"
-                >
-                  <Info className="w-4 h-4" />
-                  About this project
-                </Link>
-                <Link
-                  href="/library"
-                  className="flex items-center gap-2 text-sm text-stone-400 hover:text-white transition-colors"
-                >
-                  <Headphones className="w-4 h-4" />
-                  Audio library
-                </Link>
-              </div>
-
-              <div className="border-t border-stone-800 pt-3">
-                <p className="text-xs text-stone-500 mb-2">Follow</p>
-                <div className="flex items-center gap-2">
-                  <a
-                    href="https://instagram.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-stone-800/50 flex items-center justify-center text-stone-400 hover:text-white hover:bg-stone-700/50 transition-colors"
-                    aria-label="Instagram"
-                  >
-                    <Instagram className="w-4 h-4" />
-                  </a>
-                  <a
-                    href="https://twitter.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-stone-800/50 flex items-center justify-center text-stone-400 hover:text-white hover:bg-stone-700/50 transition-colors"
-                    aria-label="Twitter"
-                  >
-                    <Twitter className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile: Menu button in top-right - fades while scrolling */}
-      <div 
-        className={`md:hidden fixed top-3 right-3 z-50 transition-opacity duration-300 ${
-          isScrolling && !isMobileMenuOpen ? "opacity-20" : "opacity-100"
-        }`}
+      <div
+        className={`fixed right-3 top-3 z-50 flex items-center gap-2 transition-opacity duration-300 md:right-6 md:top-6 ${
+          isScrolling && !isMenuOpen ? "opacity-25" : "opacity-100"
+        } ${className ?? ""}`}
       >
         <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="w-9 h-9 rounded-full bg-stone-900/80 backdrop-blur-md border border-stone-800/40 flex items-center justify-center"
-          aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          type="button"
+          onClick={onSoundToggle}
+          aria-label={soundEnabled ? "Mute journey audio" : "Unmute journey audio"}
+          aria-pressed={!soundEnabled}
+          className={controlClass}
         >
-          {isMobileMenuOpen ? (
-            <X className="w-4 h-4 text-white" />
-          ) : (
-            <Menu className="w-4 h-4 text-stone-400" />
-          )}
+          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        </button>
+
+        <Link href="/library" aria-label="Open Audio Library" className={controlClass}>
+          <Headphones className="h-4 w-4" />
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setIsMenuOpen((open) => !open)}
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
+          aria-controls="journey-menu"
+          className={controlClass}
+        >
+          {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
       </div>
 
-      {/* Mobile: Slide-out menu */}
       <div
-        className={`md:hidden fixed inset-0 z-40 transition-all duration-300 ${
-          isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
+        aria-hidden={!isMenuOpen}
+        inert={!isMenuOpen}
+        className={`fixed inset-0 z-40 transition-opacity duration-300 ${
+          isMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
-        {/* Backdrop */}
-        <div
-          className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${
-            isMobileMenuOpen ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={() => setIsMobileMenuOpen(false)}
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="absolute inset-0 h-full w-full bg-black/60"
+          onClick={() => setIsMenuOpen(false)}
         />
 
-        {/* Panel */}
-        <div
-          className={`absolute top-0 right-0 h-full w-72 bg-stone-950 border-l border-stone-800 transform transition-transform duration-300 ${
-            isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+        <aside
+          id="journey-menu"
+          aria-label="Journey menu"
+          className={`absolute right-0 top-0 h-full w-72 border-l border-stone-800 bg-stone-950 shadow-2xl transition-transform duration-300 md:right-6 md:top-20 md:h-auto md:rounded-xl md:border ${
+            isMenuOpen ? "translate-x-0 md:translate-y-0" : "translate-x-full md:translate-x-0 md:-translate-y-2"
           }`}
         >
-          <div className="p-6 pt-20">
-            <h2 className="text-xl font-semibold text-white mb-2">PCT Soundscapes</h2>
-            <p className="text-sm text-stone-400 mb-8">
+          <div className="p-6 pt-24 md:pt-6">
+            <h2 className="text-xl font-semibold text-white">PCT Soundscapes</h2>
+            <p className="mb-8 mt-2 text-sm text-stone-400">
               An immersive audio journey along the Pacific Crest Trail.
             </p>
 
-            <nav className="space-y-4">
+            <nav className="space-y-2">
               <Link
                 href="/about"
-                className="flex items-center justify-between text-stone-300 hover:text-white transition-colors py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
+                onClick={() => setIsMenuOpen(false)}
               >
                 <span>About</span>
-                <Info className="w-4 h-4" />
+                <Info className="h-4 w-4" />
               </Link>
               <Link
                 href="/library"
-                className="flex items-center justify-between text-stone-300 hover:text-white transition-colors py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between rounded-lg px-2 py-3 text-stone-300 transition hover:bg-stone-900 hover:text-white"
+                onClick={() => setIsMenuOpen(false)}
               >
                 <span>Audio library</span>
-                <Headphones className="w-4 h-4" />
+                <Headphones className="h-4 w-4" />
               </Link>
             </nav>
 
-            <div className="border-t border-stone-800 mt-8 pt-6">
-              <p className="text-xs text-stone-500 mb-4">Follow the journey</p>
+            <div className="mt-8 border-t border-stone-800 pt-6">
+              <p className="mb-4 text-xs text-stone-500">Follow the journey</p>
               <div className="flex items-center gap-3">
                 <a
                   href="https://instagram.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center text-stone-400 hover:text-white hover:bg-stone-700 transition-colors"
+                  className="grid h-10 w-10 place-items-center rounded-full bg-stone-900 text-stone-400 transition hover:text-white"
                   aria-label="Instagram"
                 >
-                  <Instagram className="w-5 h-5" />
+                  <Instagram className="h-5 w-5" />
                 </a>
                 <a
                   href="https://twitter.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center text-stone-400 hover:text-white hover:bg-stone-700 transition-colors"
+                  className="grid h-10 w-10 place-items-center rounded-full bg-stone-900 text-stone-400 transition hover:text-white"
                   aria-label="Twitter"
                 >
-                  <Twitter className="w-5 h-5" />
+                  <Twitter className="h-5 w-5" />
                 </a>
               </div>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
     </>
   )

@@ -1,5 +1,6 @@
 "use client"
 
+import { CalendarDays, MapPin, X } from "lucide-react"
 import type { AudioMarker } from "@/types/map"
 
 interface AudioPlayerProps {
@@ -19,12 +20,10 @@ export function AudioPlayer({ marker, onClose, isLoading, error }: AudioPlayerPr
       <div className="relative bg-black/70 backdrop-blur-xl rounded-2xl p-4 text-white shadow-2xl border border-white/20">
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded-full transition-colors"
+          className="absolute top-3 right-3 grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6b9d]"
           aria-label="Close audio player"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <X className="h-4 w-4" />
         </button>
 
         <div className="text-left mb-4 pr-8">
@@ -41,33 +40,13 @@ export function AudioPlayer({ marker, onClose, isLoading, error }: AudioPlayerPr
           <div className="flex items-center justify-between text-xs text-gray-400">
             {dateOnly && (
               <span className="flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
+                <CalendarDays className="h-3.5 w-3.5" />
                 {dateOnly}
               </span>
             )}
             {marker.elevation && (
               <span className="flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
+                <MapPin className="h-3.5 w-3.5" />
                 {marker.elevation.toLocaleString("en-US")} ft
               </span>
             )}

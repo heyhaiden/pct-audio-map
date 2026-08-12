@@ -75,7 +75,13 @@ type ScrollControls = {
 }
 
 export default function Home() {
-  const { transitionToTrack, isLoading: isAudioLoading, error: audioError } = useAudioPlayer()
+  const {
+    transitionToTrack,
+    isLoading: isAudioLoading,
+    error: audioError,
+    isMuted,
+    setMuted,
+  } = useAudioPlayer()
   const [map, setMap] = useState<any>(null)
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
@@ -591,7 +597,7 @@ export default function Home() {
       </div>
 
       <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
-        <AboutSocial />
+        <AboutSocial soundEnabled={!isMuted} onSoundToggle={() => setMuted(!isMuted)} />
       </div>
 
       {selectedAudioMarker && (

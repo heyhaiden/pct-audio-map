@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import type { AudioMarker } from "@/types/map"
 
 interface NodeNavigationControlsProps {
@@ -54,18 +55,18 @@ export function NodeNavigationControls({
         onClick={onPrevious}
         disabled={!hasPrevious}
         aria-label="Previous recording"
-        className="pointer-events-auto absolute right-6 top-1/2 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-stone-950/80 text-xl text-white shadow-xl backdrop-blur-md transition hover:bg-stone-800/90 disabled:cursor-not-allowed disabled:opacity-25"
+        className="pointer-events-auto absolute right-6 top-1/2 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-stone-950/80 text-white shadow-xl backdrop-blur-md transition hover:bg-stone-800/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6b9d] disabled:cursor-not-allowed disabled:opacity-25 md:h-10 md:w-10"
       >
-        ←
+        <ChevronLeft className="h-5 w-5" />
       </button>
       <button
         type="button"
         onClick={onNext}
         disabled={!hasNext}
         aria-label="Next recording"
-        className="pointer-events-auto absolute left-6 top-1/2 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-stone-950/80 text-xl text-white shadow-xl backdrop-blur-md transition hover:bg-stone-800/90 disabled:cursor-not-allowed disabled:opacity-25"
+        className="pointer-events-auto absolute left-6 top-1/2 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-stone-950/80 text-white shadow-xl backdrop-blur-md transition hover:bg-stone-800/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6b9d] disabled:cursor-not-allowed disabled:opacity-25 md:h-10 md:w-10"
       >
-        →
+        <ChevronRight className="h-5 w-5" />
       </button>
     </div>
   )

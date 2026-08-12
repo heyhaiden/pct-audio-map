@@ -11,7 +11,7 @@ export function TrailStats({ currentMiles, totalMiles, currentSection }: TrailSt
   const percentComplete = (currentMiles / totalMiles) * 100
 
   return (
-    <div className="fixed top-6 right-6 z-30 hidden md:block">
+    <div className="fixed top-20 right-6 z-30 hidden md:block">
       <div className="bg-black/60 backdrop-blur-xl rounded-xl px-4 py-3 text-white">
         <div className="flex items-center gap-3">
           {/* Miles counter */}
