@@ -10,7 +10,7 @@ import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
 import { SplashScreen } from "@/components/splash/splash-screen"
 import { MobileStatsBar } from "@/components/mobile/mobile-stats-bar"
-import { MobileChapterToast } from "@/components/mobile/mobile-chapter-toast"
+import { MobileChapterOverlay } from "@/components/mobile/mobile-chapter-overlay"
 import { AboutSocial } from "@/components/navigation/about-social"
 import { WipScreen } from "@/components/completion/wip-screen"
 import { CompletionScreen } from "@/components/completion/completion-screen"
@@ -92,8 +92,8 @@ export default function Home() {
   const [hasScrolled, setHasScrolled] = useState(false)
   const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
   const [isTimelineTucked, setIsTimelineTucked] = useState(false)
-  // Chapter index whose mobile intro card the user manually dismissed.
-  const [toastDismissedChapter, setToastDismissedChapter] = useState<number | null>(null)
+  // Chapter index whose mobile held-breath overlay the user manually dismissed.
+  const [overlayDismissedChapter, setOverlayDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
   const lastChapterRef = useRef(0)
   const scrollControlRef = useRef<ScrollControls | null>(null)
@@ -126,13 +126,14 @@ export default function Home() {
     ? introOpacity(chapterIntro.milesIn, DESKTOP_INTRO_HOLD, DESKTOP_INTRO_FADE)
     : 0
   const mobileIntroOpacity =
-    chapterIntro && toastDismissedChapter !== introChapterIndex
+    chapterIntro && overlayDismissedChapter !== introChapterIndex
       ? introOpacity(chapterIntro.milesIn, MOBILE_INTRO_HOLD, MOBILE_INTRO_FADE)
       : 0
+  const isMobileChapterOverlayVisible = mobileIntroOpacity > 0.01
 
-  // Reset the manual mobile-card dismissal when we move to a different chapter.
+  // Reset the manual mobile-overlay dismissal when we move to a different chapter.
   useEffect(() => {
-    setToastDismissedChapter(null)
+    setOverlayDismissedChapter(null)
   }, [introChapterIndex])
 
   const atEnd = currentMiles >= END_MILE
@@ -316,7 +317,13 @@ export default function Home() {
 
   // Touch: swipe-down advances the trail (matches trackpad "scroll down").
   // Wheel/trackpad keep native direction. Body overflow/touchAction locks still win.
-  useInvertedTouchScroll(journeyStarted && !showSplash && !selectedAudioMarker && !isNodeCameraBusy)
+  useInvertedTouchScroll(
+    journeyStarted &&
+      !showSplash &&
+      !selectedAudioMarker &&
+      !isNodeCameraBusy &&
+      !isMobileChapterOverlayVisible,
+  )
 
   const handleChapterClick = (chapterIndex: number) => {
     markDirectNavigation()
@@ -566,11 +573,11 @@ export default function Home() {
       </div>
 
       {introComplete && journeyStarted && (
-        <MobileChapterToast
+        <MobileChapterOverlay
           chapter={introChapter}
           chapterIndex={introChapterIndex}
           opacity={mobileIntroOpacity}
-          onClose={() => setToastDismissedChapter(introChapterIndex)}
+          onDismiss={() => setOverlayDismissedChapter(introChapterIndex)}
         />
       )}
 

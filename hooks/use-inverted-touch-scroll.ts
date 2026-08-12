@@ -7,7 +7,8 @@ import { useEffect, useRef } from "react"
  * matching trackpad "scroll down to explore". Wheel/trackpad is unchanged.
  *
  * Native touch is finger-follow (swipe-up → scrollY↑). This experience wants
- * the opposite: swipe-down moves the map "up" the trail.
+ * the opposite: swipe-down moves the map "up" the trail. Swipe-up is reserved
+ * for dismissing the full-screen chapter overlay and does nothing on the map.
  */
 export function useInvertedTouchScroll(enabled: boolean) {
   const lastYRef = useRef<number | null>(null)
@@ -58,12 +59,18 @@ export function useInvertedTouchScroll(enabled: boolean) {
 
       const y = e.touches[0].clientY
       const now = performance.now()
-      // Invert: finger moves down (y↑) → scroll down the page (scrollY↑).
+      // Finger moves down (y↑) → advance the trail. Upward movement is
+      // intentionally consumed without moving the map; the chapter overlay is
+      // the only surface that assigns an action to that gesture.
       const delta = y - lastYRef.current
       const dt = Math.max(1, now - lastTRef.current)
 
-      window.scrollBy(0, delta)
-      velocityRef.current = delta / dt
+      if (delta > 0) {
+        window.scrollBy(0, delta)
+        velocityRef.current = delta / dt
+      } else {
+        velocityRef.current = 0
+      }
       lastYRef.current = y
       lastTRef.current = now
 
@@ -73,7 +80,7 @@ export function useInvertedTouchScroll(enabled: boolean) {
     const onTouchEnd = () => {
       lastYRef.current = null
       let v = velocityRef.current
-      if (Math.abs(v) < 0.05) return
+      if (v < 0.05) return
 
       const step = () => {
         if (isLocked()) {
@@ -81,7 +88,7 @@ export function useInvertedTouchScroll(enabled: boolean) {
           return
         }
         v *= 0.95
-        if (Math.abs(v) < 0.02) {
+        if (v < 0.02) {
           inertiaRafRef.current = 0
           return
         }
