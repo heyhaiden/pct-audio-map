@@ -3,6 +3,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
 import dynamic from "next/dynamic"
 import { AudioMarkers } from "@/components/map/audio-markers"
+import { NodeNavigationControls } from "@/components/map/node-navigation-controls"
 import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
 import { TrailStats } from "@/components/stats/trail-stats"
 import { AudioPlayer } from "@/components/audio/audio-player"
@@ -14,6 +15,7 @@ import { AboutSocial } from "@/components/navigation/about-social"
 import { WipScreen } from "@/components/completion/wip-screen"
 import { CompletionScreen } from "@/components/completion/completion-screen"
 import { pctSegments } from "@/data/pct-segments"
+import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import { computePunchInPose, type CameraPathPoint, type FreeCameraPose } from "@/lib/railing-camera"
 import {
@@ -59,6 +61,7 @@ const AMBIENT_TRACK = {
   volume: 0.15,
   loop: true,
 }
+const navigableMarkers = audioMarkers.filter((marker) => ACTIVE_CHAPTERS.has(marker.chapter))
 
 type ScrollControls = {
   pauseScrollAnimation: () => void
@@ -430,6 +433,22 @@ export default function Home() {
     activateNode(marker, 2400)
   }
 
+  const currentMarkerIndex = selectedAudioMarker
+    ? navigableMarkers.findIndex((marker) => marker.id === selectedAudioMarker.id)
+    : -1
+  const hasPreviousMarker = currentMarkerIndex > 0
+  const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < navigableMarkers.length - 1
+
+  const handlePreviousMarker = () => {
+    if (!hasPreviousMarker) return
+    activateNode(navigableMarkers[currentMarkerIndex - 1], 2800)
+  }
+
+  const handleNextMarker = () => {
+    if (!hasNextMarker) return
+    activateNode(navigableMarkers[currentMarkerIndex + 1], 2800)
+  }
+
   const currentSection = pctSegments[currentChapter]?.title ?? "Southern California"
 
   useEffect(() => {
@@ -505,9 +524,24 @@ export default function Home() {
           currentMiles={currentMiles}
         />
         {map && (
-          <AudioMarkers map={map} currentChapter={currentChapterId} onMarkerClick={handleAudioMarkerClick} />
+          <AudioMarkers
+            map={map}
+            currentChapter={selectedAudioMarker?.chapter ?? currentChapterId}
+            onMarkerClick={handleAudioMarkerClick}
+          />
         )}
       </div>
+
+      {map && selectedAudioMarker && (
+        <NodeNavigationControls
+          map={map}
+          marker={selectedAudioMarker}
+          hasPrevious={hasPreviousMarker}
+          hasNext={hasNextMarker}
+          onPrevious={handlePreviousMarker}
+          onNext={handleNextMarker}
+        />
+      )}
 
       <PerfDebugPanel map={map} />
 
