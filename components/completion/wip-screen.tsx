@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Construction, Library, X, Compass } from "lucide-react"
+import { exitDocumentFullscreen, markNavigatedFromMap } from "@/lib/map-session"
 
 interface WipScreenProps {
   isVisible: boolean
@@ -29,16 +30,14 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
+      className={`pct-glass-terminal fixed inset-0 z-[60] flex flex-col transition-opacity duration-1000 ${
         showContent ? "opacity-100" : "opacity-0"
       }`}
     >
-      <div className="absolute inset-0 bg-gradient-to-t from-[#ff6b9d]/10 via-transparent to-stone-950" />
-
       {/* Close — dismiss and keep exploring the map */}
       <button
         onClick={onDismiss}
-        className="absolute top-4 right-4 md:top-6 md:right-6 z-20 w-10 h-10 rounded-full bg-stone-900/80 border border-stone-800/60 flex items-center justify-center text-stone-400 hover:text-white hover:border-stone-600 transition-colors"
+        className="pct-glass-control absolute right-3 top-3 z-20 grid h-11 w-11 place-items-center rounded-full text-[#ada396] transition hover:text-[#d9cba8] md:right-[22px] md:top-5 md:h-10 md:w-10"
         aria-label="Close and keep exploring"
       >
         <X className="w-5 h-5" />
@@ -46,28 +45,28 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
 
       <div className="flex-1 flex items-center justify-center">
         <div
-          className={`relative z-10 flex flex-col items-center text-center px-6 max-w-xl transition-all duration-1000 delay-300 ${
+          className={`relative z-10 flex max-w-sm flex-col items-center px-7 text-center transition-all delay-300 duration-1000 ${
             showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
-          <div className="mb-8">
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#ff6b9d]/10 border-2 border-[#ff6b9d]/40 flex items-center justify-center">
-              <Construction className="w-10 h-10 md:w-12 md:h-12 text-[#ff6b9d]" />
+          <div className="mb-6">
+            <div className="pct-glass-control flex h-16 w-16 items-center justify-center rounded-full">
+              <Construction className="h-7 w-7 text-[#d9cba8]" />
             </div>
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-light text-white mb-4">Trail Continues</h1>
+          <h1 className="pct-display mb-3 text-[29px] font-normal text-[#f6f1e4] md:text-[36px]">Trail Continues</h1>
 
-          <p className="text-lg md:text-xl text-[#ff6b9d]/80 mb-2 font-light">
+          <p className="mb-5 font-mono text-[8.5px] uppercase tracking-[0.24em] text-[#8b8271]">
             More soundscapes coming
           </p>
 
-          <p className="text-stone-400 mb-8">
+          <p className="pct-display mb-5 max-w-[260px] text-[13px] font-light leading-[1.65] text-[#c0b7a6]">
             You&apos;ve reached the edge of what we&apos;ve mapped so far — early Oregon and beyond
             are still in progress.
           </p>
 
-          <p className="text-stone-400 text-sm mb-8 max-w-md">
+          <p className="pct-display mb-7 max-w-[260px] text-[12.5px] font-light leading-[1.65] text-[#ada396]">
             Keep exploring the map from here, browse the library, or head back south for more
             audio while we keep recording.
           </p>
@@ -76,23 +75,27 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <button
                 onClick={onDismiss}
-                className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+                className="flex items-center gap-2 rounded-full bg-[#d9cba8] px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-[#3e3527] transition hover:bg-[#e6d9b7]"
               >
                 <Compass className="w-4 h-4" />
                 Keep exploring
               </button>
               <Link
                 href="/library"
-                className="flex items-center gap-2 px-6 py-3 bg-stone-800/80 hover:bg-stone-700/80 border border-stone-700 text-white font-medium rounded-full transition-colors"
+                onClick={() => {
+                  exitDocumentFullscreen()
+                  markNavigatedFromMap()
+                }}
+                className="pct-glass-control flex items-center gap-2 rounded-full px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] transition hover:text-[#d9cba8]"
               >
                 <Library className="w-4 h-4" />
-                Audio Library
+                Audio library
               </Link>
             </div>
 
             <button
               onClick={onRestart}
-              className="px-6 py-2.5 text-sm text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full transition-colors"
+              className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#8b8271] transition hover:text-[#d9cba8]"
             >
               Restart journey
             </button>

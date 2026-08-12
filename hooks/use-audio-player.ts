@@ -4,82 +4,163 @@ import { useRef, useState, useCallback, useEffect } from "react"
 
 interface AudioPlayerState {
   isPlaying: boolean
-  currentTime: number
-  duration: number
   volume: number
+  isMuted: boolean
   isLoading: boolean
   error: string | null
+  currentTrack: string | null
 }
 
+export interface AudioTrack {
+  id: string
+  url: string
+  volume?: number
+  loop?: boolean
+}
+
+const DEFAULT_FADE_MS = 900
+
 export function useAudioPlayer() {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const decksRef = useRef<[HTMLAudioElement | null, HTMLAudioElement | null]>([null, null])
+  const activeDeckRef = useRef(0)
+  const currentTrackRef = useRef<string | null>(null)
+  const currentTargetVolumeRef = useRef(0.7)
+  const pendingTrackRef = useRef<string | null>(null)
+  const transitionRef = useRef(0)
+  const fadeRafRef = useRef(0)
+  const volumeRef = useRef(0.7)
+  const mutedRef = useRef(false)
   const [state, setState] = useState<AudioPlayerState>({
     isPlaying: false,
-    currentTime: 0,
-    duration: 0,
     volume: 0.7,
+    isMuted: false,
     isLoading: false,
     error: null,
+    currentTrack: null,
   })
 
-  const [currentTrack, setCurrentTrack] = useState<string | null>(null)
+  const cancelFade = useCallback(() => {
+    if (!fadeRafRef.current) return
+    cancelAnimationFrame(fadeRafRef.current)
+    fadeRafRef.current = 0
+  }, [])
 
-  const loadTrack = useCallback(
-    (audioUrl: string) => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.src = ""
+  const getDeck = useCallback((index: number) => {
+    let deck = decksRef.current[index]
+    if (!deck) {
+      deck = new Audio()
+      deck.preload = "auto"
+      decksRef.current[index] = deck
+    }
+    return deck
+  }, [])
+
+  const transitionToTrack = useCallback(
+    async (track: AudioTrack, fadeMs = DEFAULT_FADE_MS) => {
+      if (currentTrackRef.current === track.id) {
+        if (pendingTrackRef.current && pendingTrackRef.current !== track.id) {
+          transitionRef.current += 1
+          pendingTrackRef.current = null
+          const inactiveDeck = decksRef.current[activeDeckRef.current === 0 ? 1 : 0]
+          if (inactiveDeck) {
+            inactiveDeck.pause()
+            inactiveDeck.src = ""
+          }
+          const activeDeck = decksRef.current[activeDeckRef.current]
+          if (activeDeck) activeDeck.volume = currentTargetVolumeRef.current
+          setState((previous) => ({ ...previous, isLoading: false, error: null }))
+        }
+        return true
       }
 
-      setState((prev) => ({ ...prev, isLoading: true, error: null }))
+      const transition = ++transitionRef.current
+      pendingTrackRef.current = track.id
+      cancelFade()
 
-      // Create new audio element
-      const audio = new Audio()
-      audio.preload = "metadata"
-      audio.volume = state.volume
-      audio.loop = true // Enable looped playback by default
+      const outgoingIndex = activeDeckRef.current
+      const incomingIndex = outgoingIndex === 0 ? 1 : 0
+      const outgoing = decksRef.current[outgoingIndex]
+      const incoming = getDeck(incomingIndex)
+      const targetVolume = Math.max(0, Math.min(1, track.volume ?? volumeRef.current))
 
-      audio.addEventListener("loadedmetadata", () => {
-        setState((prev) => ({
-          ...prev,
-          duration: audio.duration,
-          isLoading: false,
-        }))
-      })
+      incoming.pause()
+      incoming.src = track.url
+      incoming.currentTime = 0
+      incoming.loop = track.loop ?? true
+      incoming.volume = 0
+      incoming.muted = mutedRef.current
 
-      audio.addEventListener("timeupdate", () => {
-        setState((prev) => ({
-          ...prev,
-          currentTime: audio.currentTime,
-        }))
-      })
+      setState((previous) => ({ ...previous, isLoading: true, error: null }))
 
-      audio.addEventListener("ended", () => {
-        setState((prev) => ({
-          ...prev,
-          isPlaying: false,
-          currentTime: 0,
-        }))
-      })
+      try {
+        await incoming.play()
+      } catch {
+        if (transition === transitionRef.current) {
+          pendingTrackRef.current = null
+          setState((previous) => ({
+            ...previous,
+            isLoading: false,
+            error: "Failed to play audio",
+          }))
+        }
+        incoming.src = ""
+        return false
+      }
 
-      audio.addEventListener("error", () => {
-        setState((prev) => ({
-          ...prev,
-          error: "Failed to load audio",
-          isLoading: false,
-        }))
-      })
+      if (transition !== transitionRef.current) {
+        incoming.pause()
+        incoming.src = ""
+        return false
+      }
 
-      audio.src = audioUrl
-      audioRef.current = audio
-      setCurrentTrack(audioUrl)
+      activeDeckRef.current = incomingIndex
+      currentTrackRef.current = track.id
+      currentTargetVolumeRef.current = targetVolume
+      pendingTrackRef.current = null
+      setState((previous) => ({
+        ...previous,
+        currentTrack: track.id,
+        isPlaying: true,
+        isLoading: false,
+        error: null,
+      }))
+
+      const outgoingStartVolume = outgoing && !outgoing.paused ? outgoing.volume : 0
+      const startedAt = performance.now()
+
+      const fade = (now: number) => {
+        if (transition !== transitionRef.current) return
+
+        const progress = Math.min(1, (now - startedAt) / Math.max(1, fadeMs))
+        incoming.volume = targetVolume * Math.sin((progress * Math.PI) / 2)
+        if (outgoing) {
+          outgoing.volume = outgoingStartVolume * Math.cos((progress * Math.PI) / 2)
+        }
+
+        if (progress < 1) {
+          fadeRafRef.current = requestAnimationFrame(fade)
+          return
+        }
+
+        fadeRafRef.current = 0
+        incoming.volume = targetVolume
+        if (outgoing) {
+          outgoing.pause()
+          outgoing.currentTime = 0
+          outgoing.src = ""
+        }
+      }
+
+      fadeRafRef.current = requestAnimationFrame(fade)
+      return true
     },
-    [state.volume],
+    [cancelFade, getDeck],
   )
 
   const play = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current
+    const activeDeck = decksRef.current[activeDeckRef.current]
+    if (activeDeck) {
+      activeDeck
         .play()
         .then(() => {
           setState((prev) => ({ ...prev, isPlaying: true }))
@@ -91,53 +172,65 @@ export function useAudioPlayer() {
   }, [])
 
   const pause = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
+    const activeDeck = decksRef.current[activeDeckRef.current]
+    if (activeDeck) {
+      activeDeck.pause()
       setState((prev) => ({ ...prev, isPlaying: false }))
     }
   }, [])
 
   const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-      setState((prev) => ({ ...prev, isPlaying: false, currentTime: 0 }))
-    }
-  }, [])
-
-  const seek = useCallback((time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time
-      setState((prev) => ({ ...prev, currentTime: time }))
-    }
-  }, [])
+    transitionRef.current += 1
+    cancelFade()
+    decksRef.current.forEach((deck) => {
+      if (!deck) return
+      deck.pause()
+      deck.currentTime = 0
+      deck.src = ""
+    })
+    currentTrackRef.current = null
+    pendingTrackRef.current = null
+    setState((prev) => ({ ...prev, isPlaying: false, currentTrack: null }))
+  }, [cancelFade])
 
   const setVolume = useCallback((volume: number) => {
     const clampedVolume = Math.max(0, Math.min(1, volume))
-    if (audioRef.current) {
-      audioRef.current.volume = clampedVolume
+    volumeRef.current = clampedVolume
+    const activeDeck = decksRef.current[activeDeckRef.current]
+    if (activeDeck) {
+      activeDeck.volume = clampedVolume
     }
     setState((prev) => ({ ...prev, volume: clampedVolume }))
   }, [])
 
-  // Cleanup on unmount
+  const setMuted = useCallback((muted: boolean) => {
+    mutedRef.current = muted
+    decksRef.current.forEach((deck) => {
+      if (deck) deck.muted = muted
+    })
+    setState((prev) => ({ ...prev, isMuted: muted }))
+  }, [])
+
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.src = ""
-      }
+      transitionRef.current += 1
+      pendingTrackRef.current = null
+      cancelFade()
+      decksRef.current.forEach((deck) => {
+        if (!deck) return
+        deck.pause()
+        deck.src = ""
+      })
     }
-  }, [])
+  }, [cancelFade])
 
   return {
     ...state,
-    currentTrack,
-    loadTrack,
+    transitionToTrack,
     play,
     pause,
     stop,
-    seek,
     setVolume,
+    setMuted,
   }
 }

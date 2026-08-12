@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import Link from "next/link"
+import { Headphones } from "lucide-react"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -118,16 +118,16 @@ function BeginJourneyButton({
       aria-label={
         unlocked ? "Begin Journey" : `Preparing trail, ${Math.round(fill * 100)} percent`
       }
-      className={`relative overflow-hidden text-white font-medium rounded-full transition-[transform,background-color,box-shadow] duration-500 ease-out ${
+      className={`relative overflow-hidden rounded-full font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-[#3e3527] transition-[transform,background-color,box-shadow] duration-500 ease-out ${
         unlocked
-          ? "bg-[#ff6b9d] hover:bg-[#ff85ad] hover:scale-105 active:scale-95 shadow-[0_0_0_0_rgba(255,107,157,0)]"
-          : "bg-[#ff6b9d]/20 cursor-wait"
+          ? "bg-[#d9cba8] hover:bg-[#e6d9b7] hover:scale-[1.02] active:scale-95 shadow-[0_10px_28px_rgba(0,0,0,0.32)]"
+          : "bg-[#d9cba8]/20 cursor-wait text-[#d9cba8]"
       } ${className ?? ""}`}
     >
       {/* Fill bar — stays through the unlock frame so the sweep can finish */}
       <span
         aria-hidden
-        className={`absolute inset-y-0 left-0 bg-[#ff6b9d] transition-opacity duration-500 ${
+        className={`absolute inset-y-0 left-0 bg-[#d9cba8] transition-opacity duration-500 ${
           unlocked ? "opacity-0" : "opacity-100"
         }`}
         style={{ width: `${Math.max(4, fill * 100)}%` }}
@@ -165,7 +165,6 @@ export function SplashScreen({
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Lock scroll when splash is visible
   useEffect(() => {
@@ -177,49 +176,9 @@ export function SplashScreen({
     }
   }, [isVisible])
 
-  // Initialize and play ambient wind audio
-  useEffect(() => {
-    const audio = new Audio("/audio/ambient-wind.mp3")
-    audio.loop = true
-    audio.volume = 0.15 // Light ambient volume
-    audioRef.current = audio
-
-    const playAudio = async () => {
-      try {
-        await audio.play()
-      } catch {
-        const startOnInteraction = () => {
-          audio.play().catch(() => {})
-          document.removeEventListener("click", startOnInteraction)
-          document.removeEventListener("touchstart", startOnInteraction)
-        }
-        document.addEventListener("click", startOnInteraction, { once: true })
-        document.addEventListener("touchstart", startOnInteraction, { once: true })
-      }
-    }
-    playAudio()
-
-    return () => {
-      audio.pause()
-      audio.src = ""
-    }
-  }, [])
-
   // Parent signals overview camera is ready — now fade splash (map is already correct underneath)
   useEffect(() => {
     if (!revealMap || isExiting || !hasStarted) return
-
-    if (audioRef.current) {
-      const audio = audioRef.current
-      const fadeOut = setInterval(() => {
-        if (audio.volume > 0.02) {
-          audio.volume = Math.max(0, audio.volume - 0.02)
-        } else {
-          clearInterval(fadeOut)
-          audio.pause()
-        }
-      }, 50)
-    }
 
     setIsExiting(true)
     const t = setTimeout(() => setIsVisible(false), 700)
@@ -237,104 +196,54 @@ export function SplashScreen({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col bg-stone-950 transition-all duration-700 ease-out ${
-        isExiting ? "opacity-0 scale-105" : "opacity-100 scale-100"
+      className={`pct-glass-scrim fixed inset-0 z-[100] flex flex-col transition-opacity duration-700 ease-out ${
+        isExiting ? "opacity-0" : "opacity-100"
       }`}
     >
-      {/* Background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-stone-950 via-stone-900/50 to-stone-950" />
-      
       {/* Subtle topographic pattern overlay */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
+      <div className="absolute inset-0 opacity-[0.025]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 60 Q25 40 50 60 T100 60' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 70 Q25 50 50 70 T100 70' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3C/svg%3E")`,
         backgroundSize: '200px 200px'
       }} />
 
-      {/* Content - centered vertically on both mobile and desktop */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
-        <div className="flex flex-col items-center text-center max-w-2xl">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-[26px] py-[34px]">
+        <div className="flex max-w-sm flex-col items-center text-center">
           {/* Abstract trail icon */}
-          <div className="mb-8 md:mb-8">
-            <AbstractTrailIcon className="w-16 h-28 md:w-20 md:h-36" />
+          <div className="mb-6">
+            <AbstractTrailIcon className="h-[70px] w-10" />
           </div>
 
-          {/* Title */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-4 md:mb-4">
-            <span className="font-semibold text-[#ff6b9d]">PCT</span> Soundscapes
+          <h1 className="pct-display mb-2 text-[36px] font-normal leading-none text-[#f6f1e4] md:text-[44px]">
+            PCT Soundscapes
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-stone-300 mb-3 font-light">
-            An Audio Journey Along the Pacific Crest Trail
+          <p className="mb-[26px] font-mono text-[8.5px] uppercase tracking-[0.26em] text-[#948a79]">
+            Mexico → Canada · Field recordings
           </p>
 
-          {/* Trail stats - hidden on mobile */}
-          <div className="hidden md:flex items-center gap-6 text-sm text-stone-500 mb-8 flex-wrap justify-center">
-            <span>2,650 miles</span>
-            <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
-            <span>Mexico to Canada</span>
-            <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
-            <span>Field recordings</span>
-          </div>
-
-          {/* Compact stats line - mobile only */}
-          <div className="md:hidden flex items-center gap-3 text-xs text-stone-500 mb-5">
-            <span>2,650 mi</span>
-            <span className="w-1 h-1 rounded-full bg-[#ff6b9d]/40" />
-            <span>Mexico to Canada</span>
-          </div>
-
-          {/* Description - desktop only */}
-          <p className="hidden md:block text-lg text-stone-400 leading-relaxed max-w-lg mb-10">
-            Scroll through an immersive map experience featuring ambient soundscapes
-            recorded along the Pacific Crest Trail. Discover the sonic landscape of
-            the American West.
+          <p className="pct-display mb-8 max-w-[260px] text-[13.5px] font-light leading-[1.65] text-[#c7beac] md:max-w-[320px]">
+            An audio journey along the Pacific Crest Trail. Scroll to walk it. Stop anywhere and stay
+            as long as you like.
           </p>
 
-          {/* Description - mobile only (condensed) */}
-          <p className="md:hidden text-base text-stone-400 leading-relaxed max-w-sm">
-            Scroll through an immersive map featuring ambient soundscapes recorded
-            along the trail — the sonic landscape of the American West.
-          </p>
-
-          {/* CTA Buttons - desktop only, inline with content */}
-          <div className="hidden md:flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center">
             <BeginJourneyButton
               ready={trailheadReady}
               progress={trailheadProgress}
               onClick={handleEnter}
-              className="px-8 py-3"
+              className="px-[30px] py-[13px]"
             />
-            <Link
-              href="/about"
-              className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"
-            >
-              About this project
-            </Link>
-          </div>
-
-          {/* Mobile CTA - pushed down into the thumb-tap zone */}
-          <div className="md:hidden flex flex-col items-center gap-4 mt-16 pb-[env(safe-area-inset-bottom)]">
-            <BeginJourneyButton
-              ready={trailheadReady}
-              progress={trailheadProgress}
-              onClick={handleEnter}
-              className="px-10 py-3.5 text-base"
-            />
-            <Link
-              href="/about"
-              className="px-6 py-2 text-sm text-stone-400 hover:text-white rounded-full border border-transparent hover:border-stone-600 transition-all duration-200"
-            >
-              About this project
-            </Link>
+            <div className="pct-splash-headphones mt-5 flex items-center gap-2 font-mono text-[8.5px] uppercase tracking-[0.16em] text-[#948a79]">
+              <Headphones className="h-3 w-3" />
+              Best with headphones
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Footer credits - hidden on mobile to avoid overlap */}
-      <div className="hidden md:block absolute bottom-8 left-0 right-0 text-center">
-        <p className="text-xs text-stone-600">
-          Recordings collected 2025
+      <div className="pct-splash-footer absolute bottom-[max(22px,env(safe-area-inset-bottom))] left-0 right-0 text-center">
+        <p className="font-mono text-[8.5px] uppercase tracking-[0.18em] text-[#4f493f]">
+          Recorded 2024–25
         </p>
       </div>
     </div>
