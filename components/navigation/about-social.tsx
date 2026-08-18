@@ -80,30 +80,12 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
       <div
         aria-hidden={isMenuOpen}
         inert={isMenuOpen}
-        className={`fixed left-3 top-3 z-50 transition-opacity duration-300 md:left-[22px] md:top-5 ${
+        className={`fixed right-3 top-3 z-50 flex flex-col items-center gap-2 transition-opacity duration-300 md:right-[22px] md:top-5 ${
           isMenuOpen ? "pointer-events-none opacity-0" : "opacity-100"
         } ${className ?? ""}`}
       >
         <button
           ref={menuTriggerRef}
-          type="button"
-          onClick={onSoundToggle}
-          aria-label={soundEnabled ? "Mute journey audio" : "Unmute journey audio"}
-          aria-pressed={!soundEnabled}
-          className={controlClass}
-        >
-          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-        </button>
-      </div>
-
-      <div
-        aria-hidden={isMenuOpen}
-        inert={isMenuOpen}
-        className={`fixed right-3 top-3 z-50 transition-opacity duration-300 md:right-[22px] md:top-5 ${
-          isMenuOpen ? "pointer-events-none opacity-0" : "opacity-100"
-        } ${className ?? ""}`}
-      >
-        <button
           type="button"
           onClick={() => setIsMenuOpen((open) => !open)}
           aria-label={isMenuOpen ? "Close menu" : "Open menu"}
@@ -112,6 +94,15 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
           className={controlClass}
         >
           {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={onSoundToggle}
+          aria-label={soundEnabled ? "Mute journey audio" : "Unmute journey audio"}
+          aria-pressed={!soundEnabled}
+          className={controlClass}
+        >
+          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
         </button>
       </div>
 
