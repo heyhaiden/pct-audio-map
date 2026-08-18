@@ -4,11 +4,9 @@ import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } fr
 import dynamic from "next/dynamic"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
-import { TrailStats } from "@/components/stats/trail-stats"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
 import { SplashScreen } from "@/components/splash/splash-screen"
-import { MobileStatsBar } from "@/components/mobile/mobile-stats-bar"
 import { MobileChapterOverlay } from "@/components/mobile/mobile-chapter-overlay"
 import { AboutSocial } from "@/components/navigation/about-social"
 import { WipScreen } from "@/components/completion/wip-screen"
@@ -590,7 +588,6 @@ export default function Home() {
     activateNode(navigableMarkers[currentMarkerIndex + 1], 2800)
   }
 
-  const currentSection = pctSegments[currentChapter]?.title ?? "Southern California"
   const hideChapterTimeline = shouldHideChapterTimeline(Boolean(selectedAudioMarker), isNodeCameraBusy)
 
   useEffect(() => {
@@ -681,14 +678,6 @@ export default function Home() {
       </div>
 
       <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
-
-      <div className={`transition-opacity duration-1000 ease-out ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
-        <TrailStats currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
-      </div>
-
-      <div className={`transition-opacity duration-700 ease-out ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
-        <MobileStatsBar currentMiles={currentMiles} totalMiles={totalMiles} currentSection={currentSection} />
-      </div>
 
       <div className={`transition-opacity duration-700 ease-out delay-200 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ChapterTimeline
