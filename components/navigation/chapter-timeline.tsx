@@ -88,7 +88,7 @@ export function ChapterTimeline({ nodes, activeIndex, progress, hidden, onNodeCl
               onClick={() => onNodeClick(index)}
               aria-label={isEnd ? "Go to the end of the trail" : `Go to Chapter ${index + 1}: ${node.title}`}
               aria-current={isActive ? "true" : undefined}
-              className={`pointer-events-auto relative min-h-11 min-w-[30px] rounded-r-[5px] border-t px-2 py-3 font-mono text-[8.5px] uppercase tracking-[0.13em] shadow-[2px_0_9px_rgba(0,0,0,0.34)] backdrop-blur-[4px] transition-[color,background-color,border-color,box-shadow] duration-300 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8] md:min-w-0 md:rounded-r-md md:text-[9px] md:tracking-[0.1em] ${
+              className={`pointer-events-auto relative min-h-11 min-w-[30px] rounded-r-[5px] border-t px-2 py-3 font-mono text-[14px] uppercase tracking-[0.13em] shadow-[2px_0_9px_rgba(0,0,0,0.34)] backdrop-blur-[4px] transition-[color,background-color,border-color,box-shadow] duration-300 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8] md:min-w-0 md:rounded-r-md md:tracking-[0.1em] ${
                 isActive
                   ? "border-y-white/15 border-r-[3px] border-r-[#d9cba8] bg-[rgba(23,21,17,0.93)] text-[#ede8dc] shadow-[3px_0_14px_rgba(0,0,0,0.45)] md:pr-2.5"
                   : "border-t-white/15 bg-[rgba(12,11,9,0.62)] text-[#b9b0a2] hover:bg-[rgba(23,21,17,0.8)] hover:text-[#ede8dc]"
