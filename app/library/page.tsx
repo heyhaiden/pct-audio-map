@@ -163,7 +163,7 @@ export default function LibraryPage() {
                               style={{ width: `${currentProgress}%` }}
                             />
 
-                            <div className="relative flex items-center gap-4">
+                            <div className="relative flex items-start gap-4">
                               {/* Play button */}
                               <button
                                 onClick={() => handlePlayPause(marker.id, marker.audioUrl)}
@@ -183,10 +183,10 @@ export default function LibraryPage() {
 
                               {/* Info */}
                               <div className="flex-1 min-w-0">
-                                <h3 className="pct-display truncate text-[18px] font-medium text-[#ede8dc]">
+                                <h3 className="pct-display text-[18px] font-medium text-[#ede8dc]">
                                   {marker.name}
                                 </h3>
-                                <p className="pct-display truncate text-[12.5px] font-light text-[#ada396]">
+                                <p className="pct-display mt-1 text-[12.5px] font-light leading-[1.6] text-[#ada396]">
                                   {marker.description}
                                 </p>
                               </div>

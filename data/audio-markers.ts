@@ -10,7 +10,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/campo.mp3",
     chapter: "southern-california",
     featured: true,
-    description: "Beginning at the US-Mexico border monument",
+    description:
+      "The southern terminus sits in dry chaparral beside the US-Mexico border monument. Morning wind moves through sage and chain-link; a distant highway hums. Sparrows tick in the brush as packed dirt takes the first footsteps of a walk toward Canada.",
     recordingDate: "April 15, 2024",
   },
   {
@@ -21,7 +22,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/hauser.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Morning descent into canyon depths",
+    description:
+      "A cool descent drops into Hauser Canyon before the day's heat finds the ridgelines. Dry grass whispers, a raven passes overhead, and the trail switches through oak and chaparral. On the canyon floor, footsteps echo and the next climb waits in the sun.",
     recordingDate: "April 16, 2024",
   },
   {
@@ -32,7 +34,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/kitchen.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Creek crossing at sunrise",
+    description:
+      "Kitchen Creek runs thin and bright at sunrise, a silver thread over granite and gravel. Water ticks against stone while quail call from the brush. The crossing is brief, but the creek's small music stays in the ear long after the canyon falls away.",
     recordingDate: "April 17, 2024",
   },
   {
@@ -43,7 +46,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/cibbets.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "High desert plateau winds",
+    description:
+      "Cibbets Flat opens as a high desert plateau where the wind has room to run. Pines stand in scattered groves; the rest is grass, rock, and sky. Gusts arrive in waves, then drop. A distant truck, a woodpecker, and the dry hiss of needle and dust.",
     recordingDate: "April 18, 2024",
   },
   {
@@ -54,7 +58,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/long-canyon.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Climbing through canyon walls",
+    description:
+      "The trail threads Long Canyon between rising walls of rock and chaparral. Footsteps bounce back from stone. A canyon wren sings, then the wind takes the next phrase. Shade comes in bursts; the rest is sun, switchbacks, and the next ridge.",
     recordingDate: "April 19, 2024",
   },
   {
@@ -65,7 +70,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/laguna.mp3",
     chapter: "southern-california",
     featured: true,
-    description: "First mountain summit approach",
+    description:
+      "Mount Laguna is the first real mountain: pine scent, cooler air, and a view that finally looks toward the Sierra. Wind moves through Jeffrey pine. A jay scolds from a branch. For a moment the trail feels like forest instead of desert exposure.",
     recordingDate: "April 20, 2024",
   },
   {
@@ -76,7 +82,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/pioneer.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Historic mail route junction",
+    description:
+      "Pioneer Mail sits at an old wagon route junction. Wind finds the picnic tables and the overlook. Traffic murmurs on the highway below, mixed with pine and the dry rattle of manzanita. The past is faint, but the pass still feels like a threshold.",
     recordingDate: "April 21, 2024",
   },
   {
@@ -87,7 +94,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/sunrise.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Highway crossing at dawn",
+    description:
+      "Dawn at the Sunrise Highway crossing: engines, then quiet as the trail leaves the pavement. Cool air, a meadowlark, gravel underfoot. The mountains hold last night's cold, and the day begins not with silence but with a brief, ordinary road.",
     recordingDate: "April 22, 2024",
   },
   {
@@ -98,7 +106,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/burnt.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Campground in pine forest",
+    description:
+      "Burnt Rancheria is pine shade, zipper sounds, and the low talk of hikers waking. Stoves hiss. A woodpecker works a trunk. Wind in the canopy is constant and soft—one of the first nights that feels like the mountains, the desert only a ridge away.",
     recordingDate: "April 23, 2024",
   },
   {
@@ -109,7 +118,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/oriflamme.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Steep descent through chaparral",
+    description:
+      "Oriflamme Canyon drops steeply through chaparral, gathering heat as it falls. Buckbrush scrapes pack and sleeve. Lizards scatter. The wind, loud on the rim, thins in the folds. By the lower switchbacks every step sounds dry, close, and a little faster.",
     recordingDate: "April 24, 2024",
   },
   {
@@ -120,7 +130,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/granite-mtn.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Rocky ridge traverse",
+    description:
+      "Granite Mountain is a rocky ridge traverse: boot on slab, wind in the ears, desert in every direction. The stone holds morning cool, then gives it back as heat. Ravens ride the updrafts. Little shade, a lot of sky, and the trail feeling fully exposed.",
     recordingDate: "April 25, 2024",
   },
   {
@@ -131,7 +142,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/scissors.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Descending to desert floor",
+    description:
+      "The trail spills to Scissors Crossing and the desert floor, where the air thickens and the highway appears again. Heat shimmers off the road. A dry wash ticks with insects. After miles of ridge, the flatness is relief and warning: the next climb starts here.",
     recordingDate: "April 26, 2024",
   },
   {
@@ -142,7 +154,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/barrel.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Water source in afternoon heat",
+    description:
+      "Barrel Spring is a pause in afternoon heat: water, shade, and hikers filling bottles. Bees work the damp ground. A metal trough ticks as it cools. For a few minutes the trail is only this—water, rest, and the decision to keep going.",
     recordingDate: "April 27, 2024",
   },
   {
@@ -153,7 +166,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/warner.mp3",
     chapter: "southern-california",
     featured: true,
-    description: "Resupply stop at midday",
+    description:
+      "Warner Springs is midday resupply: doors, voices, gravel, and the relief of shade. Traffic passes. A flag snaps. Then the pack is heavy again, and the trail takes back the quiet, one dusty mile at a time, as the small town falls behind.",
     recordingDate: "April 28, 2024",
   },
   {
@@ -164,7 +178,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/agua.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Hot springs at dusk",
+    description:
+      "At dusk the hot springs at Agua Caliente send up a faint mineral steam. Water murmurs in stone basins. Frogs start up. The day's heat lets go, and the first stars appear. A rare softness on a dry stretch: warm water, cooling air, night without hurry.",
     recordingDate: "April 29, 2024",
   },
   {
@@ -175,7 +190,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/chihuahua.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Valley crossing under stars",
+    description:
+      "Chihuahua Valley is a night crossing: stars, a dirt road, and a wide basin holding its breath. Coyotes call from somewhere unseen. Wind moves in the grass. Footsteps sound loud until they don't. The hills are dark shapes; the trail is a pale line.",
     recordingDate: "April 30, 2024",
   },
   {
@@ -186,7 +202,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/table.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Summit winds at sunrise",
+    description:
+      "Sunrise on Table Mountain arrives as wind first, then light. The summit is open and spare. A few birds start, then the whole ridge takes the sun. Gusts comb the grass. A short, bright hour on top before the trail tips down and the heat begins again.",
     recordingDate: "May 1, 2024",
   },
   {
@@ -197,7 +214,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/tule.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Canyon echoes in morning light",
+    description:
+      "Morning in Tule Canyon is echo and cool stone. A thin creek, if running, makes a private sound against the walls. Wrens call. The trail stays in shade longer than the ridges above. Each footstep comes back a half-second later, as if the canyon is counting.",
     recordingDate: "May 2, 2024",
   },
   {
@@ -208,7 +226,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/paradise.mp3",
     chapter: "southern-california",
     featured: true,
-    description: "Lush valley at golden hour",
+    description:
+      "Paradise Valley earns its name at golden hour: greener folds, softer wind, light that makes the hills look almost kind. Quail explode from cover. Water nearby is more felt than heard. After chaparral and glare, the valley is a held breath—lush enough.",
     recordingDate: "May 3, 2024",
   },
   {
@@ -219,7 +238,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/san-felipe.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Desert hills under midday sun",
+    description:
+      "The San Felipe Hills bake under midday sun: pale slopes, little shade, and a wind that is more heat than relief. Lizards vanish into rock. Insects drone. Distance is hard to judge. Every mile here is patience, water, and the next false summit.",
     recordingDate: "May 4, 2024",
   },
   {
@@ -230,7 +250,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/barrel-springs.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Cool spring in late afternoon",
+    description:
+      "Late afternoon at Barrel Springs: cooler air in the drainage, water sounding luxurious after the hills. Hikers gather, then drift on. Bees, a metal cup, the creak of a sign. Shadows lengthen, and the day that felt endless on the grade finally loosens.",
     recordingDate: "May 5, 2024",
   },
   {
@@ -241,7 +262,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/third-gate.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Gateway to San Jacinto wilderness",
+    description:
+      "Third Gate is a threshold into San Jacinto wilderness, where vegetation thickens and the air loses its desert edge. Wind moves in the oaks. A squirrel scolds. Behind you the hills are still pale; ahead the mountains are real, and the climb toward pine begins.",
     recordingDate: "May 6, 2024",
   },
   {
@@ -252,7 +274,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/saddle.mp3",
     chapter: "southern-california",
     featured: true,
-    description: "High altitude junction at dawn",
+    description:
+      "Dawn at Saddle Junction, high and cold. Trails fork toward peaks and valleys. Wind comes over the saddle in a steady press. Pines creak. For a moment the desert is a rumor far below: a high crossroads, numb fingers, and the next long descent or climb.",
     recordingDate: "May 7, 2024",
   },
   {
@@ -263,7 +286,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/tahquitz.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Summit winds above treeline",
+    description:
+      "Above treeline on Tahquitz Peak the wind is the whole recording. It arrives in walls, then drops, then returns. Stone ticks as it warms. A few hardy birds hold the lee. Up here the trail feels less like a path than a brief agreement with the mountain.",
     recordingDate: "May 8, 2024",
   },
   {
@@ -274,7 +298,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/fuller.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Descending Mount San Jacinto",
+    description:
+      "Fuller Ridge carries the descent off San Jacinto: an airy traverse with exposure on one side and forest on the other. Wind scours the granite. Pines roar in gusts. Each switchback trades altitude for heat, and the mountain's weather becomes the desert's again.",
     recordingDate: "May 9, 2024",
   },
   {
@@ -285,7 +310,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/whitewater.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Desert floor at high noon",
+    description:
+      "Whitewater at high noon is glare, wind, and the wide wash of a desert river that may or may not be running. Sand hisses. Heat lifts off the stones. After the high country, the floor feels like another planet—open, loud with air, and without shade.",
     recordingDate: "May 10, 2024",
   },
   {
@@ -296,7 +322,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/mission.mp3",
     chapter: "southern-california",
     featured: false,
-    description: "Creek sounds at twilight",
+    description:
+      "Twilight along Mission Creek: water through a stony bed, frogs beginning, the last heat lifting off the canyon. Cottonwoods move. A night bird calls once, then again. After the dry miles, the creek is a companion, talking quietly until the dark is complete.",
     recordingDate: "May 11, 2024",
   },
   {
@@ -307,7 +334,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/big-bear.mp3",
     chapter: "southern-california",
     featured: true,
-    description: "Lake crossing in morning mist",
+    description:
+      "Morning mist on the Big Bear stretch turns lake and pines into a softer country. Water laps out of sight. A truck on the highway, then quiet. Jays, a dock creak, cold air. The mountains feel lived-in, almost gentle, before the trail remembers the north.",
     recordingDate: "May 12, 2024",
   },
   {
@@ -318,7 +346,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/deep-creek.mp3",
     chapter: "southern-california",
     featured: true,
-    description: "Cascading water at sunset",
+    description:
+      "Deep Creek at sunset is falling water, warm rock, and swallows cutting the air above the pools. The cascade fills the canyon so completely that talk disappears. Light leaves the water last. For a while the desert trail becomes a river walk, ending in abundance.",
     recordingDate: "May 13, 2024",
   },
 
@@ -331,7 +360,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/alpine-wind.mp3",
     chapter: "sierra-nevada",
     featured: true,
-    description: "Above treeline in thin air",
+    description:
+      "Above treeline the air is thin and the wind has nothing to interrupt it. It arrives as continuous pressure, then a higher whistle across granite and snow. No trees, few birds—just the mountain at thirteen thousand feet. Footsteps on talus sound close and small.",
     recordingDate: "June 2, 2024",
   },
   {
@@ -342,7 +372,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/mountain-streams.mp3",
     chapter: "sierra-nevada",
     featured: true,
-    description: "Snowmelt rushing at dawn",
+    description:
+      "At dawn a Sierra stream runs hard with snowmelt, cold enough to ache. The banks are still in shadow. Dippers work the rocks. The roar fills the drainage, then thins as the trail climbs. Even out of sight, the water stays a bright thread of sound.",
     recordingDate: "June 8, 2024",
   },
   {
@@ -353,7 +384,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/granite-echoes.mp3",
     chapter: "sierra-nevada",
     featured: false,
-    description: "Sound reflecting off granite walls",
+    description:
+      "A granite valley gives every sound a second life. A footstep, a voice, a falling rock—each comes back off the walls a moment later, cleaner and farther. Wind moves in the lodgepoles. A creek keeps a low ostinato. The echoes make the place feel larger than its map.",
     recordingDate: "June 15, 2024",
   },
 
@@ -366,7 +398,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/volcanic-winds.mp3",
     chapter: "northern-california",
     featured: true,
-    description: "Summit gusts on Mount Shasta",
+    description:
+      "On the high slopes near Shasta the wind is volcanic: dry, mineral, and sudden. It comes off snowfields and black rock, then drops into stillness equally absolute. A raven's call is torn apart mid-note. Up here the recording is mostly air, altitude, and waiting.",
     recordingDate: "July 5, 2024",
   },
   {
@@ -377,7 +410,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/forest-streams.mp3",
     chapter: "northern-california",
     featured: false,
-    description: "Gentle creek through pine forest",
+    description:
+      "A forest creek in pine shade talks in a smaller voice than Sierra melt. Water slips over root and stone, pauses in pools, then continues. Varied thrushes call from the canopy. The air smells of duff and resin—an ordinary, perfect sound if you are willing to stop.",
     recordingDate: "July 10, 2024",
   },
   {
@@ -388,7 +422,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/bird-chorus.mp3",
     chapter: "northern-california",
     featured: true,
-    description: "Morning birdsong at first light",
+    description:
+      "First light in Northern California woods is a stacked chorus: robins, thrushes, a woodpecker's drum. The forest is still dark at ground level. Dew ticks from needles. By the time sun finds the trail, the peak of the chorus has already passed.",
     recordingDate: "July 18, 2024",
   },
 
@@ -401,7 +436,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/forest-rain.mp3",
     chapter: "oregon-cascades",
     featured: true,
-    description: "Afternoon rain in dense forest",
+    description:
+      "Afternoon rain in Oregon forest is a long, even falling—just water finding every leaf. Canopy drip continues after the shower eases. The trail turns to quiet mud. A winter wren shouts from a log. This is the sound the Cascades are famous for: enclosed, cool, and kind.",
     recordingDate: "August 3, 2024",
   },
   {
@@ -412,7 +448,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/lake-lapping.mp3",
     chapter: "oregon-cascades",
     featured: false,
-    description: "Lake shore at evening calm",
+    description:
+      "Evening at Crater Lake is almost still. Small waves tap the pumice shore in an unhurried meter. Wind comes and goes across the caldera. A distant voice carries too far, then quiet returns. The lake's small sounds make the vast crater feel intimate, even close.",
     recordingDate: "August 8, 2024",
   },
   {
@@ -423,7 +460,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/owl-calls.mp3",
     chapter: "oregon-cascades",
     featured: true,
-    description: "Night sounds in deep woods",
+    description:
+      "Deep woods at night, and a great horned owl calling at intervals that feel longer than they are. Needles drip. Something rustles, then stops. Between calls there is almost nothing, which makes each hoot a marker in the dark around you.",
     recordingDate: "August 15, 2024",
   },
 
@@ -436,7 +474,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/glacier-melt.mp3",
     chapter: "washington-cascades",
     featured: true,
-    description: "Ice melting in midday sun",
+    description:
+      "Midday sun on glacier ice becomes a bright, increasing water. Melt finds channels, then a roar in the drainage below. Rockfall ticks in the moraine. Cold air slides down from the snow. The sound is urgent: a mountain taking itself apart, afternoon by afternoon.",
     recordingDate: "September 1, 2024",
   },
   {
@@ -447,7 +486,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/rainforest-ambience.mp3",
     chapter: "washington-cascades",
     featured: true,
-    description: "Misty morning in ancient forest",
+    description:
+      "A misty morning in temperate rainforest is drip, moss, and a softness that swallows footsteps. Ancient trees hold the weather in their crowns. A varied thrush sings from somewhere unseen. Even the air seems audible—humid, close, growing and rotting.",
     recordingDate: "September 10, 2024",
   },
   {
@@ -458,7 +498,8 @@ export const audioMarkers: AudioMarker[] = [
     audioUrl: "/audio/mountain-silence.mp3",
     chapter: "washington-cascades",
     featured: false,
-    description: "Peaceful summit near Canadian border",
+    description:
+      "Near the Canadian border a summit can be almost silent: wind at a distance, a single bird, the tick of cooling stone. The noise of the long trail falls away. It is not empty so much as finished—an ending you can hear if you stop and let the last miles settle.",
     recordingDate: "September 20, 2024",
   },
 ]
