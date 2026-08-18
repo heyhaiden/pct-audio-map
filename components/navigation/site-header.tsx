@@ -11,7 +11,7 @@ import {
 
 export type SiteNavPage = "map" | "home" | "library" | "about" | "resources"
 
-const NAV_LINKS: { id: SiteNavPage; href: string; label: string }[] = [
+export const NAV_LINKS: { id: SiteNavPage; href: string; label: string }[] = [
   { id: "home", href: "/", label: "Home" },
   { id: "library", href: "/library", label: "Audio library" },
   { id: "about", href: "/about", label: "About" },

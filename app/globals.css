@@ -161,7 +161,9 @@
   .pct-chapter-tabs-shell > div {
     padding-bottom: 1px;
   }
+}
 
+@media (max-height: 720px) {
   .pct-splash-footer,
   .pct-splash-headphones {
     display: none;

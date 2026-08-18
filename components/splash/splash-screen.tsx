@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Headphones } from "lucide-react"
+import Link from "next/link"
+import { Headphones, Menu, X } from "lucide-react"
+import { NAV_LINKS } from "@/components/navigation/site-header"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -14,6 +16,93 @@ interface SplashScreenProps {
    * camera is restored to overview so the user never sees a mid-trail warm pose.
    */
   revealMap?: boolean
+}
+
+const SPLASH_NAV_LINKS = NAV_LINKS.filter((link) => link.id !== "home")
+
+const splashNavLinkClass =
+  "px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-[#8b8271] transition-colors hover:text-[#ede8dc]"
+
+function SplashNav() {
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
+  const wasOpenRef = useRef(false)
+
+  useEffect(() => {
+    if (open) {
+      wasOpenRef.current = true
+      return
+    }
+    if (!wasOpenRef.current) return
+    wasOpenRef.current = false
+    triggerRef.current?.focus()
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false)
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return
+      setOpen(false)
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    window.addEventListener("pointerdown", onPointerDown)
+    return () => {
+      window.removeEventListener("keydown", onKeyDown)
+      window.removeEventListener("pointerdown", onPointerDown)
+    }
+  }, [open])
+
+  return (
+    <div className="absolute right-[18px] top-[max(14px,env(safe-area-inset-top))] z-20 md:right-[28px] md:top-[max(20px,env(safe-area-inset-top))]">
+      <nav className="hidden items-center gap-1 sm:flex" aria-label="Site">
+        {SPLASH_NAV_LINKS.map((link) => (
+          <Link key={link.id} href={link.href} className={splashNavLinkClass}>
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="sm:hidden">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="splash-menu"
+          className="pct-glass-control grid h-11 w-11 place-items-center rounded-full text-[#d9cba8] transition hover:border-[#d9cba8]/45 hover:text-[#ede8dc] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8]"
+        >
+          {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        </button>
+
+        {open ? (
+          <nav
+            ref={panelRef}
+            id="splash-menu"
+            aria-label="Site"
+            className="pct-glass-panel absolute right-0 mt-2 min-w-[12.5rem] overflow-hidden py-1.5"
+          >
+            {SPLASH_NAV_LINKS.map((link) => (
+              <Link
+                key={link.id}
+                href={link.href}
+                className="block px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-[#c7beac] transition-colors hover:bg-white/5 hover:text-[#ede8dc]"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 // Abstract minimalist trail line SVG
@@ -34,7 +123,7 @@ function AbstractTrailIcon({ className }: { className?: string }) {
            C35 45, 75 30, 55 15
            L58 5"
         stroke="currentColor"
-        strokeWidth="2.5"
+        strokeWidth="3.1"
         strokeLinecap="round"
         fill="none"
         className="text-[#ff6b9d]"
@@ -118,7 +207,7 @@ function BeginJourneyButton({
       aria-label={
         unlocked ? "Begin Journey" : `Preparing trail, ${Math.round(fill * 100)} percent`
       }
-      className={`relative overflow-hidden rounded-full font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-[#3e3527] transition-[transform,background-color,box-shadow] duration-500 ease-out ${
+      className={`relative overflow-hidden rounded-full font-mono text-[13px] font-medium uppercase tracking-[0.2em] text-[#3e3527] transition-[transform,background-color,box-shadow] duration-500 ease-out ${
         unlocked
           ? "bg-[#d9cba8] hover:bg-[#e6d9b7] hover:scale-[1.02] active:scale-95 shadow-[0_10px_28px_rgba(0,0,0,0.32)]"
           : "bg-[#d9cba8]/20 cursor-wait text-[#d9cba8]"
@@ -206,22 +295,24 @@ export function SplashScreen({
         backgroundSize: '200px 200px'
       }} />
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-[26px] py-[34px]">
-        <div className="flex max-w-sm flex-col items-center text-center">
+      <SplashNav />
+
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-11">
+        <div className="flex max-w-[30rem] flex-col items-center text-center">
           {/* Abstract trail icon */}
-          <div className="mb-6">
-            <AbstractTrailIcon className="h-[70px] w-10" />
+          <div className="mb-8">
+            <AbstractTrailIcon className="h-[88px] w-[50px]" />
           </div>
 
-          <h1 className="pct-display mb-2 text-[36px] font-normal leading-none text-[#f6f1e4] md:text-[44px]">
+          <h1 className="pct-display mb-2.5 text-[45px] font-normal leading-none text-[#f6f1e4] md:text-[55px]">
             PCT Soundscapes
           </h1>
 
-          <p className="mb-[26px] font-mono text-[8.5px] uppercase tracking-[0.26em] text-[#948a79]">
+          <p className="mb-8 font-mono text-[11px] uppercase tracking-[0.26em] text-[#948a79]">
             Mexico → Canada · Field recordings
           </p>
 
-          <p className="pct-display mb-8 max-w-[260px] text-[13.5px] font-light leading-[1.65] text-[#c7beac] md:max-w-[320px]">
+          <p className="pct-display mb-10 max-w-[325px] text-[17px] font-light leading-[1.65] text-[#c7beac] md:max-w-[400px]">
             An audio journey along the Pacific Crest Trail. Scroll to walk it. Stop anywhere and stay
             as long as you like.
           </p>
@@ -231,19 +322,19 @@ export function SplashScreen({
               ready={trailheadReady}
               progress={trailheadProgress}
               onClick={handleEnter}
-              className="px-[30px] py-[13px]"
+              className="px-[38px] py-4"
             />
-            <div className="pct-splash-headphones mt-5 flex items-center gap-2 font-mono text-[8.5px] uppercase tracking-[0.16em] text-[#948a79]">
-              <Headphones className="h-3 w-3" />
+            <div className="pct-splash-headphones mt-6 flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-[#948a79]">
+              <Headphones className="h-4 w-4" />
               Best with headphones
             </div>
           </div>
         </div>
       </div>
 
-      <div className="pct-splash-footer absolute bottom-[max(22px,env(safe-area-inset-bottom))] left-0 right-0 text-center">
-        <p className="font-mono text-[8.5px] uppercase tracking-[0.18em] text-[#4f493f]">
-          Recorded 2024–25
+      <div className="pct-splash-footer absolute bottom-[max(28px,env(safe-area-inset-bottom))] left-0 right-0 text-center">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#4f493f]">
+          Recorded 2025
         </p>
       </div>
     </div>
