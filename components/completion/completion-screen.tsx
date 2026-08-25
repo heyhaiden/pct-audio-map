@@ -1,17 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Mountain, Linkedin, Library } from "lucide-react"
-
-// X/Twitter icon component (lucide doesn't have the new X logo)
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  )
-}
+import { ArrowRight, Headphones, RotateCcw } from "lucide-react"
+import { exitDocumentFullscreen, markNavigatedFromMap } from "@/lib/map-session"
 
 interface CompletionScreenProps {
   isVisible: boolean
@@ -23,124 +15,92 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
   const [showContent, setShowContent] = useState(false)
 
   useEffect(() => {
-    if (isVisible) {
-      // Delay content reveal for dramatic effect
-      const timer = setTimeout(() => {
-        setShowContent(true)
-      }, 500)
-      return () => clearTimeout(timer)
-    } else {
+    if (!isVisible) {
       setShowContent(false)
+      return
     }
+
+    const timer = window.setTimeout(() => setShowContent(true), 500)
+    return () => window.clearTimeout(timer)
   }, [isVisible])
 
   if (!isVisible) return null
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex flex-col bg-stone-950/95 backdrop-blur-sm transition-opacity duration-1000 ${
+      className={`pct-glass-terminal fixed inset-0 z-[60] overflow-y-auto transition-opacity duration-1000 ${
         showContent ? "opacity-100" : "opacity-0"
       }`}
     >
-
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#ff6b9d]/10 via-transparent to-stone-950" />
-
-      {/* Content - centered in remaining space */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex min-h-full items-center justify-center px-7 py-[34px]">
         <div
-          className={`relative z-10 flex flex-col items-center text-center px-6 max-w-xl transition-all duration-1000 delay-300 ${
-            showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          className={`flex w-full max-w-[280px] flex-col items-center text-center transition-all duration-1000 ${
+            showContent ? "translate-y-0 opacity-100" : "translate-y-5 opacity-0"
           }`}
         >
-        {/* Monument icon */}
-        <div className="mb-8">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#ff6b9d]/10 border-2 border-[#ff6b9d]/40 flex items-center justify-center">
-            <Mountain className="w-10 h-10 md:w-12 md:h-12 text-[#ff6b9d]" />
-          </div>
-        </div>
+          <p className="mb-4 font-mono text-[8.5px] uppercase tracking-[0.24em] text-[#8b8271]">
+            Northern Terminus · MI {totalMiles.toLocaleString("en-US")}
+          </p>
 
-        {/* Celebration text */}
-        <h1 className="text-3xl md:text-5xl font-light text-white mb-4">
-          Journey Complete
-        </h1>
+          <h1 className="pct-display text-[29px] font-normal leading-[1.18] text-[#f6f1e4] md:text-[36px]">
+            You&apos;ve reached
+            <br />
+            the monument.
+          </h1>
 
-        <p className="text-lg md:text-xl text-[#ff6b9d]/80 mb-2 font-light">
-          Monument 78, Manning Park
-        </p>
+          <p className="pct-display mt-5 max-w-[224px] text-[13px] font-light leading-[1.65] text-[#c0b7a6]">
+            Field recordings across two thousand six hundred and fifty miles. Thank you for listening
+            to them.
+          </p>
 
-        <p className="text-stone-400 mb-8">
-          You've traveled {totalMiles.toLocaleString("en-US")} miles from Mexico to Canada
-        </p>
-
-        {/* Stats summary */}
-        <div className="flex items-center justify-center gap-8 mb-10 text-center">
-          <div>
-            <p className="text-2xl md:text-3xl font-semibold text-white">{totalMiles.toLocaleString("en-US")}</p>
-            <p className="text-xs text-stone-500">Miles</p>
-          </div>
-          <div className="w-px h-10 bg-stone-800" />
-          <div>
-            <p className="text-2xl md:text-3xl font-semibold text-white">5</p>
-            <p className="text-xs text-stone-500">Regions</p>
-          </div>
-          <div className="w-px h-10 bg-stone-800" />
-          <div>
-            <p className="text-2xl md:text-3xl font-semibold text-white">30+</p>
-            <p className="text-xs text-stone-500">Soundscapes</p>
-          </div>
-        </div>
-
-        {/* Thank you message */}
-        <p className="text-stone-400 text-sm mb-8 max-w-md">
-          Thank you for experiencing the sounds of the Pacific Crest Trail. 
-          Share your journey and explore again whenever you'd like.
-        </p>
-
-        {/* Actions */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="mt-8 w-full max-w-[232px] text-left">
+            <Link
+              href="/about"
+              onClick={() => {
+                exitDocumentFullscreen()
+                markNavigatedFromMap()
+              }}
+              className="pct-link-row"
+            >
+              About the project
+              <ArrowRight className="h-3.5 w-3.5 text-[#8b8271]" />
+            </Link>
+            <Link
+              href="/about#get-involved"
+              onClick={() => {
+                exitDocumentFullscreen()
+                markNavigatedFromMap()
+              }}
+              className="pct-link-row"
+            >
+              Get involved
+              <ArrowRight className="h-3.5 w-3.5 text-[#8b8271]" />
+            </Link>
             <Link
               href="/library"
-              className="flex items-center gap-2 px-6 py-3 bg-[#ff6b9d] hover:bg-[#ff85ad] text-white font-medium rounded-full transition-colors"
+              onClick={() => {
+                exitDocumentFullscreen()
+                markNavigatedFromMap()
+              }}
+              className="pct-link-row"
             >
-              <Library className="w-4 h-4" />
-              Audio Library
+              <span className="flex items-center gap-2">
+                <Headphones className="h-3.5 w-3.5" />
+                Audio library
+              </span>
+              <ArrowRight className="h-3.5 w-3.5 text-[#8b8271]" />
             </Link>
-
-            <div className="flex items-center gap-3">
-              <a
-                href="https://www.linkedin.com/shareArticle?mini=true&url=https://pctsoundscapes.com&title=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey!&summary=2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-                aria-label="Share on LinkedIn"
-              >
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a
-                href="https://twitter.com/intent/tweet?text=I%20just%20completed%20the%20Pacific%20Crest%20Trail%20audio%20journey%20%F0%9F%8F%94%EF%B8%8F%0A%0A2,650%20miles%20of%20immersive%20soundscapes%20from%20Mexico%20to%20Canada.%20Experience%20the%20PCT%20like%20never%20before.&url=https://pctsoundscapes.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
-                aria-label="Share on X"
-              >
-                <XIcon className="w-5 h-5" />
-              </a>
-            </div>
+            <button type="button" onClick={onRestart} className="pct-link-row border-b border-b-[#d9cba8]/20">
+              Start over
+              <RotateCcw className="h-3.5 w-3.5 text-[#8b8271]" />
+            </button>
           </div>
 
-          <button
-            onClick={onRestart}
-            className="px-6 py-2.5 text-sm text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full transition-colors"
-          >
-            Back to Home
-          </button>
-        </div>
+          <p className="mt-6 font-mono text-[8.5px] uppercase tracking-[0.12em] text-[#6b6455]">
+            ↑ Scroll to return to map
+          </p>
         </div>
       </div>
-
-
     </div>
   )
 }
