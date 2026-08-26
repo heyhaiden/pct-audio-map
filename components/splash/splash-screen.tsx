@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { Headphones, Menu, X } from "lucide-react"
-import { NAV_LINKS } from "@/components/navigation/site-header"
+import { Headphones } from "lucide-react"
+import { SiteHeader } from "@/components/navigation/site-header"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -16,93 +15,6 @@ interface SplashScreenProps {
    * camera is restored to overview so the user never sees a mid-trail warm pose.
    */
   revealMap?: boolean
-}
-
-const SPLASH_NAV_LINKS = NAV_LINKS.filter((link) => link.id !== "home")
-
-const splashNavLinkClass =
-  "px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-[#8b8271] transition-colors hover:text-[#ede8dc]"
-
-function SplashNav() {
-  const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const panelRef = useRef<HTMLElement>(null)
-  const wasOpenRef = useRef(false)
-
-  useEffect(() => {
-    if (open) {
-      wasOpenRef.current = true
-      return
-    }
-    if (!wasOpenRef.current) return
-    wasOpenRef.current = false
-    triggerRef.current?.focus()
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false)
-    }
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node
-      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return
-      setOpen(false)
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-    window.addEventListener("pointerdown", onPointerDown)
-    return () => {
-      window.removeEventListener("keydown", onKeyDown)
-      window.removeEventListener("pointerdown", onPointerDown)
-    }
-  }, [open])
-
-  return (
-    <div className="absolute right-[18px] top-[max(14px,env(safe-area-inset-top))] z-20 md:right-[28px] md:top-[max(20px,env(safe-area-inset-top))]">
-      <nav className="hidden items-center gap-1 sm:flex" aria-label="Site">
-        {SPLASH_NAV_LINKS.map((link) => (
-          <Link key={link.id} href={link.href} className={splashNavLinkClass}>
-            {link.label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="sm:hidden">
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-          aria-controls="splash-menu"
-          className="pct-glass-control grid h-11 w-11 place-items-center rounded-full text-[#d9cba8] transition hover:border-[#d9cba8]/45 hover:text-[#ede8dc] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8]"
-        >
-          {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-        </button>
-
-        {open ? (
-          <nav
-            ref={panelRef}
-            id="splash-menu"
-            aria-label="Site"
-            className="pct-glass-panel absolute right-0 mt-2 min-w-[12.5rem] overflow-hidden py-1.5"
-          >
-            {SPLASH_NAV_LINKS.map((link) => (
-              <Link
-                key={link.id}
-                href={link.href}
-                className="block px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-[#c7beac] transition-colors hover:bg-white/5 hover:text-[#ede8dc]"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-      </div>
-    </div>
-  )
 }
 
 // Abstract minimalist trail line SVG
@@ -126,7 +38,7 @@ function AbstractTrailIcon({ className }: { className?: string }) {
         strokeWidth="3.1"
         strokeLinecap="round"
         fill="none"
-        className="text-[#ff6b9d]"
+        className="text-[#ed5a43]"
       />
     </svg>
   )
@@ -207,16 +119,16 @@ function BeginJourneyButton({
       aria-label={
         unlocked ? "Begin Journey" : `Preparing trail, ${Math.round(fill * 100)} percent`
       }
-      className={`relative overflow-hidden rounded-full font-mono text-[13px] font-medium uppercase tracking-[0.2em] text-[#3e3527] transition-[transform,background-color,box-shadow] duration-500 ease-out ${
+      className={`relative overflow-hidden rounded-full font-mono text-[13px] font-medium uppercase tracking-[0.2em] text-white transition-[transform,background-color,box-shadow] duration-500 ease-out ${
         unlocked
-          ? "bg-[#d9cba8] hover:bg-[#e6d9b7] hover:scale-[1.02] active:scale-95 shadow-[0_10px_28px_rgba(0,0,0,0.32)]"
-          : "bg-[#d9cba8]/20 cursor-wait text-[#d9cba8]"
+          ? "bg-[#ed5a43] hover:bg-[#f06b57] hover:scale-[1.02] active:scale-95 shadow-[0_10px_28px_rgba(0,0,0,0.32)]"
+          : "bg-[#ed5a43]/20 cursor-wait text-[#ed5a43]"
       } ${className ?? ""}`}
     >
       {/* Fill bar — stays through the unlock frame so the sweep can finish */}
       <span
         aria-hidden
-        className={`absolute inset-y-0 left-0 bg-[#d9cba8] transition-opacity duration-500 ${
+        className={`absolute inset-y-0 left-0 bg-[#ed5a43] transition-opacity duration-500 ${
           unlocked ? "opacity-0" : "opacity-100"
         }`}
         style={{ width: `${Math.max(4, fill * 100)}%` }}
@@ -290,12 +202,12 @@ export function SplashScreen({
       }`}
     >
       {/* Subtle topographic pattern overlay */}
-      <div className="absolute inset-0 opacity-[0.025]" style={{
+      <div className="pointer-events-none absolute inset-0 opacity-[0.025]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q25 30 50 50 T100 50' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 60 Q25 40 50 60 T100 60' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3Cpath d='M0 70 Q25 50 50 70 T100 70' fill='none' stroke='%23ff6b9d' stroke-width='0.5'/%3E%3C/svg%3E")`,
         backgroundSize: '200px 200px'
       }} />
 
-      <SplashNav />
+      <SiteHeader current="home" />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-11">
         <div className="flex max-w-[30rem] flex-col items-center text-center">
