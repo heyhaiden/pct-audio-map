@@ -45,7 +45,7 @@ export default function ResourcesPage() {
         <main className="mx-auto max-w-4xl px-6 py-12 md:py-20">
           <section className="mb-12 text-center md:mb-16">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
-              Trail <span className="text-[#d9cba8]">Resources</span>
+              Trail <span className="text-[#ed5a43]">Resources</span>
             </h1>
             <p className="pct-display mx-auto max-w-xl text-[13.5px] font-light leading-[1.65] text-[#b4aa9b]">
               Organizations and planning tools for the PCT, with a focus on communities supporting
@@ -60,23 +60,23 @@ export default function ResourcesPage() {
                 href={resource.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="pct-glass-panel group flex items-center justify-between gap-5 p-4 transition-all hover:border-[#d9cba8]/35 hover:bg-[rgba(23,21,17,0.86)]"
+                className="pct-glass-panel group flex items-center justify-between gap-5 p-4 transition-all hover:border-[#ed5a43]/35 hover:bg-[rgba(23,21,17,0.86)]"
               >
                 <div>
-                  <h2 className="pct-display text-[17px] font-medium text-[#ede8dc] transition-colors group-hover:text-[#d9cba8]">
+                  <h2 className="pct-display text-[17px] font-medium text-[#ede8dc] transition-colors group-hover:text-[#ed5a43]">
                     {resource.name}
                   </h2>
                   <p className="pct-display mt-1 text-[12px] font-light leading-[1.55] text-[#867c6e]">
                     {resource.description}
                   </p>
                 </div>
-                <ExternalLink className="h-4 w-4 shrink-0 text-[#8b8271] transition-colors group-hover:text-[#d9cba8]" />
+                <ExternalLink className="h-4 w-4 shrink-0 text-[#8b8271] transition-colors group-hover:text-[#ed5a43]" />
               </a>
             ))}
           </div>
         </main>
 
-        <footer className="mt-12 border-t border-[#d9cba8]/10 py-8">
+        <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
           <div className="mx-auto max-w-4xl px-6 text-center">
             <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6b6455]">
               PCT Soundscapes · Field recordings collected 2025

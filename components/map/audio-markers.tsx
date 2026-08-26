@@ -45,7 +45,7 @@ function createPinImage(size = 64): { width: number; height: number; data: Uint8
     headCy + r * Math.sin(Math.PI * 0.15),
   )
   ctx.closePath()
-  ctx.fillStyle = "#ff6b9d"
+  ctx.fillStyle = "#ed5a43"
   ctx.fill()
   ctx.lineWidth = size * 0.05
   ctx.strokeStyle = "#ffffff"

@@ -33,7 +33,7 @@ export function AudioPlayer({
       <div className="pct-glass-panel group relative p-[15px_16px] md:p-[20px_21px]">
         <button
           onClick={onClose}
-          className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full text-[#ada396] opacity-100 transition-[color,background-color,opacity] hover:bg-white/10 hover:text-[#ede8dc] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8] md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+          className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full text-[#ada396] opacity-100 transition-[color,background-color,opacity] hover:bg-white/10 hover:text-[#ede8dc] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
           aria-label="Close audio player"
         >
           <X className="h-4 w-4" />
@@ -70,7 +70,7 @@ export function AudioPlayer({
 
           {(isLoading || error) && (
             <div className={`pct-kicker mt-3 flex items-center gap-2 ${error ? "text-red-300" : ""}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${error ? "bg-red-400" : "bg-[#d9cba8]"}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${error ? "bg-red-400" : "bg-[#ed5a43]"}`} />
               {isLoading ? "Loading soundscape" : "Audio unavailable"}
             </div>
           )}
@@ -81,7 +81,7 @@ export function AudioPlayer({
               onClick={onPrevious}
               disabled={!hasPrevious}
               aria-label="Previous recording"
-              className="pct-glass-control grid h-10 w-10 place-items-center rounded-full transition hover:border-[#d9cba8]/45 hover:text-[#d9cba8] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8] disabled:cursor-not-allowed disabled:opacity-25"
+              className="pct-glass-control grid h-10 w-10 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] disabled:cursor-not-allowed disabled:opacity-25"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -93,7 +93,7 @@ export function AudioPlayer({
               onClick={onNext}
               disabled={!hasNext}
               aria-label="Next recording"
-              className="pct-glass-control grid h-10 w-10 place-items-center rounded-full transition hover:border-[#d9cba8]/45 hover:text-[#d9cba8] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d9cba8] disabled:cursor-not-allowed disabled:opacity-25"
+              className="pct-glass-control grid h-10 w-10 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] disabled:cursor-not-allowed disabled:opacity-25"
             >
               <ChevronRight className="h-5 w-5" />
             </button>

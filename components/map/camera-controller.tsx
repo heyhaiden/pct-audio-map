@@ -63,7 +63,7 @@ export function CameraController({ map, isPlaying, onPlayStateChange, segments }
         <div className="flex items-center gap-3">
           <button
             onClick={() => onPlayStateChange(!isPlaying)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#ff6b9d] hover:bg-[#ff5a8a] rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#ed5a43] hover:bg-[#f06b57] rounded-lg transition-colors"
           >
             {isPlaying ? (
               <>
@@ -82,7 +82,7 @@ export function CameraController({ map, isPlaying, onPlayStateChange, segments }
             <div className="flex items-center gap-2">
               <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#ff6b9d] transition-all duration-300 ease-out"
+                  className="h-full bg-[#ed5a43] transition-all duration-300 ease-out"
                   style={{ width: `${progress * 100}%` }}
                 ></div>
               </div>

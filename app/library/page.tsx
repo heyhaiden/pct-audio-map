@@ -29,9 +29,7 @@ function groupByChapter() {
 export default function LibraryPage() {
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [progress, setProgress] = useState<Record<string, number>>({})
-  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({
-    "southern-california": true,
-  })
+  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({})
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const groupedMarkers = groupByChapter()
 
@@ -102,7 +100,7 @@ export default function LibraryPage() {
         <main className="mx-auto max-w-4xl px-6 py-12 md:py-20">
           <section className="mb-12 text-center md:mb-16">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
-              Audio <span className="text-[#d9cba8]">Library</span>
+              Audio <span className="text-[#ed5a43]">Library</span>
             </h1>
             <p className="pct-display mx-auto max-w-xl text-[13.5px] font-light leading-[1.65] text-[#b4aa9b]">
               Browse and listen to all {audioMarkers.length} field recordings from the Pacific Crest Trail.
@@ -128,7 +126,7 @@ export default function LibraryPage() {
                     aria-expanded={isExpanded}
                     className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-white/[0.035]"
                   >
-                    <Mountain className="h-5 w-5 flex-shrink-0 text-[#d9cba8]" />
+                    <Mountain className="h-5 w-5 flex-shrink-0 text-[#ed5a43]" />
                     <h2 className="pct-display min-w-0 flex-1 text-xl font-medium text-[#ede8dc]">
                       {chapterNames[chapterKey]}
                       <span className="ml-2 text-sm font-normal text-stone-500">
@@ -153,13 +151,13 @@ export default function LibraryPage() {
                             key={marker.id}
                             className={`relative overflow-hidden rounded-[6px] border p-4 backdrop-blur-[14px] transition-all duration-300 ${
                               isPlaying
-                                ? "border-[#d9cba8]/35 bg-[rgba(15,14,12,0.88)]"
+                                ? "border-[#ed5a43]/35 bg-[rgba(15,14,12,0.88)]"
                                 : "border-white/10 bg-[rgba(15,14,12,0.62)] hover:border-white/20"
                             }`}
                           >
                             {/* Progress bar background */}
                             <div
-                              className="absolute inset-0 bg-[#d9cba8]/10 transition-all duration-200"
+                              className="absolute inset-0 bg-[#ed5a43]/10 transition-all duration-200"
                               style={{ width: `${currentProgress}%` }}
                             />
 
@@ -169,8 +167,8 @@ export default function LibraryPage() {
                                 onClick={() => handlePlayPause(marker.id, marker.audioUrl)}
                                 className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
                                   isPlaying
-                                    ? "border-[#d9cba8] bg-[#d9cba8] text-[#3e3527]"
-                                    : "border-white/20 bg-[rgba(12,11,9,0.62)] text-[#ada396] hover:border-[#d9cba8]/45 hover:text-[#d9cba8]"
+                                    ? "border-[#ed5a43] bg-[#ed5a43] text-white"
+                                    : "border-white/20 bg-[rgba(12,11,9,0.62)] text-[#ada396] hover:border-[#ed5a43]/45 hover:text-[#ed5a43]"
                                 }`}
                                 aria-label={isPlaying ? "Pause" : "Play"}
                               >
@@ -211,7 +209,7 @@ export default function LibraryPage() {
           </div>
         </main>
 
-        <footer className="mt-12 border-t border-[#d9cba8]/10 py-8">
+        <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
           <div className="mx-auto max-w-4xl px-6 text-center">
             <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6b6455]">
               PCT Soundscapes · Field recordings collected 2025
