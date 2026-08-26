@@ -11,6 +11,7 @@ import {
   type FreeCameraPose,
 } from "@/lib/railing-camera"
 import { getMapPrefetchPolicy, isMapAlive } from "@/lib/map-runtime-policy"
+import { createTrailheadNotifier } from "@/lib/trailhead-readiness"
 
 /** Warm style + terrain out to early Oregon; content ends there for now. */
 export const PREFETCH_END_MILES = 1800
@@ -209,6 +210,9 @@ export function startPathTilePrefetch(options: {
   trailCoordinates: number[][]
   /** Reuse the scroll rail when it has already been built. */
   getCameraPath?: () => CameraPathPoint[] | null
+  /** Fired when the gate may open, including the soft timeout path. */
+  onTrailheadReady?: () => void
+  /** Fired only after the requested trailhead samples actually complete. */
   onTrailheadWarm?: () => void
   onTrailheadProgress?: (progress: number) => void
   trailheadAlreadyCached?: boolean
@@ -221,6 +225,7 @@ export function startPathTilePrefetch(options: {
     map,
     trailCoordinates,
     getCameraPath,
+    onTrailheadReady,
     onTrailheadWarm,
     onTrailheadProgress,
     trailheadAlreadyCached = false,
@@ -242,11 +247,14 @@ export function startPathTilePrefetch(options: {
     return path
   }
 
-  const notifyTrailhead = () => {
-    if (trailheadNotified) return
+  const notifyTrailheadPolicy = createTrailheadNotifier({
+    onReady: onTrailheadReady,
+    onWarm: onTrailheadWarm,
+    onProgress: onTrailheadProgress,
+  })
+  const notifyTrailhead = (warmed: boolean) => {
     trailheadNotified = true
-    onTrailheadProgress?.(1)
-    onTrailheadWarm?.()
+    notifyTrailheadPolicy(warmed)
   }
 
   const detailSamples = (fromMiles: number, toMiles: number) => {
@@ -299,7 +307,7 @@ export function startPathTilePrefetch(options: {
     if (cancelled || !isMapAlive(map)) return
 
     if (trailheadAlreadyCached) {
-      notifyTrailhead()
+      notifyTrailhead(true)
       if (!policy.warmFullRoute) return
       await warmBaseLayer()
       await warmDetail(0, PRIORITY_WARM_MILES)
@@ -308,7 +316,7 @@ export function startPathTilePrefetch(options: {
     }
 
     const readyTimer = setTimeout(() => {
-      if (!cancelled) notifyTrailhead()
+      if (!cancelled) notifyTrailhead(false)
     }, TRAILHEAD_READY_TIMEOUT_MS)
 
     onTrailheadProgress?.(0.02)
@@ -321,7 +329,7 @@ export function startPathTilePrefetch(options: {
       await new Promise((r) => setTimeout(r, 400))
       if (cancelled || !ensurePath()) {
         clearTimeout(readyTimer)
-        notifyTrailhead()
+        notifyTrailhead(false)
         return
       }
     }
@@ -329,7 +337,7 @@ export function startPathTilePrefetch(options: {
     // Phase 1 — warm the SoCal trailhead without moving the visible overview.
     await warmTrailhead()
     clearTimeout(readyTimer)
-    if (!cancelled) notifyTrailhead()
+    if (!cancelled) notifyTrailhead(true)
 
     // Mobile stops after the trailhead: route-wide terrain decoding is the
     // primary WebGL memory spike. Desktop can afford the broader cache warm.
