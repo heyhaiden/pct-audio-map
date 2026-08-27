@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Headphones } from "lucide-react"
 import { SiteHeader } from "@/components/navigation/site-header"
+import { SPLASH_SCROLL_LOCK_CLASS } from "@/lib/splash-scroll-lock"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -167,13 +168,18 @@ export function SplashScreen({
   const [isExiting, setIsExiting] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
 
-  // Lock scroll when splash is visible
+  // Lock html+body. Body-only overflow leaves html as the scroller.
   useEffect(() => {
-    if (isVisible) {
-      document.body.style.overflow = "hidden"
-    }
+    if (!isVisible) return
+    const html = document.documentElement
+    const body = document.body
+    const previousHtmlOverflow = html.style.overflow
+    const previousBodyOverflow = body.style.overflow
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
     return () => {
-      document.body.style.overflow = ""
+      html.style.overflow = previousHtmlOverflow
+      body.style.overflow = previousBodyOverflow
     }
   }, [isVisible])
 
@@ -197,7 +203,7 @@ export function SplashScreen({
 
   return (
     <div
-      className={`pct-glass-scrim fixed inset-0 z-[100] flex flex-col transition-opacity duration-700 ease-out ${
+      className={`pct-glass-scrim ${SPLASH_SCROLL_LOCK_CLASS} fixed inset-0 z-[100] flex flex-col transition-opacity duration-700 ease-out ${
         isExiting ? "opacity-0" : "opacity-100"
       }`}
     >

@@ -29,6 +29,7 @@ import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { useAudioPlayer } from "@/hooks/use-audio-player"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
+import { shouldRenderTrailScrollSpacer } from "@/lib/splash-scroll-lock"
 import {
   resolveChapterTimelineCollapsed,
   shouldHideChapterTimeline,
@@ -730,7 +731,9 @@ export default function Home() {
         )}
       </div>
 
-      <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
+      {shouldRenderTrailScrollSpacer(showSplash) ? (
+        <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
+      ) : null}
 
       <div className={`transition-opacity duration-700 ease-out delay-200 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ChapterTimeline

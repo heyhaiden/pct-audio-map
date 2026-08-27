@@ -46,6 +46,15 @@
     touch-action: none;
   }
 
+  /* Splash is position:fixed; html is still the scroller. Freeze both. */
+  html:has(.pct-splash-lock),
+  html:has(.pct-splash-lock) body {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    height: 100%;
+    max-height: 100dvh;
+  }
+
   html:has(.site-page-root),
   html:has(.site-page-root) body {
     overscroll-behavior: auto;

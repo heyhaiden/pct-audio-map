@@ -10,7 +10,7 @@ import {
   type CameraPathPoint,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
-import { getMapPrefetchPolicy, isMapAlive } from "@/lib/map-runtime-policy"
+import { getMapPrefetchPolicy, isMapAlive, isMapReadyForPreload } from "@/lib/map-runtime-policy"
 import { createTrailheadNotifier } from "@/lib/trailhead-readiness"
 
 /** Warm style + terrain out to early Oregon; content ends there for now. */
@@ -175,10 +175,10 @@ async function preloadPoses(
   canPreload: () => boolean,
   overrides?: { zoom?: number; pitch?: number; bearing?: number },
 ): Promise<void> {
-  if (!isMapAlive(map) || typeof map.jumpTo !== "function") return
+  if (!isMapReadyForPreload(map) || typeof map.jumpTo !== "function") return
 
   for (const pose of poses) {
-    if (!canPreload() || !isMapAlive(map)) return
+    if (!canPreload() || !isMapReadyForPreload(map)) return
     try {
       map.jumpTo({
         center: lookAtGroundPoint(pose),
@@ -301,10 +301,12 @@ export function startPathTilePrefetch(options: {
 
   const runInitialWarm = async () => {
     // preloadOnly reads each source cache's transform. Calling it right after
-    // addSource/setTerrain (map "load") hits undefined transform.tileZoom —
-    // wait until newly added terrain has settled first.
-    await waitForIdle(map, 2_500)
-    if (cancelled || !isMapAlive(map)) return
+    // addSource/setTerrain (map "load") hits undefined transform.tileZoom.
+    for (let i = 0; i < 12 && !isMapReadyForPreload(map); i++) {
+      await waitForIdle(map, 400)
+      if (cancelled) return
+    }
+    if (cancelled || !isMapReadyForPreload(map)) return
 
     if (trailheadAlreadyCached) {
       notifyTrailhead(true)

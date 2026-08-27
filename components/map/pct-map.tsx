@@ -369,6 +369,21 @@ export function PCTMap({
 
           map.current.setFog(TRAIL_FOG)
 
+          // Custom satellite style still ships the deprecated root `light` key.
+          // Re-declare it as a flat light so Mapbox stops warning on load.
+          const legacyLight = map.current.getLight?.() ?? {}
+          map.current.setLights?.([
+            {
+              id: "flat",
+              type: "flat",
+              properties: {
+                anchor: legacyLight.anchor ?? "viewport",
+                color: legacyLight.color ?? "#ffffff",
+                intensity: legacyLight.intensity ?? 0.5,
+              },
+            },
+          ])
+
           const cameraTrackingGeometry = {
             ...trailData,
             geometry: {

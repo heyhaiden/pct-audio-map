@@ -4,6 +4,7 @@ import {
   getMapPrefetchPolicy,
   isFatalMapboxError,
   isMapAlive,
+  isMapReadyForPreload,
 } from "../lib/map-runtime-policy.ts"
 
 test("mobile prefetch avoids the route-wide GPU warm", () => {
@@ -60,4 +61,16 @@ test("a removed or style-less map is not alive for preload", () => {
   assert.equal(isMapAlive({ _removed: true, style: {} }), false)
   assert.equal(isMapAlive({ _removed: false }), false)
   assert.equal(isMapAlive({ _removed: false, style: {} }), true)
+})
+
+test("preload waits until the camera transform has a tileZoom", () => {
+  assert.equal(isMapReadyForPreload({ _removed: false, style: {} }), false)
+  assert.equal(
+    isMapReadyForPreload({ _removed: false, style: {}, transform: {} }),
+    false,
+  )
+  assert.equal(
+    isMapReadyForPreload({ _removed: false, style: {}, transform: { tileZoom: 10 } }),
+    true,
+  )
 })
