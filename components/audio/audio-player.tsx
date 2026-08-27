@@ -1,6 +1,8 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin, X } from "lucide-react"
+import { isOutsideAudioCard } from "@/lib/audio-player-dismiss"
 import type { AudioMarker } from "@/types/map"
 
 interface AudioPlayerProps {
@@ -24,13 +26,31 @@ export function AudioPlayer({
   onPrevious,
   onNext,
 }: AudioPlayerProps) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    if (!marker) return
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!isOutsideAudioCard(event.target, cardRef.current)) return
+      event.preventDefault()
+      event.stopPropagation()
+      onCloseRef.current()
+    }
+
+    document.addEventListener("pointerdown", onPointerDown, true)
+    return () => document.removeEventListener("pointerdown", onPointerDown, true)
+  }, [marker])
+
   if (!marker) return null
 
   const dateOnly = marker.recordingDate?.split(" ")[0] || marker.recordingDate
 
   return (
     <div className="fixed bottom-4 left-3.5 right-3.5 z-40 md:bottom-[34px] md:left-16 md:right-auto md:w-[352px]">
-      <div className="pct-glass-panel group relative p-[15px_16px] md:p-[20px_21px]">
+      <div ref={cardRef} className="pct-glass-panel group relative p-[15px_16px] md:p-[20px_21px]">
         <button
           onClick={onClose}
           className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full text-[#ada396] opacity-100 transition-[color,background-color,opacity] hover:bg-white/10 hover:text-[#ede8dc] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
