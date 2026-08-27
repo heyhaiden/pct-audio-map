@@ -35,14 +35,14 @@ export function SiteHeader({ current }: SiteHeaderProps) {
   }, [])
 
   return (
-    <header className="pct-glass-panel sticky top-0 z-50 rounded-none border-x-0 border-t-0">
+    <header className="sticky top-0 z-50 bg-transparent">
       <div className="flex items-center justify-between gap-4 px-[18px] py-4 md:px-[28px]">
         <div className="flex min-w-0 items-center gap-3">
           {current === "home" ? (
             <span
               aria-current="page"
               aria-label="Home"
-              className="inline-flex text-[#ed5a43]"
+              className="inline-flex text-[#8b8271]"
             >
               <Mountain className="h-4 w-4" />
             </span>
