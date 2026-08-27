@@ -62,7 +62,7 @@ export function ChapterCard({
         <button
           type="button"
           onClick={onDismiss}
-          className="absolute bottom-[max(30px,env(safe-area-inset-bottom))] px-5 py-3 font-mono text-[12px] uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
+          className="absolute bottom-32 px-5 py-3 font-mono text-[12px] uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
         >
           Click to continue
         </button>
