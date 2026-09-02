@@ -6,10 +6,11 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
+import { configureRailingCameraForViewport } from "@/lib/railing-camera"
 import { isFatalMapboxError, isMapAlive } from "@/lib/map-runtime-policy"
+import { createTrailDataLoader } from "@/lib/trail-data"
 import {
   startPathTilePrefetch,
-  TRAILHEAD_READY_TIMEOUT_MS,
   type PrefetchController,
 } from "@/lib/tile-prefetch"
 import { isTrailPrepCached, markTrailPrepCached } from "@/lib/trail-prep-cache"
@@ -74,6 +75,14 @@ export const TRAILHEAD_CAMERA = {
   bearing: -5,
 }
 
+/** Slightly wider trailhead framing on mobile so more map is visible at start. */
+export const TRAILHEAD_CAMERA_MOBILE = {
+  center: [-116.467, 32.5897] as [number, number],
+  zoom: 8.4,
+  pitch: 0,
+  bearing: -5,
+}
+
 /**
  * Distance fog. Load-bearing for perf, not just look: Mapbox culls tiles once
  * they're ~98% fogged (past `range[1]`), so at our 60°-pitch / ~26 km-altitude
@@ -92,6 +101,11 @@ const TRAIL_FOG = {
   "star-intensity": 0,
 }
 
+const loadTrailData = createTrailDataLoader(
+  () => fetch("/pct-trail.geojson"),
+  pctTrailGeometry,
+)
+
 /** Decided once at map construction — never toggled during scroll. */
 function preferReducedGpu(): boolean {
   if (typeof window === "undefined") return false
@@ -101,6 +115,10 @@ function preferReducedGpu(): boolean {
 /** Top-down full-trail overview on mobile; angled bird's-eye on desktop. */
 function getOverviewCamera() {
   return preferReducedGpu() ? OVERVIEW_CAMERA_MOBILE : OVERVIEW_CAMERA
+}
+
+function getTrailheadCamera() {
+  return preferReducedGpu() ? TRAILHEAD_CAMERA_MOBILE : TRAILHEAD_CAMERA
 }
 
 export function PCTMap({
@@ -168,46 +186,43 @@ export function PCTMap({
     onTrailheadReadyRef.current?.()
   }
 
-  // Soft timeout so Enter is never gated forever (e.g. map init failure)
+  // A previously warmed tab can skip the tile-prep gate. Map initialization
+  // still proceeds normally behind the splash.
   useEffect(() => {
-    // Session already warmed — unlock immediately (tiles live in browser HTTP cache)
     if (isTrailPrepCached()) {
       notifyTrailheadReady()
-      return
     }
-
-    const timer = setTimeout(() => {
-      if (trailheadReadyRef.current || fatalErrorRef.current) return
-      trailheadReadyRef.current = true
-      setTilesPreloaded(true)
-      onTrailheadProgressRef.current?.(1)
-      onTrailheadReadyRef.current?.()
-    }, TRAILHEAD_READY_TIMEOUT_MS + 2000)
-    return () => clearTimeout(timer)
   }, [])
 
   // Kick token fetch as early as possible (parallel with scripts / geojson)
   useEffect(() => {
     if (!tokenPromiseRef.current) {
-      tokenPromiseRef.current = getMapboxToken().catch((error) => {
-        console.error("[v0] Token error:", error)
-        throw error
-      })
+      tokenPromiseRef.current = getMapboxToken()
+        .then((token) => {
+          onTrailheadProgressRef.current?.(0.12)
+          return token
+        })
+        .catch((error) => {
+          console.error("[v0] Token error:", error)
+          throw error
+        })
     }
   }, [])
 
   useEffect(() => {
-    fetch("/pct-trail.geojson")
-      .then((res) => res.json())
-      .then((data) => {
-        const feature = data.type === "FeatureCollection" ? data.features[0] : data
+    let active = true
+
+    loadTrailData().then((feature) => {
+      if (active) {
         console.log("[v0] Loaded trail data with", feature.geometry.coordinates.length, "points")
+        onTrailheadProgressRef.current?.(0.08)
         setTrailData(feature)
-      })
-      .catch((err) => {
-        console.error("[v0] Failed to load trail data:", err)
-        setTrailData(pctTrailGeometry)
-      })
+      }
+    })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   const trailCoordinates = trailData?.geometry?.coordinates || []
@@ -263,15 +278,10 @@ export function PCTMap({
 
   useEffect(() => {
     let disposed = false
-    let startupTimer: number | null = null
 
     const failMap = (message: string, error: unknown) => {
       if (fatalErrorRef.current || disposed) return
       fatalErrorRef.current = true
-      if (startupTimer !== null) {
-        window.clearTimeout(startupTimer)
-        startupTimer = null
-      }
       console.error("[v0] Fatal Mapbox error:", error)
       prefetchRef.current?.cancel()
       prefetchRef.current = null
@@ -287,13 +297,6 @@ export function PCTMap({
       if (!trailData) {
         return
       }
-
-      startupTimer = window.setTimeout(() => {
-        failMap(
-          "The map took too long to start. Please check your connection and try again.",
-          new Error("Mapbox startup timed out"),
-        )
-      }, TRAILHEAD_READY_TIMEOUT_MS)
 
       try {
         if (!mapContainer.current || map.current) return
@@ -315,6 +318,7 @@ export function PCTMap({
         accessTokenRef.current = token
 
         const reducedGpu = preferReducedGpu()
+        configureRailingCameraForViewport(reducedGpu)
         const overview = getOverviewCamera()
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
@@ -342,14 +346,14 @@ export function PCTMap({
           minTileCacheSize: reducedGpu ? undefined : 150,
           maxTileCacheSize: reducedGpu ? 80 : 300,
         })
+        const mapInstance = map.current
+        onTrailheadProgressRef.current?.(0.18)
 
-        map.current.on("load", () => {
-          if (disposed || !isMapAlive(map.current)) return
-          if (startupTimer !== null) {
-            window.clearTimeout(startupTimer)
-            startupTimer = null
-          }
+        mapInstance.on("load", () => {
+          if (disposed || map.current !== mapInstance || !isMapAlive(mapInstance)) return
+          try {
           mapLoadedRef.current = true
+          onTrailheadProgressRef.current?.(0.25)
 
           map.current.addSource("mapbox-terrain-rgb", {
             type: "raster-dem",
@@ -364,6 +368,21 @@ export function PCTMap({
           })
 
           map.current.setFog(TRAIL_FOG)
+
+          // Custom satellite style still ships the deprecated root `light` key.
+          // Re-declare it as a flat light so Mapbox stops warning on load.
+          const legacyLight = map.current.getLight?.() ?? {}
+          map.current.setLights?.([
+            {
+              id: "flat",
+              type: "flat",
+              properties: {
+                anchor: legacyLight.anchor ?? "viewport",
+                color: legacyLight.color ?? "#ffffff",
+                intensity: legacyLight.intensity ?? 0.5,
+              },
+            },
+          ])
 
           const cameraTrackingGeometry = {
             ...trailData,
@@ -408,7 +427,7 @@ export function PCTMap({
               "line-cap": "round",
             },
             paint: {
-              "line-color": "#ff6b9d",
+              "line-color": "#ed5a43",
               "line-width": 12,
               "line-opacity": 0.15,
               "line-blur": 4,
@@ -424,7 +443,7 @@ export function PCTMap({
               "line-cap": "round",
             },
             paint: {
-              "line-color": "#ff6b9d",
+              "line-color": "#ed5a43",
               "line-width": 8,
               "line-opacity": 0.4,
               "line-blur": 2,
@@ -440,7 +459,7 @@ export function PCTMap({
               "line-cap": "round",
             },
             paint: {
-              "line-color": "#ff6b9d",
+              "line-color": "#ed5a43",
               "line-width": ["interpolate", ["linear"], ["zoom"], 5, 2, 10, 6, 15, 10],
               "line-opacity": 0.95,
             },
@@ -467,19 +486,22 @@ export function PCTMap({
             map: map.current,
             trailCoordinates: trailData.geometry.coordinates,
             getCameraPath,
-            onTrailheadWarm: () => {
-              markTrailPrepCached()
-              notifyTrailheadReady()
-            },
-            onTrailheadProgress: (progress) => onTrailheadProgressRef.current?.(progress),
+            onTrailheadReady: notifyTrailheadReady,
+            onTrailheadWarm: markTrailPrepCached,
+            onTrailheadProgress: (progress) =>
+              onTrailheadProgressRef.current?.(0.25 + progress * 0.75),
             trailheadAlreadyCached: isTrailPrepCached(),
             reducedGpu,
             // Any easeTo/jumpTo (even preloadOnly) would cancel the intro flyTo mid-flight
             isIntroFlying: () => introPhaseRef.current === "flying",
           })
+          } catch (error) {
+            failMap("The map loaded, but its trail layers could not be prepared.", error)
+          }
         })
 
-        map.current.on("error", (e: any) => {
+        mapInstance.on("error", (e: any) => {
+          if (disposed || map.current !== mapInstance) return
           const error = e?.error ?? e
           if (!isFatalMapboxError(e, mapLoadedRef.current)) {
             console.warn("[v0] Recoverable Mapbox resource error:", error)
@@ -496,15 +518,25 @@ export function PCTMap({
 
     return () => {
       disposed = true
-      if (startupTimer !== null) window.clearTimeout(startupTimer)
       prefetchRef.current?.cancel()
       prefetchRef.current = null
       mapLoadedRef.current = false
       const liveMap = map.current
       map.current = null
-      // Cancel first, then remove — in-flight preloadOnly callbacks check _removed.
+      // Don't block route transitions on WebGL teardown (~can freeze the main thread).
       if (liveMap && !liveMap._removed) {
-        liveMap.remove()
+        const drop = () => {
+          try {
+            if (!liveMap._removed) liveMap.remove()
+          } catch {
+            /* already gone */
+          }
+        }
+        if (typeof requestIdleCallback === "function") {
+          requestIdleCallback(drop, { timeout: 800 })
+        } else {
+          window.setTimeout(drop, 0)
+        }
       }
     }
   }, [getCameraPath, onMapLoad, trailData])
@@ -563,6 +595,7 @@ export function PCTMap({
       map.current.scrollZoom.enable()
       map.current.dragRotate.enable()
       map.current.touchZoomRotate.enable()
+      map.current.touchPitch?.enable()
       map.current.keyboard.enable()
       map.current.boxZoom.enable()
       map.current.doubleClickZoom.enable()
@@ -571,6 +604,7 @@ export function PCTMap({
       map.current.scrollZoom.disable()
       map.current.dragRotate.disable()
       map.current.touchZoomRotate.disable()
+      map.current.touchPitch?.disable()
       map.current.keyboard.disable()
       map.current.boxZoom.disable()
       map.current.doubleClickZoom.disable()
@@ -654,11 +688,12 @@ export function PCTMap({
       if (!isMapAlive(map.current)) return
       setIntroPhase("flying")
 
+      const trailhead = getTrailheadCamera()
       map.current.flyTo({
-        center: TRAILHEAD_CAMERA.center,
-        zoom: TRAILHEAD_CAMERA.zoom,
-        pitch: TRAILHEAD_CAMERA.pitch,
-        bearing: TRAILHEAD_CAMERA.bearing,
+        center: trailhead.center,
+        zoom: trailhead.zoom,
+        pitch: trailhead.pitch,
+        bearing: trailhead.bearing,
         duration: 8000,
         essential: true,
         easing: (t: number) =>
@@ -679,7 +714,7 @@ export function PCTMap({
 
   return (
     <div className="relative h-full w-full">
-      <div ref={mapContainer} className="h-full w-full" />
+      <div ref={mapContainer} className="h-full w-full touch-none" />
 
       {mapboxError && (
         <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -700,9 +735,10 @@ export function PCTMap({
 
       {/* Never flash this during splash→intro — hideLoading covers that path */}
       {!mapboxError && !hideLoading && (!trailData || !mapLoaded) && (
-        <div className="absolute inset-0 bg-black flex items-center justify-center">
-          <div className="text-white text-xl">
-            {!trailData ? "Loading trail data..." : "Loading PCT Audio Map..."}
+        <div className="absolute inset-0 flex items-center justify-center bg-[#151310]">
+          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#9b8e7a]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ed5a43]" />
+            {skipIntro ? "Restoring trail…" : !trailData ? "Loading trail…" : "Starting map…"}
           </div>
         </div>
       )}

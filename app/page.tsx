@@ -14,7 +14,11 @@ import { CompletionScreen } from "@/components/completion/completion-screen"
 import { pctSegments } from "@/data/pct-segments"
 import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
-import { computePunchInPose, type CameraPathPoint, type FreeCameraPose } from "@/lib/railing-camera"
+import {
+  computePunchInPose,
+  type CameraPathPoint,
+  type FreeCameraPose,
+} from "@/lib/railing-camera"
 import {
   animateFreeCamera,
   applyFreeCameraPose,
@@ -25,7 +29,12 @@ import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { useAudioPlayer } from "@/hooks/use-audio-player"
 import { isTrailPrepCached } from "@/lib/trail-prep-cache"
-import { shouldHideChapterTimeline } from "@/lib/chapter-timeline-visibility"
+import { shouldRenderTrailScrollSpacer } from "@/lib/splash-scroll-lock"
+import {
+  resolveChapterTimelineCollapsed,
+  shouldHideChapterTimeline,
+} from "@/lib/chapter-timeline-visibility"
+import { resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
 import {
   clearMapSession,
   consumeResumeIntent,
@@ -102,9 +111,13 @@ export default function Home() {
   const [showCompletion, setShowCompletion] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
-  // Chapter index whose mobile held-breath overlay the user manually dismissed.
+  // Chapter index whose held-breath overlay the user manually dismissed.
   const [overlayDismissedChapter, setOverlayDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
+  /** User peeked the chapter rail open while audio owns the view. */
+  const [tabsUserExpanded, setTabsUserExpanded] = useState(false)
+  /** User tucked the rail while exploring (arrow). */
+  const [tabsUserCollapsed, setTabsUserCollapsed] = useState(false)
   const lastChapterRef = useRef(0)
   const scrollControlRef = useRef<ScrollControls | null>(null)
   const cameraAnimRef = useRef(0)
@@ -176,16 +189,19 @@ export default function Home() {
 
   const introChapterIndex = chapterIntro?.index ?? currentChapter
   const introChapter = pctSegments[introChapterIndex] ?? pctSegments[0]
-  const desktopIntroOpacity = chapterIntro
-    ? introOpacity(chapterIntro.milesIn, DESKTOP_INTRO_HOLD, DESKTOP_INTRO_FADE)
-    : 0
-  const mobileIntroOpacity =
-    chapterIntro && overlayDismissedChapter !== introChapterIndex
-      ? introOpacity(chapterIntro.milesIn, MOBILE_INTRO_HOLD, MOBILE_INTRO_FADE)
-      : 0
+  const desktopIntroOpacity = resolveChapterOverlayOpacity(
+    chapterIntro ? introOpacity(chapterIntro.milesIn, DESKTOP_INTRO_HOLD, DESKTOP_INTRO_FADE) : 0,
+    overlayDismissedChapter,
+    introChapterIndex,
+  )
+  const mobileIntroOpacity = resolveChapterOverlayOpacity(
+    chapterIntro ? introOpacity(chapterIntro.milesIn, MOBILE_INTRO_HOLD, MOBILE_INTRO_FADE) : 0,
+    overlayDismissedChapter,
+    introChapterIndex,
+  )
   const isMobileChapterOverlayVisible = mobileIntroOpacity > 0.01
 
-  // Reset the manual mobile-overlay dismissal when we move to a different chapter.
+  // Reset the manual overlay dismissal when we move to a different chapter.
   useEffect(() => {
     setOverlayDismissedChapter(null)
   }, [introChapterIndex])
@@ -357,14 +373,21 @@ export default function Home() {
   )
 
   // Keep scroll locked through the overview→trailhead intro so the first explore
-  // gesture isn't eaten while the camera is still flying.
+  // gesture isn't eaten while the camera is still flying. Also block pinch.
   useEffect(() => {
     if (!journeyStarted || introComplete || isResuming) return
     document.body.style.overflow = "hidden"
+
+    const blockPinch = (e: TouchEvent) => {
+      if (e.touches.length >= 2) e.preventDefault()
+    }
+    window.addEventListener("touchmove", blockPinch, { passive: false, capture: true })
+
     return () => {
       document.body.style.overflow = ""
+      window.removeEventListener("touchmove", blockPinch, true)
     }
-  }, [journeyStarted, introComplete, isResuming])
+  }, [journeyStarted, introComplete, isResuming, showSplash])
 
   // Persist trail position while exploring so Back to Map can restore it.
   useEffect(() => {
@@ -588,7 +611,38 @@ export default function Home() {
     activateNode(navigableMarkers[currentMarkerIndex + 1], 2800)
   }
 
-  const hideChapterTimeline = shouldHideChapterTimeline(Boolean(selectedAudioMarker), isNodeCameraBusy)
+  const autoHideChapterTimeline = shouldHideChapterTimeline(
+    Boolean(selectedAudioMarker),
+    isNodeCameraBusy,
+  )
+
+  // Opening an audio node collapses the drawer; closing it clears peek/tuck overrides.
+  useEffect(() => {
+    if (autoHideChapterTimeline) {
+      setTabsUserExpanded(false)
+      setTabsUserCollapsed(false)
+    } else {
+      setTabsUserExpanded(false)
+    }
+  }, [autoHideChapterTimeline])
+
+  const hideChapterTimeline = resolveChapterTimelineCollapsed(
+    autoHideChapterTimeline,
+    tabsUserExpanded,
+    tabsUserCollapsed,
+  )
+
+  const handleToggleChapterDrawer = useCallback(() => {
+    if (hideChapterTimeline) {
+      // Peek open (works during audio) or undo a manual tuck.
+      if (autoHideChapterTimeline) setTabsUserExpanded(true)
+      else setTabsUserCollapsed(false)
+      return
+    }
+    // Close: clear peek, or tuck while exploring.
+    if (autoHideChapterTimeline) setTabsUserExpanded(false)
+    else setTabsUserCollapsed(true)
+  }, [autoHideChapterTimeline, hideChapterTimeline])
 
   useEffect(() => {
     if (selectedAudioMarker || isNodeCameraBusy) {
@@ -665,7 +719,7 @@ export default function Home() {
           onMapError={handleMapError}
           startIntro={journeyStarted && !isResuming}
           skipIntro={isResuming}
-          hideLoading={true}
+          hideLoading={showSplash}
           currentMiles={currentMiles}
         />
         {map && (
@@ -677,7 +731,9 @@ export default function Home() {
         )}
       </div>
 
-      <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
+      {shouldRenderTrailScrollSpacer(showSplash) ? (
+        <div className="relative z-10 pointer-events-none" style={{ height: `${pctSegments.length * 2400}vh` }} />
+      ) : null}
 
       <div className={`transition-opacity duration-700 ease-out delay-200 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ChapterTimeline
@@ -685,6 +741,7 @@ export default function Home() {
           activeIndex={activeNodeIndex}
           progress={timelineProgress}
           hidden={hideChapterTimeline}
+          onToggleDrawer={handleToggleChapterDrawer}
           onNodeClick={(i) => (i >= pctSegments.length ? handleEndClick() : handleChapterClick(i))}
         />
       </div>
@@ -702,8 +759,8 @@ export default function Home() {
         <ChapterCard
           chapter={introChapter}
           chapterIndex={introChapterIndex}
-          totalChapters={pctSegments.length}
           opacity={desktopIntroOpacity}
+          onDismiss={() => setOverlayDismissedChapter(introChapterIndex)}
         />
       </div>
 
@@ -732,9 +789,9 @@ export default function Home() {
         <div className="pct-glass-panel px-3 py-2">
           <div className="flex items-center gap-2">
             <div className="relative h-5 w-3 rounded-sm border border-[#8b8271]">
-              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#d9cba8]"></div>
+              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#ed5a43]"></div>
             </div>
-            <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#9b8e7a]">Scroll to explore</span>
+            <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-[#9b8e7a]">Scroll to explore</span>
           </div>
         </div>
       </div>
@@ -747,9 +804,9 @@ export default function Home() {
         <div className="pct-glass-panel px-3 py-2">
           <div className="flex items-center gap-2">
             <div className="relative h-5 w-3 rounded-sm border border-[#8b8271]">
-              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#d9cba8]"></div>
+              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#ed5a43]"></div>
             </div>
-            <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#9b8e7a]">Swipe down to explore</span>
+            <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-[#9b8e7a]">Swipe down to explore</span>
           </div>
         </div>
       </div>

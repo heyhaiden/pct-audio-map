@@ -24,7 +24,7 @@ export default function AboutPage() {
         <main className="mx-auto max-w-4xl px-6 py-12 md:py-20">
           <section className="mb-12 text-center md:mb-16">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
-              About <span className="text-[#d9cba8]">PCT</span> Soundscapes
+              About <span className="text-[#ed5a43]">PCT</span> Soundscapes
             </h1>
             <p className="pct-display mx-auto max-w-xl text-[13.5px] font-light leading-[1.65] text-[#b4aa9b]">
               An immersive audio journey documenting the sonic landscape of the Pacific Crest Trail,
@@ -34,7 +34,7 @@ export default function AboutPage() {
 
           <section className="mb-16 md:mb-24">
             <h2 className="pct-display mb-6 flex items-center gap-3 text-xl font-medium text-[#ede8dc] md:text-2xl">
-              <span className="h-px w-8 bg-[#d9cba8]/60" />
+              <span className="h-px w-8 bg-[#ed5a43]/60" />
               The Project
             </h2>
             <div className="space-y-4">
@@ -58,14 +58,14 @@ export default function AboutPage() {
 
           <section className="mb-16 md:mb-24">
             <h2 className="pct-display mb-8 flex items-center gap-3 text-xl font-medium text-[#ede8dc] md:text-2xl">
-              <span className="h-px w-8 bg-[#d9cba8]/60" />
+              <span className="h-px w-8 bg-[#ed5a43]/60" />
               The Team
             </h2>
             <div className="grid gap-8 md:grid-cols-2">
               {team.map((member) => (
                 <article key={member.title} className="pct-glass-panel p-6 md:p-8">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#d9cba8]/30 bg-[#d9cba8]/10">
-                    <span className="pct-display text-2xl font-light text-[#d9cba8]">{member.initial}</span>
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#ed5a43]/30 bg-[#ed5a43]/10">
+                    <span className="pct-display text-2xl font-light text-[#ed5a43]">{member.initial}</span>
                   </div>
                   <h3 className="pct-display text-lg font-medium text-[#ede8dc]">{member.title}</h3>
                   <p className="mb-4 mt-1 font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#9b8e7a]">
@@ -79,7 +79,7 @@ export default function AboutPage() {
                       href="https://linkedin.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="pct-glass-control flex h-8 w-8 items-center justify-center rounded-full text-[#ada396] transition-all hover:border-[#d9cba8]/35 hover:text-[#d9cba8]"
+                      className="pct-glass-control flex h-8 w-8 items-center justify-center rounded-full text-[#ada396] transition-all hover:border-[#ed5a43]/35 hover:text-[#ed5a43]"
                       aria-label={`${member.title} on LinkedIn`}
                     >
                       <Linkedin className="h-4 w-4" />
@@ -88,7 +88,7 @@ export default function AboutPage() {
                       href="https://example.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="pct-glass-control flex h-8 w-8 items-center justify-center rounded-full text-[#ada396] transition-all hover:border-[#d9cba8]/35 hover:text-[#d9cba8]"
+                      className="pct-glass-control flex h-8 w-8 items-center justify-center rounded-full text-[#ada396] transition-all hover:border-[#ed5a43]/35 hover:text-[#ed5a43]"
                       aria-label={`${member.title} website`}
                     >
                       <Globe className="h-4 w-4" />
@@ -101,7 +101,7 @@ export default function AboutPage() {
 
           <section id="get-involved" className="mb-16 scroll-mt-24">
             <h2 className="pct-display mb-6 flex items-center gap-3 text-xl font-medium text-[#ede8dc] md:text-2xl">
-              <span className="h-px w-8 bg-[#d9cba8]/60" />
+              <span className="h-px w-8 bg-[#ed5a43]/60" />
               Press & Inquiries
             </h2>
             <p className="pct-display mb-8 text-[13.5px] font-light leading-[1.65] text-[#b4aa9b]">
@@ -110,7 +110,7 @@ export default function AboutPage() {
             </p>
             <a
               href="mailto:hello@offbeathike.com"
-              className="inline-flex items-center gap-2 rounded-full bg-[#d9cba8] px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-[#3e3527] transition-colors hover:bg-[#e6d9b7]"
+              className="inline-flex items-center gap-2 rounded-full bg-[#ed5a43] px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-[#f06b57]"
             >
               <Mail className="h-4 w-4" />
               Contact Us
@@ -118,7 +118,7 @@ export default function AboutPage() {
           </section>
         </main>
 
-        <footer className="mt-12 border-t border-[#d9cba8]/10 py-8">
+        <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
           <div className="mx-auto max-w-4xl px-6 text-center">
             <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6b6455]">
               PCT Soundscapes · Field recordings collected 2025

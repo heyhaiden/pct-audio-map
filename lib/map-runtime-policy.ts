@@ -49,3 +49,12 @@ export function isFatalMapboxError(event: any, mapLoaded: boolean): boolean {
 export function isMapAlive(map: any): boolean {
   return !!map && !map._removed && !!map.style
 }
+
+/**
+ * Mapbox `jumpTo({ preloadOnly: true })` reads `transform.tileZoom` on each
+ * source cache. Calling it before the camera transform exists throws
+ * `Cannot read properties of undefined (reading 'tileZoom')`.
+ */
+export function isMapReadyForPreload(map: any): boolean {
+  return isMapAlive(map) && map.transform?.tileZoom != null
+}

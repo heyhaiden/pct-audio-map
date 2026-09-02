@@ -30,7 +30,7 @@ export function ChapterDropdown({ chapters, currentChapter, onChapterSelect }: C
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-4 py-2 bg-black/80 backdrop-blur-sm rounded-lg text-white hover:bg-black/90 transition-colors border border-white/10"
       >
-        <MapPin className="w-4 h-4 text-[#ff6b9d]" />
+        <MapPin className="w-4 h-4 text-[#ed5a43]" />
         <span className="text-sm font-medium">
           Chapter {currentChapter + 1}: {chapters[currentChapter]?.title}
         </span>
@@ -51,14 +51,14 @@ export function ChapterDropdown({ chapters, currentChapter, onChapterSelect }: C
                   onClick={() => handleChapterClick(index)}
                   className={`w-full text-left p-3 rounded-lg transition-colors ${
                     currentChapter === index
-                      ? "bg-[#ff6b9d]/20 border border-[#ff6b9d]/30"
+                      ? "bg-[#ed5a43]/20 border border-[#ed5a43]/30"
                       : "hover:bg-white/5 border border-transparent"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
                       className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                        currentChapter === index ? "bg-[#ff6b9d] text-white" : "bg-white/10 text-gray-400"
+                        currentChapter === index ? "bg-[#ed5a43] text-white" : "bg-white/10 text-gray-400"
                       }`}
                     >
                       {index + 1}
@@ -74,8 +74,8 @@ export function ChapterDropdown({ chapters, currentChapter, onChapterSelect }: C
                       <p className="text-xs text-gray-400 line-clamp-2">{chapter.description}</p>
                       {chapter.audioMarkers.length > 0 && (
                         <div className="flex items-center gap-1 mt-2">
-                          <div className="w-3 h-3 rounded-full bg-[#ff6b9d]/30 flex items-center justify-center">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#ff6b9d]" />
+                          <div className="w-3 h-3 rounded-full bg-[#ed5a43]/30 flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#ed5a43]" />
                           </div>
                           <span className="text-xs text-gray-500">
                             {chapter.audioMarkers.length} audio marker{chapter.audioMarkers.length !== 1 ? "s" : ""}

@@ -1,7 +1,7 @@
-export const CHAPTER_OVERLAY_SWIPE_DISTANCE = 48
+/** Max pointer travel (px) still counted as a tap. */
 export const CHAPTER_OVERLAY_TAP_SLOP = 8
 
+/** Dismiss only on tap — any meaningful drag is ignored. */
 export function shouldDismissChapterOverlay(startY: number, endY: number) {
-  const movement = startY - endY
-  return Math.abs(movement) <= CHAPTER_OVERLAY_TAP_SLOP || movement >= CHAPTER_OVERLAY_SWIPE_DISTANCE
+  return Math.abs(startY - endY) <= CHAPTER_OVERLAY_TAP_SLOP
 }

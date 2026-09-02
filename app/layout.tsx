@@ -55,7 +55,6 @@ export default function RootLayout({
         {/* Tiles + style still stream from Mapbox — keep the connection warm */}
         <link rel="preconnect" href="https://api.mapbox.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://events.mapbox.com" />
-        <link rel="preload" href="/pct-trail.geojson" as="fetch" crossOrigin="anonymous" />
       </head>
       <body className={`${archivo.variable} ${spectral.variable} ${plexMono.variable} font-sans`}>
         {children}

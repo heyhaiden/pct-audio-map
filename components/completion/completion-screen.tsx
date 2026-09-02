@@ -90,7 +90,7 @@ export function CompletionScreen({ isVisible, totalMiles, onRestart }: Completio
               </span>
               <ArrowRight className="h-3.5 w-3.5 text-[#8b8271]" />
             </Link>
-            <button type="button" onClick={onRestart} className="pct-link-row border-b border-b-[#d9cba8]/20">
+            <button type="button" onClick={onRestart} className="pct-link-row border-b border-b-[#ed5a43]/20">
               Start over
               <RotateCcw className="h-3.5 w-3.5 text-[#8b8271]" />
             </button>

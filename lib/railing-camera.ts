@@ -3,10 +3,23 @@ export const CAMERA_PATH_POINTS = 500
 export const OPENING_TRANSITION_MILES = 80
 export const END_TRANSITION_MILES = 35
 export const CRUISING_ALTITUDE_METERS = 26000
+/** Higher cruise on mobile so more trail is visible in portrait. */
+export const CRUISING_ALTITUDE_METERS_MOBILE = 42000
 export const INTRO_ALTITUDE_METERS = 50000
+export const INTRO_ALTITUDE_METERS_MOBILE = 65000
 export const PEAK_PITCH = 60
 /** Punch-in lowers altitude to this fraction of the railing altitude. */
 export const PUNCH_IN_ALTITUDE_FACTOR = 0.68
+
+let activeCruisingAltitude = CRUISING_ALTITUDE_METERS
+let activeIntroAltitude = INTRO_ALTITUDE_METERS
+
+/** Call once at map construction — never toggle mid-session. */
+export function configureRailingCameraForViewport(mobile: boolean) {
+  activeCruisingAltitude = mobile ? CRUISING_ALTITUDE_METERS_MOBILE : CRUISING_ALTITUDE_METERS
+  activeIntroAltitude = mobile ? INTRO_ALTITUDE_METERS_MOBILE : INTRO_ALTITUDE_METERS
+}
+
 
 export type CameraPathPoint = {
   lng: number
@@ -111,7 +124,7 @@ export function altitudeAndPitchForProgress(progress: number): { altitude: numbe
   const openingPhase = Math.min(1, miles / OPENING_TRANSITION_MILES)
   const openingEase = 1 - Math.pow(1 - openingPhase, 3)
   const altitude =
-    INTRO_ALTITUDE_METERS + (CRUISING_ALTITUDE_METERS - INTRO_ALTITUDE_METERS) * openingEase
+    activeIntroAltitude + (activeCruisingAltitude - activeIntroAltitude) * openingEase
 
   const endTransitionStart = 1 - END_TRANSITION_MILES / PCT_TOTAL_MILES
   let pitch = PEAK_PITCH * openingEase

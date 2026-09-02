@@ -1,14 +1,18 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import {
+  applyTouchDelta,
+  shouldStartInertia,
+  stepInertiaVelocity,
+} from "@/lib/inverted-touch-scroll"
 
 /**
- * Invert touch scrolling so swipe-down advances the page (scrollY↑),
- * matching trackpad "scroll down to explore". Wheel/trackpad is unchanged.
- *
- * Native touch remains available (swipe-up → scrollY↑). We add the inverse
- * gesture as a second affordance: swipe-down also advances the trail. Swipe-up
- * dismisses the full-screen chapter overlay while that overlay owns the screen.
+ * Drive map-journey scrolling from one-finger touch.
+ * Swipe-down advances (scrollY↑); swipe-up goes back — both are JS-owned
+ * because the fixed Mapbox canvas is not a native scroll target.
+ * Wheel/trackpad keep native direction. Two-finger gestures are cancelled
+ * so pinch cannot zoom the page or fight the camera.
  */
 export function useInvertedTouchScroll(enabled: boolean) {
   const lastYRef = useRef<number | null>(null)
@@ -46,48 +50,65 @@ export function useInvertedTouchScroll(enabled: boolean) {
     }
 
     const onTouchStart = (e: TouchEvent) => {
-      if (isLocked() || e.touches.length !== 1) return
+      // Any new touch (including 2-finger) must kill leftover inertia.
       cancelInertia()
+      velocityRef.current = 0
+
+      if (isLocked()) {
+        lastYRef.current = null
+        return
+      }
+
+      if (e.touches.length !== 1) {
+        lastYRef.current = null
+        return
+      }
+
       lastYRef.current = e.touches[0].clientY
       lastTRef.current = performance.now()
-      velocityRef.current = 0
     }
 
     const onTouchMove = (e: TouchEvent) => {
-      if (isLocked() || e.touches.length !== 1 || lastYRef.current === null) return
+      if (isLocked()) return
+
+      // Block pinch / two-finger zoom on the journey page.
+      if (e.touches.length >= 2) {
+        lastYRef.current = null
+        velocityRef.current = 0
+        e.preventDefault()
+        return
+      }
+
+      if (e.touches.length !== 1 || lastYRef.current === null) return
       if (isNativeScrollTarget(e.target)) return
 
       const y = e.touches[0].clientY
       const now = performance.now()
-      // Finger moves down (y↑) → advance the trail with the inverse gesture.
-      // Finger movement up keeps native scrolling and must not be prevented.
-      const delta = y - lastYRef.current
-      const dt = Math.max(1, now - lastTRef.current)
+      const { scrollDelta, velocity } = applyTouchDelta({
+        deltaY: y - lastYRef.current,
+        deltaMs: now - lastTRef.current,
+      })
 
-      if (delta > 0) {
-        window.scrollBy(0, delta)
-        velocityRef.current = delta / dt
-        e.preventDefault()
-      } else {
-        velocityRef.current = 0
-      }
+      window.scrollBy(0, scrollDelta)
+      velocityRef.current = velocity
+      e.preventDefault()
+
       lastYRef.current = y
       lastTRef.current = now
-
     }
 
     const onTouchEnd = () => {
       lastYRef.current = null
       let v = velocityRef.current
-      if (v < 0.05) return
+      if (!shouldStartInertia(v)) return
 
       const step = () => {
         if (isLocked()) {
           cancelInertia()
           return
         }
-        v *= 0.95
-        if (v < 0.02) {
+        v = stepInertiaVelocity(v)
+        if (v === 0) {
           inertiaRafRef.current = 0
           return
         }

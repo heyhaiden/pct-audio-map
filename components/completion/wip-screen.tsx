@@ -37,7 +37,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
       {/* Close — dismiss and keep exploring the map */}
       <button
         onClick={onDismiss}
-        className="pct-glass-control absolute right-3 top-3 z-20 grid h-11 w-11 place-items-center rounded-full text-[#ada396] transition hover:text-[#d9cba8] md:right-[22px] md:top-5 md:h-10 md:w-10"
+        className="pct-glass-control absolute right-3 top-3 z-20 grid h-11 w-11 place-items-center rounded-full text-[#ada396] transition hover:text-[#ed5a43] md:right-[22px] md:top-5 md:h-10 md:w-10"
         aria-label="Close and keep exploring"
       >
         <X className="w-5 h-5" />
@@ -51,7 +51,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
         >
           <div className="mb-6">
             <div className="pct-glass-control flex h-16 w-16 items-center justify-center rounded-full">
-              <Construction className="h-7 w-7 text-[#d9cba8]" />
+              <Construction className="h-7 w-7 text-[#ed5a43]" />
             </div>
           </div>
 
@@ -75,7 +75,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <button
                 onClick={onDismiss}
-                className="flex items-center gap-2 rounded-full bg-[#d9cba8] px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-[#3e3527] transition hover:bg-[#e6d9b7]"
+                className="flex items-center gap-2 rounded-full bg-[#ed5a43] px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-white transition hover:bg-[#f06b57]"
               >
                 <Compass className="w-4 h-4" />
                 Keep exploring
@@ -86,7 +86,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
                   exitDocumentFullscreen()
                   markNavigatedFromMap()
                 }}
-                className="pct-glass-control flex items-center gap-2 rounded-full px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] transition hover:text-[#d9cba8]"
+                className="pct-glass-control flex items-center gap-2 rounded-full px-6 py-3 font-mono text-[9px] uppercase tracking-[0.14em] transition hover:text-[#ed5a43]"
               >
                 <Library className="w-4 h-4" />
                 Audio library
@@ -95,7 +95,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
 
             <button
               onClick={onRestart}
-              className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#8b8271] transition hover:text-[#d9cba8]"
+              className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#8b8271] transition hover:text-[#ed5a43]"
             >
               Restart journey
             </button>

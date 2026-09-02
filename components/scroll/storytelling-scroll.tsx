@@ -65,8 +65,8 @@ export function StorytellingScroll({ map, chapters, onChapterChange }: Storytell
                 }`}
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-0.5 bg-[#ff6b9d] rounded"></div>
-                  <span className="text-sm font-medium text-[#ff6b9d] uppercase tracking-wider">
+                  <div className="w-8 h-0.5 bg-[#ed5a43] rounded"></div>
+                  <span className="text-sm font-medium text-[#ed5a43] uppercase tracking-wider">
                     Chapter {index + 1}
                   </span>
                 </div>
@@ -78,7 +78,7 @@ export function StorytellingScroll({ map, chapters, onChapterChange }: Storytell
                 {/* Audio markers preview */}
                 {chapter.audioMarkers.length > 0 && (
                   <div className="border-t border-white/20 pt-6">
-                    <h4 className="text-sm font-semibold text-[#ff6b9d] mb-3">Featured Sounds</h4>
+                    <h4 className="text-sm font-semibold text-[#ed5a43] mb-3">Featured Sounds</h4>
                     <div className="flex flex-wrap gap-2">
                       {chapter.audioMarkers.map((marker) => (
                         <span

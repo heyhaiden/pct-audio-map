@@ -109,7 +109,7 @@ interface AudioMarker {
 
 VISUAL DESIGN:
 - Dark satellite base style emphasizing natural terrain
-- PCT trail rendered as prominent pink/red line (#ff6b9d) with glow effect
+- PCT trail rendered as prominent pink/red line (#ed5a43) with glow effect
 - 3D terrain with enhanced exaggeration for dramatic elevation visualization
 - Clean typography using system fonts
 - Floating content cards with glassmorphism effects
