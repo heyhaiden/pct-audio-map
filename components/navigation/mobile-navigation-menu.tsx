@@ -3,7 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import { Instagram, Menu, Twitter, X } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import {
   exitDocumentFullscreen,
   goHomeToSplash,
@@ -87,7 +87,6 @@ export function MobileNavigationMenu({
 
   useEffect(() => {
     if (!isOpen) return
-    const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
 
     const handleKeydown = (event: KeyboardEvent) => {
@@ -122,7 +121,10 @@ export function MobileNavigationMenu({
 
     window.addEventListener("keydown", handleKeydown)
     return () => {
-      document.body.style.overflow = previousOverflow
+      // Cleared, not restored: a snapshot taken while another lock was active
+      // would re-apply "hidden" after that lock had released, freezing touch
+      // scrolling. The splash lock is CSS-class based and survives this.
+      document.body.style.removeProperty("overflow")
       window.removeEventListener("keydown", handleKeydown)
     }
   }, [isOpen, menuId])
@@ -161,7 +163,7 @@ export function MobileNavigationMenu({
         tabIndex={showLiftedControl ? -1 : undefined}
         className={`${triggerClassName} ${showLiftedControl ? "invisible" : ""}`}
       >
-        <Menu className="h-4 w-4" />
+        <Menu className="h-[18px] w-[18px]" />
       </button>
 
       {hasMounted
@@ -170,7 +172,7 @@ export function MobileNavigationMenu({
               <div
                 aria-hidden={!isOpen}
                 inert={!isOpen}
-                className={`fixed inset-0 z-[110] bg-[rgba(10,9,7,0.94)] backdrop-blur-[18px] transition-opacity duration-500 ${
+                className={`pct-glass-terminal fixed inset-0 z-[110] transition-opacity duration-500 ${
                   isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
@@ -184,52 +186,36 @@ export function MobileNavigationMenu({
                   }`}
                 >
                   <div className="my-auto w-full max-w-sm py-10">
-                    <p className="mb-5 font-mono text-[8.5px] uppercase tracking-[0.24em] text-[#8b8271]">
-                      PCT Soundscapes
+                    <p className="mb-5 font-mono text-micro uppercase tracking-[0.24em] text-[#8b8271]">
+                      Offbeat: Soundscapes of the PCT
                     </p>
 
+                    {/* Map always lists Home as 01. On site pages, Home drops
+                        off only while you're already on the splash. */}
                     <nav aria-label="Mobile site navigation">
-                      {MOBILE_NAV_ITEMS.map((item, index) => (
-                        <Link
-                          key={item.id}
-                          href={item.href}
-                          onClick={(event) => handleNavigation(item.id, event)}
-                          aria-current={current === item.id ? "page" : undefined}
-                          className={menuLinkClass}
-                        >
-                          <span>{item.label}</span>
-                          <span className="font-mono text-[9px] tracking-[0.16em] text-[#8b8271]">
-                            {String(index + 1).padStart(2, "0")}
-                          </span>
-                        </Link>
-                      ))}
+                      {MOBILE_NAV_ITEMS.map((item, index) => ({ item, index }))
+                        .filter(
+                          ({ item }) =>
+                            source === "map" ||
+                            !(item.id === "home" && current === "home"),
+                        )
+                        .map(({ item, index }) => (
+                          <Link
+                            key={item.id}
+                            href={item.href}
+                            onClick={(event) => handleNavigation(item.id, event)}
+                            aria-current={current === item.id ? "page" : undefined}
+                            className={`${menuLinkClass} ${
+                              current === item.id ? "text-[#ed5a43]" : ""
+                            }`}
+                          >
+                            <span>{item.label}</span>
+                            <span className="font-mono text-micro tracking-[0.16em] text-[#8b8271]">
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                          </Link>
+                        ))}
                     </nav>
-
-                    <div className="mt-8 pt-5">
-                      <p className="mb-3 font-mono text-[8.5px] uppercase tracking-[0.16em] text-[#6b6455]">
-                        Follow the journey
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <a
-                          href="https://instagram.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`${defaultControlClass} h-10 w-10`}
-                          aria-label="Instagram"
-                        >
-                          <Instagram className="h-5 w-5" />
-                        </a>
-                        <a
-                          href="https://twitter.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`${defaultControlClass} h-10 w-10`}
-                          aria-label="Twitter"
-                        >
-                          <Twitter className="h-5 w-5" />
-                        </a>
-                      </div>
-                    </div>
                   </div>
                 </aside>
               </div>
@@ -244,7 +230,11 @@ export function MobileNavigationMenu({
                   className={`${triggerClassName} fixed z-[120]`}
                   style={triggerBox}
                 >
-                  {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                  {isOpen ? (
+                    <X className="h-[18px] w-[18px]" />
+                  ) : (
+                    <Menu className="h-[18px] w-[18px]" />
+                  )}
                 </button>
               ) : null}
             </>,
