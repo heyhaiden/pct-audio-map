@@ -20,15 +20,10 @@ export function ChapterCard({
   const isVisible = opacity > 0.01
   const romanNumerals = ["I", "II", "III", "IV", "V"]
 
-  useEffect(() => {
-    if (!isVisible || !window.matchMedia("(min-width: 768px)").matches) return
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [isVisible])
+  // Scroll locking is owned solely by app/page.tsx (isOverlayBlockingScroll).
+  // This component used to lock body overflow too, and its snapshot captured
+  // the page lock's own "hidden", then restored it after the page had released
+  // — stranding the document unscrollable.
 
   if (!isVisible) return null
 
@@ -62,7 +57,7 @@ export function ChapterCard({
         <button
           type="button"
           onClick={onDismiss}
-          className="absolute bottom-32 px-5 py-3 font-mono text-[12px] uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
+          className="absolute bottom-32 px-5 py-3 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
         >
           Click to continue
         </button>

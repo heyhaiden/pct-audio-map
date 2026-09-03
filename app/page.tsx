@@ -9,6 +9,7 @@ import { ChapterCard } from "@/components/chapters/chapter-card"
 import { SplashScreen } from "@/components/splash/splash-screen"
 import { MobileChapterOverlay } from "@/components/mobile/mobile-chapter-overlay"
 import { AboutSocial } from "@/components/navigation/about-social"
+import { ScrollHint } from "@/components/scroll/scroll-hint"
 import { WipScreen } from "@/components/completion/wip-screen"
 import { CompletionScreen } from "@/components/completion/completion-screen"
 import { pctSegments } from "@/data/pct-segments"
@@ -27,16 +28,18 @@ import {
 } from "@/lib/node-camera"
 import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
+import { useInvertedWheelScroll } from "@/hooks/use-inverted-wheel-scroll"
 import { useAudioPlayer } from "@/hooks/use-audio-player"
-import { isTrailPrepCached } from "@/lib/trail-prep-cache"
 import { shouldRenderTrailScrollSpacer } from "@/lib/splash-scroll-lock"
 import {
   resolveChapterTimelineCollapsed,
   shouldHideChapterTimeline,
+  shouldShowChapterDrawerHandle,
 } from "@/lib/chapter-timeline-visibility"
 import { resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
 import {
   clearMapSession,
+  clearNavigatedFromMap,
   consumeResumeIntent,
   getMapSession,
   saveMapSession,
@@ -60,6 +63,9 @@ const WIP_MILE = 1800
 
 /** Near the Canadian border — reaching here shows the end-of-trail screen. */
 const END_MILE = 2640
+
+/** Camera return to the scroll rail on close — the audio fade is timed to match. */
+const CLOSE_CAMERA_MS = 2200
 
 /** Chapter labels hold long enough to read, then clear quickly as the trail resumes. */
 const MOBILE_INTRO_HOLD = 14
@@ -85,10 +91,11 @@ export default function Home() {
   const {
     transitionToTrack,
     isLoading: isAudioLoading,
+    isPlaying: isAudioPlaying,
     error: audioError,
     isMuted,
     setMuted,
-    stop,
+    fadeOutAndStop,
   } = useAudioPlayer()
 
   // 'boot' avoids SSR/client mismatch while we read resume intent from sessionStorage.
@@ -109,11 +116,16 @@ export default function Home() {
   const [showWip, setShowWip] = useState(false)
   const [wipDismissed, setWipDismissed] = useState(false)
   const [showCompletion, setShowCompletion] = useState(false)
+  const [completionDismissed, setCompletionDismissed] = useState(false)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [isChapterTransitioning, setIsChapterTransitioning] = useState(false)
   // Chapter index whose held-breath overlay the user manually dismissed.
   const [overlayDismissedChapter, setOverlayDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
+  /** Matches Tailwind's `md` breakpoint, so JS agrees with which card is shown. */
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false)
+  /** Controls arrive via a ref, so state is needed to re-run the block effect. */
+  const [scrollControlsReady, setScrollControlsReady] = useState(false)
   /** User peeked the chapter rail open while audio owns the view. */
   const [tabsUserExpanded, setTabsUserExpanded] = useState(false)
   /** User tucked the rail while exploring (arrow). */
@@ -123,6 +135,8 @@ export default function Home() {
   const cameraAnimRef = useRef(0)
   const resumeRestoredRef = useRef(false)
   const navInitializedRef = useRef(false)
+  /** True while the current position came from a chapter-tab jump, not scrolling. */
+  const arrivedByJumpRef = useRef(false)
   const currentMilesRef = useRef(currentMiles)
   const wipDismissedRef = useRef(wipDismissed)
   currentMilesRef.current = currentMiles
@@ -131,6 +145,9 @@ export default function Home() {
   useLayoutEffect(() => {
     if (navInitializedRef.current) return
     navInitializedRef.current = true
+
+    // We're on the map now, however we got here — retire the from-map marker.
+    clearNavigatedFromMap()
 
     const session = consumeResumeIntent() ? getMapSession() : null
     if (session) {
@@ -149,13 +166,6 @@ export default function Home() {
     setShowSplash(true)
     // Intentionally once on mount — resume intent is consumed and must not re-run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Restore Enter-gate from session after navigating away and back home
-  useLayoutEffect(() => {
-    if (!isTrailPrepCached()) return
-    setTrailheadProgress(1)
-    setTrailheadReady(true)
   }, [])
 
   // Restore trail scroll before the camera loop arms, otherwise it publishes mile 0.
@@ -200,28 +210,51 @@ export default function Home() {
     introChapterIndex,
   )
   const isMobileChapterOverlayVisible = mobileIntroOpacity > 0.01
+  // Only the overlay actually rendered at this width counts. The two cards are
+  // swapped by Tailwind (`hidden md:block` / `md:hidden`) but both opacities are
+  // always computed, and the desktop card holds far longer (60mi vs 14mi). ORing
+  // them locked scrolling on phones against a card that isn't on screen to tap.
+  const isChapterOverlayVisible = isDesktopViewport
+    ? desktopIntroOpacity > 0.01
+    : isMobileChapterOverlayVisible
+  /** Any overlay that must be clicked away rather than scrolled past. */
+  const isOverlayBlockingScroll = isChapterOverlayVisible || showWip || showCompletion
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 768px)")
+    const sync = () => setIsDesktopViewport(query.matches)
+    sync()
+    query.addEventListener("change", sync)
+    return () => query.removeEventListener("change", sync)
+  }, [])
+
+  // Single owner for the scroll-camera block, derived rather than toggled.
+  // Several paths used to set it imperatively (overlays, marker punch-in, the
+  // exit camera), and handleCloseAudio could return early on a superseded
+  // animation token without ever clearing it — leaving the camera permanently
+  // deaf to scrolling while the page itself still scrolled.
+  useEffect(() => {
+    if (!scrollControlsReady) return
+    const shouldBlock =
+      isOverlayBlockingScroll || Boolean(selectedAudioMarker) || isNodeCameraBusy
+    scrollControlRef.current?.setBlocked(shouldBlock)
+  }, [scrollControlsReady, isOverlayBlockingScroll, selectedAudioMarker, isNodeCameraBusy])
 
   // Reset the manual overlay dismissal when we move to a different chapter.
   useEffect(() => {
     setOverlayDismissedChapter(null)
   }, [introChapterIndex])
 
-  const atEnd = currentMiles >= END_MILE
-
-  // Timeline nodes: the five chapters plus a trailing "End" node.
+  // Timeline nodes: the five chapters. No trailing "End" tab.
   const timelineNodes = useMemo(
-    () => [
-      ...pctSegments.map((c) => ({ id: c.id, title: c.title })),
-      { id: "end", title: "End of Trail" },
-    ],
+    () => pctSegments.map((c) => ({ id: c.id, title: c.title })),
     [],
   )
-  const activeNodeIndex = atEnd ? pctSegments.length : currentChapter
+  const activeNodeIndex = currentChapter
 
-  // Continuous progress along the dot track (0 = first node, 1 = the End node).
-  // Advances smoothly within each chapter so the pink connector line reads as
-  // the horizontal scroll-progress indicator. Denominator is the chapter count
-  // because the End node sits one step past the last chapter start.
+  // Continuous progress along the rail (0 = first chapter, 1 = end of the last).
+  // Advances smoothly within each chapter so the connector line reads as the
+  // scroll-progress indicator.
   const timelineProgress = useMemo(() => {
     const lastNode = pctSegments.length
     if (lastNode <= 0) return 0
@@ -285,6 +318,7 @@ export default function Home() {
     setShowWip(false)
     setWipDismissed(false)
     setShowCompletion(false)
+    setCompletionDismissed(false)
     setCurrentMiles(0)
     setHasScrolled(false)
     // Instant so the long sweep back to the start can't flash the WIP notice.
@@ -297,19 +331,16 @@ export default function Home() {
     setWipDismissed(true)
   }, [])
 
+  // Clear the terminus and stay on the map. Reappears if you scroll back and return.
+  const handleDismissCompletion = useCallback(() => {
+    setShowCompletion(false)
+    setCompletionDismissed(true)
+  }, [])
+
   const markDirectNavigation = useCallback(() => {
     setHasScrolled(true)
   }, [])
 
-  // Jump to the very end of the trail (final node) → end-of-trail screen.
-  // Instant so the mile sweep can't briefly trip the mid-trail WIP notice.
-  const handleEndClick = useCallback(() => {
-    markDirectNavigation()
-    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
-    setIsChapterTransitioning(true)
-    window.scrollTo({ top: scrollHeight, behavior: "instant" as ScrollBehavior })
-    setTimeout(() => setIsChapterTransitioning(false), 600)
-  }, [markDirectNavigation])
 
   useEffect(() => {
     if (currentChapter !== lastChapterRef.current && journeyStarted) {
@@ -336,6 +367,7 @@ export default function Home() {
       journeyStarted &&
       !showWip &&
       !wipDismissed &&
+      !arrivedByJumpRef.current &&
       !selectedAudioMarker
     ) {
       setShowWip(true)
@@ -344,13 +376,14 @@ export default function Home() {
 
   // End-of-trail screen near the Canadian border. Resets if you scroll back.
   useEffect(() => {
-    if (currentMiles >= END_MILE && journeyStarted && !selectedAudioMarker) {
+    if (currentMiles >= END_MILE && journeyStarted && !selectedAudioMarker && !completionDismissed) {
       setShowCompletion(true)
       setShowWip(false)
-    } else if (currentMiles < END_MILE && showCompletion) {
-      setShowCompletion(false)
+    } else if (currentMiles < END_MILE) {
+      if (showCompletion) setShowCompletion(false)
+      if (completionDismissed) setCompletionDismissed(false)
     }
-  }, [currentMiles, journeyStarted, selectedAudioMarker, showCompletion])
+  }, [currentMiles, journeyStarted, selectedAudioMarker, showCompletion, completionDismissed])
 
   useEffect(() => {
     if (hasScrolled) return
@@ -361,16 +394,90 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [hasScrolled])
 
+  // A real scroll gesture ends "arrived by jump" — programmatic scrolls don't.
+  useEffect(() => {
+    const clearJump = () => {
+      arrivedByJumpRef.current = false
+    }
+    const events = ["wheel", "touchmove", "keydown"] as const
+    events.forEach((event) => window.addEventListener(event, clearJump, { passive: true }))
+    return () => events.forEach((event) => window.removeEventListener(event, clearJump))
+  }, [])
+
+  // Any overlay holds the journey completely still — you clear it by clicking,
+  // never by scrolling past it. Body overflow alone isn't enough on desktop
+  // (html is the scroller and the wheel still drives the camera), so wheel,
+  // touch and the scroll keys are blocked at the capture phase too. Content
+  // inside the overlay card itself stays scrollable.
+  useEffect(() => {
+    if (!journeyStarted || !isOverlayBlockingScroll) return
+
+    const html = document.documentElement
+    const body = document.body
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+
+    const isInsideOverlay = (target: EventTarget | null) =>
+      target instanceof Element && !!target.closest("[data-overlay-scroll]")
+
+    const blockScroll = (event: Event) => {
+      if (isInsideOverlay(event.target)) return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    const SCROLL_KEYS = [
+      "ArrowUp",
+      "ArrowDown",
+      "PageUp",
+      "PageDown",
+      "Home",
+      "End",
+      " ",
+      "Spacebar",
+    ]
+
+    const blockScrollKeys = (event: KeyboardEvent) => {
+      // Escape still reaches the overlay so it can dismiss.
+      if (!SCROLL_KEYS.includes(event.key)) return
+      if (isInsideOverlay(event.target)) return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    window.addEventListener("wheel", blockScroll, { passive: false, capture: true })
+    window.addEventListener("touchmove", blockScroll, { passive: false, capture: true })
+    window.addEventListener("keydown", blockScrollKeys, true)
+
+    return () => {
+      // Clear outright rather than restoring a snapshot. The intro lock also
+      // sets body overflow, so a snapshot taken while that was active captured
+      // "hidden" and put it back here after the intro had already released it —
+      // which permanently stalls useInvertedTouchScroll, whose isLocked() check
+      // reads exactly this property. Touches registered; nothing scrolled.
+      html.style.removeProperty("overflow")
+      body.style.removeProperty("overflow")
+      // touch-action is the hook's other lock signal — clear any legacy value.
+      body.style.removeProperty("touch-action")
+      window.removeEventListener("wheel", blockScroll, true)
+      window.removeEventListener("touchmove", blockScroll, true)
+      window.removeEventListener("keydown", blockScrollKeys, true)
+    }
+  }, [isOverlayBlockingScroll, journeyStarted])
+
   // Touch: swipe-down advances the trail (matches trackpad "scroll down").
   // Wheel/trackpad keep native direction. Body overflow/touchAction locks still win.
-  useInvertedTouchScroll(
+  const journeyScrollEnabled =
     journeyStarted &&
-      !showSplash &&
-      introComplete &&
-      !selectedAudioMarker &&
-      !isNodeCameraBusy &&
-      !isMobileChapterOverlayVisible,
-  )
+    !showSplash &&
+    introComplete &&
+    !selectedAudioMarker &&
+    !isNodeCameraBusy &&
+    !isOverlayBlockingScroll
+
+  useInvertedTouchScroll(journeyScrollEnabled)
+  // Same gesture, same result on a trackpad as on a phone.
+  useInvertedWheelScroll(journeyScrollEnabled)
 
   // Keep scroll locked through the overview→trailhead intro so the first explore
   // gesture isn't eaten while the camera is still flying. Also block pinch.
@@ -482,6 +589,8 @@ export default function Home() {
 
   const handleChapterClick = (chapterIndex: number) => {
     markDirectNavigation()
+    // Flying over the content edge via a tab shouldn't trip the WIP notice.
+    arrivedByJumpRef.current = true
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
     const targetMile = chapterStartMile + 1
     const progress = targetMile / totalMiles
@@ -534,12 +643,16 @@ export default function Home() {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
       markDirectNavigation()
-      void transitionToTrack({
-        id: marker.id,
-        url: marker.audioUrl,
-        volume: 0.7,
-        loop: true,
-      })
+      // Match the crossfade to the camera move so audio and view land together.
+      void transitionToTrack(
+        {
+          id: marker.id,
+          url: marker.audioUrl,
+          volume: 0.7,
+          loop: true,
+        },
+        durationMs,
+      )
 
       if (map) {
         cancelFreeCameraAnimation()
@@ -557,7 +670,8 @@ export default function Home() {
     const marker = selectedAudioMarker
     if (!marker) return
 
-    stop()
+    // Ease the audio out over the same span the camera takes to return.
+    fadeOutAndStop(CLOSE_CAMERA_MS)
 
     // Keep scroll locked while we ease back to the railing (player UI can dismiss)
     setIsNodeCameraBusy(true)
@@ -572,21 +686,19 @@ export default function Home() {
     const currentCoords = marker.coordinates
 
     controls?.setPendingSyncCoordinates(currentCoords)
-    controls?.setBlocked(true)
 
     const railingPose = controls?.getRailingPoseAtCoordinates(currentCoords)
     const from = readFreeCameraPose(map)
 
     if (railingPose && from) {
       const token = ++cameraAnimRef.current
-      await animateFreeCamera(map, from, railingPose, 2200)
+      await animateFreeCamera(map, from, railingPose, CLOSE_CAMERA_MS)
       if (token !== cameraAnimRef.current) {
         setIsNodeCameraBusy(false)
         return
       }
     }
 
-    controls?.setBlocked(false)
     controls?.resumeScrollAnimation()
     setIsNodeCameraBusy(false)
   }
@@ -646,8 +758,6 @@ export default function Home() {
 
   useEffect(() => {
     if (selectedAudioMarker || isNodeCameraBusy) {
-      scrollControlRef.current?.setBlocked(true)
-
       const preventScroll = (e: Event) => {
         e.preventDefault()
         e.stopPropagation()
@@ -697,12 +807,29 @@ export default function Home() {
 
       <WipScreen isVisible={showWip} onRestart={handleRestart} onDismiss={handleDismissWip} />
 
-      <CompletionScreen isVisible={showCompletion} totalMiles={totalMiles} onRestart={handleRestart} />
+      <CompletionScreen
+        isVisible={showCompletion}
+        totalMiles={totalMiles}
+        onRestart={handleRestart}
+        onDismiss={handleDismissCompletion}
+      />
 
       <div
         className={`fixed inset-0 z-20 bg-black/40 pointer-events-none transition-opacity duration-500 ${
           isChapterTransitioning ? "opacity-100" : "opacity-0"
         }`}
+      />
+
+      {/* Vignette focuses the view on the marker while a recording plays. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none fixed inset-0 z-[25] transition-opacity duration-1000 ease-out ${
+          selectedAudioMarker ? "opacity-100" : "opacity-0"
+        }`}
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(8, 7, 5, 0.42) 72%, rgba(8, 7, 5, 0.72) 100%)",
+        }}
       />
 
       <div className="fixed inset-0 z-0 pointer-events-auto">
@@ -711,6 +838,7 @@ export default function Home() {
           onMilesUpdate={handleMilesUpdate}
           onScrollControlReady={(controls) => {
             scrollControlRef.current = controls
+            setScrollControlsReady(true)
           }}
           onIntroComplete={handleIntroComplete}
           onOverviewReady={handleOverviewReady}
@@ -741,8 +869,9 @@ export default function Home() {
           activeIndex={activeNodeIndex}
           progress={timelineProgress}
           hidden={hideChapterTimeline}
+          showDrawerHandle={shouldShowChapterDrawerHandle(Boolean(selectedAudioMarker))}
           onToggleDrawer={handleToggleChapterDrawer}
-          onNodeClick={(i) => (i >= pctSegments.length ? handleEndClick() : handleChapterClick(i))}
+          onNodeClick={handleChapterClick}
         />
       </div>
 
@@ -768,48 +897,31 @@ export default function Home() {
         <AboutSocial soundEnabled={!isMuted} onSoundToggle={() => setMuted(!isMuted)} />
       </div>
 
-      {selectedAudioMarker && (
-        <AudioPlayer
-          marker={selectedAudioMarker}
-          onClose={handleCloseAudio}
-          isLoading={isAudioLoading}
-          error={audioError}
-          hasPrevious={hasPreviousMarker}
-          hasNext={hasNextMarker}
-          onPrevious={handlePreviousMarker}
-          onNext={handleNextMarker}
-        />
-      )}
+      {/* Always mounted — the card owns its own enter/exit transition. */}
+      <AudioPlayer
+        marker={selectedAudioMarker}
+        onClose={handleCloseAudio}
+        isLoading={isAudioLoading}
+        isPlaying={isAudioPlaying}
+        error={audioError}
+        hasPrevious={hasPreviousMarker}
+        hasNext={hasNextMarker}
+        onPrevious={handlePreviousMarker}
+        onNext={handleNextMarker}
+      />
 
-      <div
-        className={`hidden md:block fixed bottom-32 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
-          !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
-        }`}
-      >
-        <div className="pct-glass-panel px-3 py-2">
-          <div className="flex items-center gap-2">
-            <div className="relative h-5 w-3 rounded-sm border border-[#8b8271]">
-              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#ed5a43]"></div>
-            </div>
-            <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-[#9b8e7a]">Scroll to explore</span>
-          </div>
-        </div>
-      </div>
-
-      <div
-        className={`md:hidden fixed bottom-32 left-1/2 -translate-x-1/2 z-30 pointer-events-none transition-opacity duration-500 ease-out ${
-          !introComplete || !journeyStarted || hasScrolled ? "opacity-0" : "opacity-100"
-        }`}
-      >
-        <div className="pct-glass-panel px-3 py-2">
-          <div className="flex items-center gap-2">
-            <div className="relative h-5 w-3 rounded-sm border border-[#8b8271]">
-              <div className="absolute left-1/2 top-0.5 h-1.5 w-0.5 -translate-x-1/2 animate-bounce rounded-full bg-[#ed5a43]"></div>
-            </div>
-            <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-[#9b8e7a]">Swipe down to explore</span>
-          </div>
-        </div>
-      </div>
+      <ScrollHint
+        enabled={
+          introComplete &&
+          journeyStarted &&
+          !showSplash &&
+          !selectedAudioMarker &&
+          !isNodeCameraBusy &&
+          !isChapterOverlayVisible &&
+          !showWip &&
+          !showCompletion
+        }
+      />
     </main>
   )
 }

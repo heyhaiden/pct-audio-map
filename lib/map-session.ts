@@ -62,7 +62,26 @@ export function clearMapSession(): void {
 export function markNavigatedFromMap(): void {
   if (!canUseStorage()) return
   try {
+    // Only meaningful when there's a saved position to return to. Without this
+    // guard, leaving the splash (no journey yet) would still arm Back to Map.
+    if (getMapSession() === null) return
     sessionStorage.setItem(FROM_MAP_KEY, "1")
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Back on the map, so "arrived here from a journey" no longer holds. Called on
+ * every map mount. Without it the marker survives the whole tab session — run a
+ * journey, leave for a site page, reload `/`, and the splash would still hand
+ * Back to Map to the next site page you opened. The saved session itself is
+ * kept, so a later exit can still resume where you left off.
+ */
+export function clearNavigatedFromMap(): void {
+  if (!canUseStorage()) return
+  try {
+    sessionStorage.removeItem(FROM_MAP_KEY)
   } catch {
     /* ignore */
   }
