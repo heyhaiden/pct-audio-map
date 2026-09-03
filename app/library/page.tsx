@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Play, Pause, MapPin, Mountain, ChevronDown } from "lucide-react"
+import { Mountain, ChevronDown } from "lucide-react"
 import { audioMarkers } from "@/data/audio-markers"
+import { LibraryRecordingCard } from "@/components/audio/library-recording-card"
 import { SitePage } from "@/components/navigation/site-page"
 
 // Chapter display names
@@ -28,7 +29,11 @@ function groupByChapter() {
 
 export default function LibraryPage() {
   const [playingId, setPlayingId] = useState<string | null>(null)
+  // Percent played per recording. Kept across pause, track switches, and
+  // collapsing a chapter, so returning to a recording resumes where you left it.
   const [progress, setProgress] = useState<Record<string, number>>({})
+  const progressRef = useRef(progress)
+  progressRef.current = progress
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({})
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const groupedMarkers = groupByChapter()
@@ -73,6 +78,14 @@ export default function LibraryPage() {
       const audio = new Audio(audioUrl)
       audioRef.current = audio
 
+      // Resume from the remembered position once we know the duration.
+      audio.addEventListener("loadedmetadata", () => {
+        const resumeAt = progressRef.current[markerId] ?? 0
+        if (resumeAt > 0 && resumeAt < 100 && audio.duration) {
+          audio.currentTime = (resumeAt / 100) * audio.duration
+        }
+      })
+
       audio.addEventListener("timeupdate", () => {
         if (audio.duration) {
           setProgress((prev) => ({
@@ -95,14 +108,24 @@ export default function LibraryPage() {
     }
   }
 
+  const handleSeek = (markerId: string, percent: number) => {
+    setProgress((prev) => ({ ...prev, [markerId]: percent }))
+
+    // Seek live only if this is the recording currently playing.
+    const audio = audioRef.current
+    if (playingId === markerId && audio?.duration) {
+      audio.currentTime = (percent / 100) * audio.duration
+    }
+  }
+
   return (
     <SitePage current="library">
-        <main className="mx-auto max-w-4xl px-6 py-12 md:py-20">
+        <main className="pct-stagger mx-auto max-w-4xl px-6 py-12 md:py-20">
           <section className="mb-12 text-center md:mb-16">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
               Audio <span className="text-[#ed5a43]">Library</span>
             </h1>
-            <p className="pct-display mx-auto max-w-xl text-[13.5px] font-light leading-[1.65] text-[#b4aa9b]">
+            <p className="pct-display mx-auto max-w-xl text-prose font-light leading-[1.65] text-[#b4aa9b]">
               Browse and listen to all {audioMarkers.length} field recordings from the Pacific Crest Trail.
             </p>
           </section>
@@ -140,69 +163,20 @@ export default function LibraryPage() {
                     />
                   </button>
 
-                  {isExpanded && (
+                  {isExpanded ? (
                     <div className="space-y-3 px-4 pb-4">
-                      {markers.map((marker) => {
-                        const isPlaying = playingId === marker.id
-                        const currentProgress = progress[marker.id] || 0
-
-                        return (
-                          <div
-                            key={marker.id}
-                            className={`relative overflow-hidden rounded-[6px] border p-4 backdrop-blur-[14px] transition-all duration-300 ${
-                              isPlaying
-                                ? "border-[#ed5a43]/35 bg-[rgba(15,14,12,0.88)]"
-                                : "border-white/10 bg-[rgba(15,14,12,0.62)] hover:border-white/20"
-                            }`}
-                          >
-                            {/* Progress bar background */}
-                            <div
-                              className="absolute inset-0 bg-[#ed5a43]/10 transition-all duration-200"
-                              style={{ width: `${currentProgress}%` }}
-                            />
-
-                            <div className="relative flex items-start gap-4">
-                              {/* Play button */}
-                              <button
-                                onClick={() => handlePlayPause(marker.id, marker.audioUrl)}
-                                className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
-                                  isPlaying
-                                    ? "border-[#ed5a43] bg-[#ed5a43] text-white"
-                                    : "border-white/20 bg-[rgba(12,11,9,0.62)] text-[#ada396] hover:border-[#ed5a43]/45 hover:text-[#ed5a43]"
-                                }`}
-                                aria-label={isPlaying ? "Pause" : "Play"}
-                              >
-                                {isPlaying ? (
-                                  <Pause className="w-5 h-5" />
-                                ) : (
-                                  <Play className="w-5 h-5 ml-0.5" />
-                                )}
-                              </button>
-
-                              {/* Info */}
-                              <div className="flex-1 min-w-0">
-                                <h3 className="pct-display text-[18px] font-medium text-[#ede8dc]">
-                                  {marker.name}
-                                </h3>
-                                <p className="pct-display mt-1 text-[12.5px] font-light leading-[1.6] text-[#ada396]">
-                                  {marker.description}
-                                </p>
-                              </div>
-
-                              {/* Metadata */}
-                              <div className="hidden sm:flex flex-col items-end text-right">
-                                <div className="flex items-center gap-1 text-xs text-stone-500">
-                                  <MapPin className="w-3 h-3" />
-                                  {marker.elevation.toLocaleString("en-US")} ft
-                                </div>
-                                <p className="text-xs text-stone-600">{marker.recordingDate}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
+                      {markers.map((marker) => (
+                        <LibraryRecordingCard
+                          key={marker.id}
+                          marker={marker}
+                          isPlaying={playingId === marker.id}
+                          progress={progress[marker.id] || 0}
+                          onPlayPause={() => handlePlayPause(marker.id, marker.audioUrl)}
+                          onSeek={(percent) => handleSeek(marker.id, percent)}
+                        />
+                      ))}
                     </div>
-                  )}
+                  ) : null}
                 </section>
               )
             })}
@@ -211,8 +185,8 @@ export default function LibraryPage() {
 
         <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
           <div className="mx-auto max-w-4xl px-6 text-center">
-            <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6b6455]">
-              PCT Soundscapes · Field recordings collected 2025
+            <p className="font-mono text-micro uppercase tracking-[0.14em] text-[#6b6455]">
+              Offbeat: Soundscapes of the PCT · Field recordings collected 2025
             </p>
           </div>
         </footer>

@@ -21,25 +21,10 @@ export function MobileChapterOverlay({
   const isVisible = opacity > 0.01
   const romanNumerals = ["I", "II", "III", "IV", "V"]
 
-  useEffect(() => {
-    if (!isVisible) return
-
-    const previousOverflow = document.body.style.overflow
-    const previousTouchAction = document.body.style.touchAction
-    const mobileQuery = window.matchMedia("(max-width: 767px)")
-    const syncScrollLock = () => {
-      document.body.style.overflow = mobileQuery.matches ? "hidden" : previousOverflow
-      document.body.style.touchAction = mobileQuery.matches ? "none" : previousTouchAction
-    }
-
-    syncScrollLock()
-    mobileQuery.addEventListener("change", syncScrollLock)
-    return () => {
-      mobileQuery.removeEventListener("change", syncScrollLock)
-      document.body.style.overflow = previousOverflow
-      document.body.style.touchAction = previousTouchAction
-    }
-  }, [isVisible])
+  // Scroll locking is owned solely by app/page.tsx (isOverlayBlockingScroll).
+  // This component used to set body overflow AND touch-action itself; both are
+  // what useInvertedTouchScroll's isLocked() reads, and its snapshot/restore
+  // raced the page lock and left them stuck on.
 
   if (!isVisible) return null
 
@@ -87,7 +72,7 @@ export function MobileChapterOverlay({
         <button
           type="button"
           onClick={onDismiss}
-          className="absolute bottom-32 px-5 py-3 font-mono text-[12px] uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
+          className="absolute bottom-32 px-5 py-3 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
         >
           Tap to continue
         </button>

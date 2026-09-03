@@ -120,7 +120,7 @@ function BeginJourneyButton({
       aria-label={
         unlocked ? "Begin Journey" : `Preparing trail, ${Math.round(fill * 100)} percent`
       }
-      className={`relative overflow-hidden rounded-full font-mono text-[13px] font-medium uppercase tracking-[0.2em] text-white transition-[transform,background-color,box-shadow] duration-500 ease-out ${
+      className={`relative overflow-hidden rounded-full font-mono text-copy font-medium uppercase tracking-[0.2em] text-white transition-[transform,background-color,box-shadow] duration-500 ease-out ${
         unlocked
           ? "bg-[#ed5a43] hover:bg-[#f06b57] hover:scale-[1.02] active:scale-95 shadow-[0_10px_28px_rgba(0,0,0,0.32)]"
           : "bg-[#ed5a43]/20 cursor-wait text-[#ed5a43]"
@@ -215,22 +215,24 @@ export function SplashScreen({
 
       <SiteHeader current="home" />
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-11">
+      <div className="pct-splash-body relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-11">
         <div className="flex max-w-[30rem] flex-col items-center text-center">
           {/* Abstract trail icon */}
-          <div className="mb-8">
+          <div className="pct-splash-icon mb-8">
             <AbstractTrailIcon className="h-[88px] w-[50px]" />
           </div>
 
-          <h1 className="pct-display mb-2.5 text-[45px] font-normal leading-none text-[#f6f1e4] md:text-[55px]">
-            PCT Soundscapes
+          <h1 className="pct-splash-title pct-display mb-8 text-[45px] font-normal leading-none text-[#f6f1e4] md:text-[55px]">
+            {/* Caps carry wide tracking; lowercase serif just reads loose. The
+                negative right margin cancels the trailing letter-space so the
+                word stays optically centred against the subtitle. */}
+            <span className="-mr-[0.1em] block uppercase tracking-[0.1em]">Offbeat</span>
+            <span className="mt-3.5 block font-mono text-label uppercase leading-[1.4] tracking-[0.26em] text-[#948a79]">
+              Soundscapes of the PCT
+            </span>
           </h1>
 
-          <p className="mb-8 font-mono text-[11px] uppercase tracking-[0.26em] text-[#948a79]">
-            Mexico → Canada · Field recordings
-          </p>
-
-          <p className="pct-display mb-10 max-w-[325px] text-[17px] font-light leading-[1.65] text-[#c7beac] md:max-w-[400px]">
+          <p className="pct-splash-lede pct-display mb-10 max-w-[325px] text-lede font-light leading-[1.65] text-[#c7beac] md:max-w-[400px]">
             An audio journey along the Pacific Crest Trail. Scroll to walk it. Stop anywhere and stay
             as long as you like.
           </p>
@@ -242,7 +244,7 @@ export function SplashScreen({
               onClick={handleEnter}
               className="px-[38px] py-4"
             />
-            <div className="pct-splash-headphones mt-6 flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-[#948a79]">
+            <div className="pct-splash-headphones mt-6 flex items-center gap-2.5 font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
               <Headphones className="h-4 w-4" />
               Best with headphones
             </div>
@@ -251,7 +253,7 @@ export function SplashScreen({
       </div>
 
       <div className="pct-splash-footer absolute bottom-[max(28px,env(safe-area-inset-bottom))] left-0 right-0 text-center">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#4f493f]">
+        <p className="font-mono text-label uppercase tracking-[0.18em] text-[#4f493f]">
           Recorded 2025
         </p>
       </div>

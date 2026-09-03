@@ -26,7 +26,7 @@ const plexMono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "PCT Audio Journey",
+  title: "Offbeat: Soundscapes of the PCT",
   description: "Interactive audio journey along the Pacific Crest Trail",
   generator: "v0.app",
 }

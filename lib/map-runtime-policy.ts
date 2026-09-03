@@ -36,6 +36,8 @@ export function isFatalMapboxError(event: any, mapLoaded: boolean): boolean {
     return false
   }
 
+  if (/tileZoom|reading ['"]get['"]/i.test(message)) return false
+
   if (status === 401 || status === 403 || status === 404) return true
 
   return /access token|unauthorized|forbidden|style.+(?:load|parse|invalid|not found)/i.test(message)
@@ -50,11 +52,29 @@ export function isMapAlive(map: any): boolean {
   return !!map && !map._removed && !!map.style
 }
 
+function getSourceCaches(map: any): any[] {
+  const style = map?.style
+  if (!style) return []
+  if (typeof style.getSourceCaches === "function") {
+    const caches = style.getSourceCaches()
+    if (Array.isArray(caches)) return caches
+    if (caches && typeof caches === "object") return Object.values(caches)
+  }
+  const dict = style.sourceCaches ?? style._sourceCaches
+  return dict && typeof dict === "object" ? Object.values(dict) : []
+}
+
 /**
  * Mapbox `jumpTo({ preloadOnly: true })` reads `transform.tileZoom` on each
- * source cache. Calling it before the camera transform exists throws
- * `Cannot read properties of undefined (reading 'tileZoom')`.
+ * source cache, not just the camera. `addSource` / `setTerrain` create caches
+ * whose transform is assigned on the next style update — calling preloadOnly
+ * before that throws `Cannot read properties of undefined (reading 'tileZoom')`.
+ * Unloaded sources retry `_preloadTiles` on a later `data` event, outside our
+ * try/catch, so the caches must already have transforms before the first call.
  */
 export function isMapReadyForPreload(map: any): boolean {
-  return isMapAlive(map) && map.transform?.tileZoom != null
+  if (!isMapAlive(map) || map.transform?.tileZoom == null) return false
+  const caches = getSourceCaches(map)
+  if (caches.length === 0) return false
+  return caches.every((cache) => cache?.transform?.tileZoom != null)
 }

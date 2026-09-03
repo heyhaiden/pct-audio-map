@@ -14,9 +14,9 @@ export const MOBILE_NAV_ITEMS: ReadonlyArray<{
 
 const COMPACT_CHAPTER_LABELS: Record<string, string> = {
   "Southern California": "SOCAL",
-  "Sierra Nevada": "SIER",
-  "Northern California": "NORCA",
-  Oregon: "ORE",
+  "Sierra Nevada": "SIERRA",
+  "Northern California": "NORCAL",
+  Oregon: "OREGON",
   Washington: "WASH",
 }
 

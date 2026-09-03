@@ -42,12 +42,12 @@ const resources = [
 export default function ResourcesPage() {
   return (
     <SitePage current="resources">
-        <main className="mx-auto max-w-4xl px-6 py-12 md:py-20">
+        <main className="pct-stagger mx-auto max-w-4xl px-6 py-12 md:py-20">
           <section className="mb-12 text-center md:mb-16">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
               Trail <span className="text-[#ed5a43]">Resources</span>
             </h1>
-            <p className="pct-display mx-auto max-w-xl text-[13.5px] font-light leading-[1.65] text-[#b4aa9b]">
+            <p className="pct-display mx-auto max-w-xl text-prose font-light leading-[1.65] text-[#b4aa9b]">
               Organizations and planning tools for the PCT, with a focus on communities supporting
               women, nonbinary, LGBTQ+, and underrepresented hikers.
             </p>
@@ -63,10 +63,10 @@ export default function ResourcesPage() {
                 className="pct-glass-panel group flex items-center justify-between gap-5 p-4 transition-all hover:border-[#ed5a43]/35 hover:bg-[rgba(23,21,17,0.86)]"
               >
                 <div>
-                  <h2 className="pct-display text-[17px] font-medium text-[#ede8dc] transition-colors group-hover:text-[#ed5a43]">
+                  <h2 className="pct-display text-lede font-medium text-[#ede8dc] transition-colors group-hover:text-[#ed5a43]">
                     {resource.name}
                   </h2>
-                  <p className="pct-display mt-1 text-[12px] font-light leading-[1.55] text-[#867c6e]">
+                  <p className="pct-display mt-1 text-nav font-light leading-[1.55] text-[#867c6e]">
                     {resource.description}
                   </p>
                 </div>
@@ -78,8 +78,8 @@ export default function ResourcesPage() {
 
         <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
           <div className="mx-auto max-w-4xl px-6 text-center">
-            <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6b6455]">
-              PCT Soundscapes · Field recordings collected 2025
+            <p className="font-mono text-micro uppercase tracking-[0.14em] text-[#6b6455]">
+              Offbeat: Soundscapes of the PCT · Field recordings collected 2025
             </p>
           </div>
         </footer>
