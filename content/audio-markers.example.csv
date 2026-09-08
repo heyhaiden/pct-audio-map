@@ -1,0 +1,4 @@
+id,name,lng,lat,chapter,filename,description,recording_date,featured,recording_time
+marker-1,Campo Trailhead,-116.470375,32.600903,southern-california,campo.mp3,"Southern terminus beside the border monument.",April 15 2024,true,6:30 AM
+marker-111,Hat Creek Rim,-121.507654,40.922343,northern-california,3-1.wav,"Evening thunderstorm.",July 25 2025,false,7:12 PM
+marker-74,Cottonwood Pass,-118.126207,36.350265,sierra-nevada,,"Sample not ready yet.",June 8 2025,false,9:31 AM
