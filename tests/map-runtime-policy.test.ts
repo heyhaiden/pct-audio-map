@@ -69,8 +69,39 @@ test("preload waits until the camera transform has a tileZoom", () => {
     isMapReadyForPreload({ _removed: false, style: {}, transform: {} }),
     false,
   )
+})
+
+test("preload waits until every source cache has a transform", () => {
+  const mapTransform = { tileZoom: 10 }
+  const notReady = {
+    _removed: false,
+    transform: mapTransform,
+    style: {
+      getSourceCaches: () => [{
+        transform: undefined,
+      }],
+    },
+  }
+  const ready = {
+    _removed: false,
+    transform: mapTransform,
+    style: {
+      getSourceCaches: () => [{
+        transform: { tileZoom: 10 },
+      }],
+    },
+  }
+
+  assert.equal(isMapReadyForPreload(notReady), false)
+  assert.equal(isMapReadyForPreload(ready), true)
+})
+
+test("a Mapbox tileZoom crash during preload is not fatal", () => {
   assert.equal(
-    isMapReadyForPreload({ _removed: false, style: {}, transform: { tileZoom: 10 } }),
-    true,
+    isFatalMapboxError(
+      { error: { message: "Cannot read properties of undefined (reading 'tileZoom')" } },
+      false,
+    ),
+    false,
   )
 })

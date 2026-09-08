@@ -9,8 +9,10 @@ interface AboutSocialProps {
   onSoundToggle: () => void
 }
 
+// 44px on both touch and desktop — these are the only persistent map controls,
+// so they hold their weight rather than shrinking on the larger screen.
 const controlClass =
-  "pct-glass-control grid h-11 w-11 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] md:h-10 md:w-10"
+  "pct-glass-control grid h-11 w-11 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
 
 export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSocialProps) {
   return (
@@ -27,7 +29,11 @@ export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSoc
         aria-pressed={!soundEnabled}
         className={controlClass}
       >
-        {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        {soundEnabled ? (
+          <Volume2 className="h-[18px] w-[18px]" />
+        ) : (
+          <VolumeX className="h-[18px] w-[18px]" />
+        )}
       </button>
     </div>
   )

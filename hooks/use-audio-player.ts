@@ -193,6 +193,62 @@ export function useAudioPlayer() {
     setState((prev) => ({ ...prev, isPlaying: false, currentTrack: null }))
   }, [cancelFade])
 
+  /**
+   * Ease the current recording out instead of cutting it. Used on close, timed
+   * to the camera's return to the scroll rail so sound and view land together.
+   */
+  const fadeOutAndStop = useCallback(
+    (fadeMs = DEFAULT_FADE_MS) => {
+      const transition = ++transitionRef.current
+      pendingTrackRef.current = null
+      currentTrackRef.current = null
+      cancelFade()
+
+      const active = decksRef.current[activeDeckRef.current]
+      setState((prev) => ({ ...prev, isPlaying: false, currentTrack: null }))
+
+      if (!active || active.paused) {
+        decksRef.current.forEach((deck) => {
+          if (!deck) return
+          deck.pause()
+          deck.currentTime = 0
+          deck.src = ""
+        })
+        return
+      }
+
+      // The other deck may still be finishing a crossfade — cut it now.
+      const idle = decksRef.current[activeDeckRef.current === 0 ? 1 : 0]
+      if (idle) {
+        idle.pause()
+        idle.src = ""
+      }
+
+      const startVolume = active.volume
+      const startedAt = performance.now()
+
+      const fade = (now: number) => {
+        if (transition !== transitionRef.current) return
+
+        const progress = Math.min(1, (now - startedAt) / Math.max(1, fadeMs))
+        active.volume = startVolume * Math.cos((progress * Math.PI) / 2)
+
+        if (progress < 1) {
+          fadeRafRef.current = requestAnimationFrame(fade)
+          return
+        }
+
+        fadeRafRef.current = 0
+        active.pause()
+        active.currentTime = 0
+        active.src = ""
+      }
+
+      fadeRafRef.current = requestAnimationFrame(fade)
+    },
+    [cancelFade],
+  )
+
   const setVolume = useCallback((volume: number) => {
     const clampedVolume = Math.max(0, Math.min(1, volume))
     volumeRef.current = clampedVolume
@@ -230,6 +286,7 @@ export function useAudioPlayer() {
     play,
     pause,
     stop,
+    fadeOutAndStop,
     setVolume,
     setMuted,
   }

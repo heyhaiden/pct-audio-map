@@ -1,7 +1,7 @@
-PCT Soundscapes Audio Files
-===========================
+Offbeat: Soundscapes of the PCT — Audio Files
+=============================================
 
-This directory should contain the audio files for the PCT Soundscapes project.
+This directory should contain the audio files for Offbeat: Soundscapes of the PCT.
 
 Required for splash screen:
 - ambient-wind.mp3 - Light, looping wind ambient sound for the splash screen

@@ -5,6 +5,17 @@
   --font-sans: var(--font-archivo);
   --font-serif: var(--font-spectral);
   --font-mono: var(--font-plex-mono);
+
+  /* One type ladder for the whole app. The original v0 sizes ran small — 8.5px
+     mono metadata, 12.5px body — so every step here is a size up from what it
+     replaces. Use these instead of arbitrary text-[Npx] values; they support
+     responsive variants (md:text-prose) like any other utility. */
+  --text-micro: 10px; /* mono kickers, metadata, footnotes */
+  --text-label: 12px; /* mono labels, pill buttons, splash chrome */
+  --text-nav: 13px; /* nav items, tooltips, hints */
+  --text-copy: 14px; /* dense body copy inside cards */
+  --text-prose: 15px; /* page body copy */
+  --text-lede: 18px; /* intro paragraphs */
 }
 
 :root {
@@ -113,7 +124,7 @@
   .pct-kicker {
     color: var(--pct-glass-kicker);
     font-family: var(--font-plex-mono), monospace;
-    font-size: 0.53125rem;
+    font-size: var(--text-micro);
     letter-spacing: 0.18em;
     text-transform: uppercase;
   }
@@ -127,10 +138,14 @@
     color: #f0eadc;
     border-top: 1px solid rgba(237, 90, 67, 0.18);
     font-family: var(--font-plex-mono), monospace;
-    font-size: 0.625rem;
+    font-size: var(--text-label);
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    transition: color 180ms ease, background-color 180ms ease;
+    transition:
+      color 180ms ease,
+      background-color 180ms ease,
+      padding-left 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 160ms ease;
   }
 
   .pct-link-row:hover {
@@ -138,11 +153,43 @@
   }
 
   .pct-chapter-tabs-shell {
-    --pct-tabs-edge-room: clamp(8px, 2.5dvh, 28px);
+    /* Shortens the rail from both ends — tabs are flex-1, so this is what
+       controls their length. */
+    --pct-tabs-edge-room: clamp(18px, 6dvh, 64px);
+    /* Tab widths live here as variables so the drawer handle can sit on the
+       exact same value. Driving the handle from JS (measure -> state -> render)
+       always landed a frame late and let it float mid-transition. */
+    --pct-tab-w: clamp(21px, 3.1vmin, 28px);
+    --pct-tab-w-lifted: clamp(26px, 3.7vmin, 33px);
+    --pct-handle-offset: var(--pct-tab-w);
     top: calc(env(safe-area-inset-top) + var(--pct-tabs-edge-room));
     bottom: calc(env(safe-area-inset-bottom) + var(--pct-tabs-edge-room));
   }
 
+  /* The connected tab is wider when it's active or under the pointer, so the
+     handle's offset switches on exactly the same condition, in the same tick. */
+  .pct-chapter-tabs-shell:has(.pct-chapter-tab[data-connected="true"][data-active="true"]),
+  .pct-chapter-tabs-shell:has(.pct-chapter-tab[data-connected="true"]:hover),
+  .pct-chapter-tabs-shell:has(.pct-chapter-tab[data-connected="true"]:focus-visible) {
+    --pct-handle-offset: var(--pct-tab-w-lifted);
+  }
+
+  /* Position comes from `left-full` on the connected tab's wrapper, not from a
+     variable — only the colour states transition here. */
+  .pct-chapter-drawer-handle {
+    transition:
+      background-color 300ms ease,
+      color 180ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pct-chapter-drawer-handle {
+      transition: none;
+    }
+  }
+
+  /* Journal tabs: the active chapter is a solid paper tab that runs wider than
+     its translucent neighbours, so it reads as pulled out of the stack. */
   .pct-chapter-tab {
     width: clamp(28px, 4vmin, 36px);
     min-height: 0;
@@ -151,12 +198,127 @@
     line-height: 1;
     letter-spacing: clamp(0.03em, 0.12dvh, 0.1em);
   }
+
+  /* The active tab steps up only slightly, matching the Field Notes proportions
+     (inactive 15px side padding vs active 16px) — a nudge, not a jump. */
+  .pct-chapter-tab[data-active="true"] {
+    width: var(--pct-tab-w-lifted);
+  }
+
+  /* Unselected chapters sit back: narrower, smaller type, slightly dimmed. */
+  .pct-chapter-tab[data-active="false"] {
+    width: var(--pct-tab-w);
+    font-size: calc(var(--pct-tab-font-size) * 0.9);
+    opacity: 0.78;
+  }
+
+  /* Hover grows the tab toward the active size — the affordance that says
+     these are clickable, not just labels. */
+  /* Hover previews selection: the tab grows to exactly the active width. */
+  .pct-chapter-tab[data-active="false"]:hover,
+  .pct-chapter-tab[data-active="false"]:focus-visible {
+    width: var(--pct-tab-w-lifted);
+    opacity: 1;
+  }
+
+  /* Touch: vmin is the short side on a phone, so the clamps collapse to their
+     minimum and the tabs come out far narrower than on desktop. Pin mobile to
+     the same widths desktop resolves to, keeping the active/inactive ratio. */
+  @media (max-width: 768px) {
+    .pct-chapter-tabs-shell {
+      --pct-tab-w: 28px;
+      --pct-tab-w-lifted: 33px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pct-chapter-tab {
+      transition: none;
+    }
+  }
 }
 
+/* Slow "listening" breath on the audio card status dot. */
+@keyframes pct-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.72);
+  }
+}
+
+.pct-pulse-dot {
+  animation: pct-pulse 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pct-pulse-dot {
+    animation: none;
+  }
+}
+
+/* Short viewports (most phones): drop the footer line, tighten the stack, and
+   keep "Best with headphones" — it's the one instruction that changes how the
+   piece is heard, so it stays on mobile. */
 @media (max-height: 720px) {
-  .pct-splash-footer,
-  .pct-splash-headphones {
+  .pct-splash-footer {
     display: none;
+  }
+
+  .pct-splash-body {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .pct-splash-icon {
+    margin-bottom: 1.25rem;
+  }
+
+  .pct-splash-icon svg {
+    height: 62px;
+  }
+
+  .pct-splash-title {
+    font-size: 38px;
+    margin-bottom: 1.25rem;
+  }
+
+  .pct-splash-lede {
+    margin-bottom: 1.5rem;
+    font-size: 15px;
+  }
+
+  .pct-splash-headphones {
+    margin-top: 1.125rem;
+  }
+}
+
+/* Phones: the body centres itself in the space left under the sticky header,
+   which lands the stack visually low. Bias it up toward the optical centre. */
+@media (max-width: 768px) {
+  .pct-splash-body {
+    padding-top: clamp(4px, 1.5dvh, 16px);
+    padding-bottom: clamp(56px, 17dvh, 150px);
+  }
+
+  .pct-splash-icon {
+    margin-bottom: 1.125rem;
+  }
+
+  .pct-splash-icon svg {
+    height: 58px;
+  }
+
+  .pct-splash-title {
+    margin-bottom: 1.125rem;
+  }
+
+  .pct-splash-lede {
+    margin-bottom: 1.5rem;
   }
 }
 
@@ -219,6 +381,119 @@
 
 .duration-300 {
   animation-duration: 300ms;
+}
+
+/* Touch scroll hint: a finger drifting downward, then fading out. */
+@keyframes pct-swipe-down {
+  0% {
+    transform: translateY(-3px);
+    opacity: 0.3;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+.pct-swipe-down {
+  display: inline-flex;
+  overflow: visible;
+  animation: pct-swipe-down 1.7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pct-swipe-down {
+    animation: none;
+  }
+}
+
+/* Home joins the nav only on subpages — ease it in instead of popping. */
+@keyframes pct-nav-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.pct-nav-in {
+  animation: pct-nav-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pct-nav-in {
+    animation: none;
+  }
+}
+
+/* Staggered entrance for site page sections. */
+@keyframes pct-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pct-stagger > * {
+  animation: pct-fade-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pct-stagger > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.pct-stagger > *:nth-child(2) {
+  animation-delay: 110ms;
+}
+
+.pct-stagger > *:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.pct-stagger > *:nth-child(4) {
+  animation-delay: 250ms;
+}
+
+.pct-stagger > *:nth-child(n + 5) {
+  animation-delay: 320ms;
+}
+
+/* Press feedback on the shared controls and link rows. */
+.pct-glass-control:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.pct-link-row:hover {
+  padding-left: 0.5rem;
+}
+
+.pct-link-row:active {
+  transform: scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pct-stagger > * {
+    animation: none;
+  }
+
+  .pct-glass-control:active:not(:disabled),
+  .pct-link-row:active {
+    transform: none;
+  }
+
+  .pct-link-row:hover {
+    padding-left: 0.1875rem;
+  }
 }
 
 /* Splash Begin Journey — soft sheen while preparing */

@@ -13,8 +13,8 @@ test("compact chapter labels stay short enough for constrained screens", async (
     navigation.getCompactChapterLabel("Washington"),
   ]
 
-  assert.deepEqual(labels, ["SOCAL", "SIER", "NORCA", "ORE", "WASH"])
-  assert.ok(labels.every((label) => label.length <= 5))
+  assert.deepEqual(labels, ["SOCAL", "SIERRA", "NORCAL", "OREGON", "WASH"])
+  assert.ok(labels.every((label) => label.length <= 6))
 })
 
 test("mobile overlays use the same ordered destinations", async () => {

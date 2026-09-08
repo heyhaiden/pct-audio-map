@@ -14,6 +14,8 @@ import {
   type PrefetchController,
 } from "@/lib/tile-prefetch"
 import { isTrailPrepCached, markTrailPrepCached } from "@/lib/trail-prep-cache"
+import { installAudioMarkerLayer } from "@/lib/audio-marker-layer"
+import { waitForOverviewScene } from "@/lib/splash-map-readiness"
 
 interface PCTMapProps {
   onMapLoad?: (map: any) => void
@@ -186,11 +188,30 @@ export function PCTMap({
     onTrailheadReadyRef.current?.()
   }
 
-  // A previously warmed tab can skip the tile-prep gate. Map initialization
-  // still proceeds normally behind the splash.
+  // preferReducedGpu() picks antialias and tile-cache sizes at construction and
+  // those can't change without recreating the map. The camera framing can,
+  // though — so re-run just that half when the viewport crosses the breakpoint
+  // mid-session, otherwise a desktop→phone resize keeps desktop cruise altitude.
   useEffect(() => {
-    if (isTrailPrepCached()) {
-      notifyTrailheadReady()
+    let reduced = preferReducedGpu()
+    let timer = 0
+
+    const onViewportChange = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        const next = preferReducedGpu()
+        if (next === reduced) return
+        reduced = next
+        configureRailingCameraForViewport(next)
+      }, 250)
+    }
+
+    window.addEventListener("resize", onViewportChange)
+    window.addEventListener("orientationchange", onViewportChange)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener("resize", onViewportChange)
+      window.removeEventListener("orientationchange", onViewportChange)
     }
   }, [])
 
@@ -476,17 +497,29 @@ export function PCTMap({
             },
           })
 
+          // Marker pins are a layer like any other, created here rather than
+          // from a React effect — an effect can only run after onMapLoad below,
+          // by which point tile prefetching keeps isStyleLoaded() false and the
+          // install silently never lands.
+          installAudioMarkerLayer(map.current)
+          // A style reload drops every image, source and layer we added.
+          mapInstance.on("style.load", () => {
+            if (map.current !== mapInstance || !isMapAlive(mapInstance)) return
+            installAudioMarkerLayer(mapInstance)
+          })
+
           setMapLoaded(true)
           onMapLoad?.(map.current)
 
           if (disposed || !isMapAlive(map.current)) return
 
-          prefetchRef.current?.cancel()
-          prefetchRef.current = startPathTilePrefetch({
+          const beginPrefetch = () => {
+            if (disposed || !isMapAlive(map.current)) return
+            prefetchRef.current?.cancel()
+            prefetchRef.current = startPathTilePrefetch({
             map: map.current,
             trailCoordinates: trailData.geometry.coordinates,
             getCameraPath,
-            onTrailheadReady: notifyTrailheadReady,
             onTrailheadWarm: markTrailPrepCached,
             onTrailheadProgress: (progress) =>
               onTrailheadProgressRef.current?.(0.25 + progress * 0.75),
@@ -494,6 +527,24 @@ export function PCTMap({
             reducedGpu,
             // Any easeTo/jumpTo (even preloadOnly) would cancel the intro flyTo mid-flight
             isIntroFlying: () => introPhaseRef.current === "flying",
+            })
+          }
+
+          // Stay on the aerial overview while splash is up. Jumping to Campo
+          // (marker 1) to tessellate GeoJSON was visible through the glass
+          // scrim. idle here paints tiles, trail, and pins in the view the user
+          // can already see; corridor prefetch starts only after that gate.
+          void waitForOverviewScene(
+            map.current,
+            () => !disposed && introPhaseRef.current === "waiting",
+            {
+              onProgress: (progress) =>
+                onTrailheadProgressRef.current?.(0.25 + progress * 0.75),
+            },
+          ).then(() => {
+            if (disposed) return
+            notifyTrailheadReady()
+            beginPrefetch()
           })
           } catch (error) {
             failMap("The map loaded, but its trail layers could not be prepared.", error)
@@ -736,7 +787,7 @@ export function PCTMap({
       {/* Never flash this during splash→intro — hideLoading covers that path */}
       {!mapboxError && !hideLoading && (!trailData || !mapLoaded) && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#151310]">
-          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#9b8e7a]">
+          <div className="flex items-center gap-3 font-mono text-label uppercase tracking-[0.18em] text-[#9b8e7a]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ed5a43]" />
             {skipIntro ? "Restoring trail…" : !trailData ? "Loading trail…" : "Starting map…"}
           </div>

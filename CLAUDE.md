@@ -55,15 +55,15 @@ When touching camera/scroll behavior, trace through all of these — a change to
 - `data/chapter-ranges.ts` (`CHAPTER_MILE_RANGES`) maps mile ranges to chapter index; `data/pct-segments.ts` order must stay in sync with it.
 - `data/audio-markers.ts` defines `AudioMarker`s (coordinates, chapter, audio URL, etc.), rendered by `components/map/audio-markers.tsx` and consumed by `components/audio/audio-player.tsx` + `hooks/use-audio-player.ts`.
 - `app/page.tsx` defines `ACTIVE_CHAPTERS` — only markers in these chapters are clickable/navigable (`navigableMarkers`); this gates content that isn't finished yet.
-- `WIP_MILE` (currently 1700, "early Oregon") is where the trail's produced content currently ends — scrolling/chapter-jumping past this shows `components/completion/wip-screen.tsx` instead of continuing. When more chapters get real content, extend `ACTIVE_CHAPTERS` and push `WIP_MILE` forward together.
+- `WIP_MILE` (currently 1800, "early Oregon") is where the trail's produced content currently ends — scrolling/chapter-jumping past this shows `components/completion/wip-screen.tsx` instead of continuing. When more chapters get real content, extend `ACTIVE_CHAPTERS` and push `WIP_MILE` forward together.
 
 ### Mapbox loading strategy
 
-Mapbox GL JS and Turf.js are loaded via CDN `<script>` tags at runtime (see constants at the top of `pct-map.tsx`), not as npm dependencies — `window.mapboxgl`/`window.turf` are used throughout (see the `declare global` blocks in `pct-map.tsx` and `use-trail-scroll.ts`). Any code touching the map must guard on these being loaded rather than importing `mapbox-gl` types/module.
+Mapbox GL JS and Turf.js are npm dependencies, imported directly (`import mapboxgl from "mapbox-gl"` plus `mapbox-gl/dist/mapbox-gl.css` in `pct-map.tsx`; individual `@turf/*` packages where needed). They were previously loaded from CDN `<script>` tags via `window.mapboxgl`/`window.turf` — that is no longer the case, so import them rather than guarding on globals.
 
 ### Mobile vs. desktop
 
-Distinct components exist for mobile (`components/mobile/mobile-stats-bar.tsx`, `mobile-chapter-toast.tsx`) vs. desktop-oriented (`components/stats/trail-stats.tsx`, `components/chapters/chapter-card.tsx`) presentations of the same underlying state (`currentMiles`, `currentChapter`) — shown/hidden via Tailwind responsive classes rather than JS branching. `preferReducedGpu()` in `pct-map.tsx` (checked once at map construction, never toggled mid-session) reduces `antialias`/`pixelRatio`/tile cache size on touch/narrow-viewport devices.
+Distinct components exist for mobile (`components/mobile/mobile-stats-bar.tsx`, `mobile-chapter-toast.tsx`) vs. desktop-oriented (`components/stats/trail-stats.tsx`, `components/chapters/chapter-card.tsx`) presentations of the same underlying state (`currentMiles`, `currentChapter`) — shown/hidden via Tailwind responsive classes rather than JS branching. `preferReducedGpu()` in `pct-map.tsx` reduces `antialias`/`pixelRatio`/tile cache size on touch/narrow-viewport devices. Those map-construction options are fixed for the life of the map instance. The camera half is not: a debounced `resize`/`orientationchange` listener re-runs `configureRailingCameraForViewport()` when the viewport crosses the breakpoint, so cruise altitude and framing follow a mid-session resize.
 
 ## UI stack
 

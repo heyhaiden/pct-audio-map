@@ -23,11 +23,47 @@ export function resolveChapterTimelineCollapsed(
   return false
 }
 
-export function getChapterTimelineMotionStyle(hidden: boolean) {
+export function getChapterTimelineMotionStyle(hidden: boolean, peekHandle = false) {
+  // The handle sits on the connected tab's right edge — not the column's, which
+  // is as wide as its widest tab — so a tuck travels exactly that far to land
+  // the handle on the viewport edge. Same variable the handle's `left` uses.
+  const peekOffset = "calc(var(--pct-handle-offset) * -1)"
+
   return {
-    transform: hidden ? "translate3d(calc(-100% - 8px), 0, 0)" : "translate3d(0, 0, 0)",
-    opacity: hidden ? 0 : 1,
-    transitionDuration: hidden ? "700ms" : "760ms",
+    // CSS `translate` (not `transform`) — Tailwind v4 owns `transform` and
+    // ignores inline transform on this node.
+    translate: hidden ? (peekHandle ? peekOffset : "calc(-100% - 8px)") : "0%",
+    // Peek keeps opacity so the attached handle stays visible at the edge.
+    opacity: hidden && !peekHandle ? 0 : 1,
+    // Same length both ways — the rail withdraws at the cadence it returns at.
+    transitionDuration: "760ms",
     transitionTimingFunction: CHAPTER_TIMELINE_EASE_OUT,
   }
+}
+
+/** Chapter 3 (0-based). Pins the open/close handle above the audio card. */
+export const CHAPTER_DRAWER_HANDLE_INDEX = 2
+
+export function getChapterDrawerHandleIndex(chapterCount: number) {
+  if (chapterCount <= 0) return 0
+  return Math.min(CHAPTER_DRAWER_HANDLE_INDEX, chapterCount - 1)
+}
+
+/** The peek handle is gone while a recording card owns the bottom of the view. */
+export function shouldShowChapterDrawerHandle(hasSelectedAudioMarker: boolean) {
+  return !hasSelectedAudioMarker
+}
+
+/**
+ * Vertical center of the connected tab, as a percentage of the rail.
+ * Tabs are equal-height flex items with the last chapter at the top.
+ */
+export function getChapterDrawerHandleTopPercent(
+  connectedIndex: number,
+  chapterCount: number,
+) {
+  if (chapterCount <= 0) return 50
+  const clamped = Math.min(Math.max(connectedIndex, 0), chapterCount - 1)
+  const fromTop = chapterCount - 1 - clamped
+  return ((fromTop + 0.5) / chapterCount) * 100
 }
