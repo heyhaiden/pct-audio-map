@@ -5,6 +5,7 @@ import { Mountain, ChevronDown } from "lucide-react"
 import { audioMarkers } from "@/data/audio-markers"
 import { LibraryRecordingCard } from "@/components/audio/library-recording-card"
 import { SitePage } from "@/components/navigation/site-page"
+import { resolveAudioUrl } from "@/lib/resolve-audio-url"
 
 // Chapter display names
 const chapterNames: Record<string, string> = {
@@ -19,6 +20,7 @@ const chapterNames: Record<string, string> = {
 function groupByChapter() {
   const grouped: Record<string, typeof audioMarkers> = {}
   for (const marker of audioMarkers) {
+    if (!marker.audioUrl) continue
     if (!grouped[marker.chapter]) {
       grouped[marker.chapter] = []
     }
@@ -34,6 +36,7 @@ export default function LibraryPage() {
   const [progress, setProgress] = useState<Record<string, number>>({})
   const progressRef = useRef(progress)
   progressRef.current = progress
+  const [durations, setDurations] = useState<Record<string, number>>({})
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({})
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const groupedMarkers = groupByChapter()
@@ -75,11 +78,14 @@ export default function LibraryPage() {
       }
 
       // Play new
-      const audio = new Audio(audioUrl)
+      const audio = new Audio(resolveAudioUrl(audioUrl))
       audioRef.current = audio
 
       // Resume from the remembered position once we know the duration.
       audio.addEventListener("loadedmetadata", () => {
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          setDurations((prev) => ({ ...prev, [markerId]: audio.duration }))
+        }
         const resumeAt = progressRef.current[markerId] ?? 0
         if (resumeAt > 0 && resumeAt < 100 && audio.duration) {
           audio.currentTime = (resumeAt / 100) * audio.duration
@@ -126,7 +132,7 @@ export default function LibraryPage() {
               Audio <span className="text-[#ed5a43]">Library</span>
             </h1>
             <p className="pct-display mx-auto max-w-xl text-prose font-light leading-[1.65] text-[#b4aa9b]">
-              Browse and listen to all {audioMarkers.length} field recordings from the Pacific Crest Trail.
+              Browse and listen to all {audioMarkers.filter((marker) => marker.audioUrl).length} field recordings from the Pacific Crest Trail.
             </p>
           </section>
 
@@ -171,8 +177,14 @@ export default function LibraryPage() {
                           marker={marker}
                           isPlaying={playingId === marker.id}
                           progress={progress[marker.id] || 0}
+                          durationSeconds={durations[marker.id] || 0}
                           onPlayPause={() => handlePlayPause(marker.id, marker.audioUrl)}
                           onSeek={(percent) => handleSeek(marker.id, percent)}
+                          onDuration={(seconds) =>
+                            setDurations((prev) =>
+                              prev[marker.id] ? prev : { ...prev, [marker.id]: seconds },
+                            )
+                          }
                         />
                       ))}
                     </div>

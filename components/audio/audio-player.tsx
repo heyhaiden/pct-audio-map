@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { ChevronLeft, ChevronRight, X } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { AudioMarkerCardBody, audioMarkerStatusClass } from "@/components/audio/audio-marker-card"
-import { isOutsideAudioCard } from "@/lib/audio-player-dismiss"
+import { shouldDismissAudioCard } from "@/lib/audio-player-dismiss"
 import type { AudioMarker } from "@/types/map"
 
 interface AudioPlayerProps {
@@ -26,7 +26,7 @@ const CARD_TRANSITION_MS = 520
 
 // Bare caret — no button chrome, so the arrows read as navigation, not controls.
 const arrowClass =
-  "grid h-10 w-8 shrink-0 place-items-center bg-transparent text-[#8b8271] transition-[color,transform] duration-200 hover:text-[#ed5a43] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] active:scale-90 disabled:cursor-not-allowed disabled:opacity-20 disabled:hover:text-[#8b8271] motion-reduce:transition-none"
+  "grid h-10 w-8 shrink-0 place-items-center bg-transparent text-[#8b8271] transition-[color,transform] duration-200 hover:text-[#ed5a43] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] active:scale-90 disabled:cursor-default disabled:opacity-20 disabled:hover:text-[#8b8271] motion-reduce:transition-none"
 
 export function AudioPlayer({
   marker,
@@ -65,7 +65,7 @@ export function AudioPlayer({
     if (!marker) return
 
     const onPointerDown = (event: PointerEvent) => {
-      if (!isOutsideAudioCard(event.target, cardRef.current)) return
+      if (!shouldDismissAudioCard(event.target, cardRef.current)) return
       event.preventDefault()
       event.stopPropagation()
       onCloseRef.current()
@@ -101,6 +101,8 @@ export function AudioPlayer({
         Listening
       </span>
     )
+  } else if (!shown.audioUrl) {
+    status = <span className={`${audioMarkerStatusClass} text-[#8b8271]`}>Sample not ready</span>
   } else {
     status = <span className={`${audioMarkerStatusClass} text-[#8b8271]`}>Recording</span>
   }
@@ -114,18 +116,8 @@ export function AudioPlayer({
     >
       <div
         ref={cardRef}
-        className="pct-glass-panel group relative flex items-center gap-2 p-[15px_12px] md:gap-4 md:p-[18px_18px]"
+        className="pct-glass-panel relative flex items-center gap-2 p-[15px_12px] md:gap-4 md:p-[18px_18px]"
       >
-        {/* Floats just outside the corner on desktop so the date can sit flush
-            with the rule beneath it; stays inside the card on mobile. */}
-        <button
-          onClick={onClose}
-          className="absolute right-2.5 top-2.5 z-10 grid h-8 w-8 place-items-center rounded-full text-[#ada396] opacity-100 transition-[color,background-color,opacity] hover:bg-white/10 hover:text-[#ede8dc] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] md:-right-3 md:-top-3 md:border md:border-[var(--pct-glass-border)] md:bg-[rgba(15,14,12,0.92)] md:opacity-0 md:backdrop-blur-[14px] md:group-focus-within:opacity-100 md:group-hover:opacity-100"
-          aria-label="Close audio player"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
         <button
           type="button"
           onClick={onPrevious}
@@ -137,7 +129,7 @@ export function AudioPlayer({
         </button>
 
         <div className="min-w-0 flex-1 text-left">
-          <AudioMarkerCardBody marker={shown} headerClassName="pr-9 md:pr-0" />
+          <AudioMarkerCardBody marker={shown} variant="map" />
 
           <div className="mt-4 border-t border-white/15 pt-3">{status}</div>
         </div>
