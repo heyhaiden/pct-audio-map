@@ -12,6 +12,7 @@ import {
 } from "@/lib/map-session"
 import {
   visibleMobileNavItems,
+  shouldCloseMobileNavOnNavigate,
   type MobileNavigationPage,
   type MobileNavigationSource,
 } from "@/lib/mobile-navigation"
@@ -147,7 +148,9 @@ export function MobileNavigationMenu({
       markNavigatedFromMap()
     }
 
-    setIsOpen(false)
+    if (shouldCloseMobileNavOnNavigate(page, current)) {
+      setIsOpen(false)
+    }
   }
 
   const showLiftedControl = liftControl && triggerBox !== null
@@ -204,6 +207,7 @@ export function MobileNavigationMenu({
                 <button
                   ref={controlRef}
                   type="button"
+                  data-keep-audio-focus
                   onClick={() => setIsOpen((open) => !open)}
                   aria-label={isOpen ? "Close menu" : "Open menu"}
                   aria-expanded={isOpen}

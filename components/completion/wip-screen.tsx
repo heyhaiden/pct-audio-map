@@ -1,13 +1,12 @@
 "use client"
 
-import Link from "next/link"
-import { Construction, Map, Music, RotateCcw } from "lucide-react"
+import { Construction, Map, RotateCcw } from "lucide-react"
 import {
   OverlayActionLabel,
   OverlayIcon,
   OverlayShell,
 } from "@/components/overlay/overlay-shell"
-import { exitDocumentFullscreen, markNavigatedFromMap } from "@/lib/map-session"
+import { OverlaySiteLinks } from "@/components/overlay/overlay-site-links"
 
 interface WipScreenProps {
   isVisible: boolean
@@ -34,18 +33,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
               Continue
             </OverlayActionLabel>
           </button>
-          <Link
-            href="/library"
-            onClick={() => {
-              exitDocumentFullscreen()
-              markNavigatedFromMap()
-            }}
-            className="pct-link-row"
-          >
-            <OverlayActionLabel icon={<Music className="h-4 w-4" />}>
-              Audio library
-            </OverlayActionLabel>
-          </Link>
+          <OverlaySiteLinks pages={["library"]} />
           <button type="button" onClick={onRestart} className="pct-link-row">
             <OverlayActionLabel icon={<RotateCcw className="h-4 w-4" />}>
               Restart journey

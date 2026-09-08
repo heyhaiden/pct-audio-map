@@ -226,7 +226,7 @@ export function SplashScreen({
             {/* Caps carry wide tracking; lowercase serif just reads loose. The
                 negative right margin cancels the trailing letter-space so the
                 word stays optically centred against the subtitle. */}
-            <span className="-mr-[0.1em] block uppercase tracking-[0.1em]">Offbeat</span>
+            <span className="pct-wordmark font-wordmark block uppercase">Offbeat</span>
             <span className="mt-3.5 block font-mono text-label uppercase leading-[1.4] tracking-[0.26em] text-[#948a79]">
               Soundscapes of the PCT
             </span>
@@ -250,12 +250,6 @@ export function SplashScreen({
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="pct-splash-footer absolute bottom-[max(28px,env(safe-area-inset-bottom))] left-0 right-0 text-center">
-        <p className="font-mono text-label uppercase tracking-[0.18em] text-[#4f493f]">
-          Recorded 2025
-        </p>
       </div>
     </div>
   )

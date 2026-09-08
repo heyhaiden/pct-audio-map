@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Archivo, IBM_Plex_Mono, Spectral } from "next/font/google"
+import { Archivo, IBM_Plex_Mono, Mansalva, Spectral } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css"
@@ -22,6 +22,13 @@ const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-plex-mono",
   weight: ["400", "500", "600"],
+  display: "swap",
+})
+
+const mansalva = Mansalva({
+  subsets: ["latin"],
+  variable: "--font-mansalva",
+  weight: "400",
   display: "swap",
 })
 
@@ -56,7 +63,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.mapbox.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://events.mapbox.com" />
       </head>
-      <body className={`${archivo.variable} ${spectral.variable} ${plexMono.variable} font-sans`}>
+      <body className={`${archivo.variable} ${spectral.variable} ${plexMono.variable} ${mansalva.variable} font-sans`}>
         {children}
         <Analytics />
         <SpeedInsights />

@@ -1,0 +1,43 @@
+id,name,lng,lat,chapter,filename,description,recording_date,featured,recording_time
+marker-1,Campo Trailhead,-116.470375,32.600903,southern-california,campo.mp3,The southern terminus sits in dry chaparral beside the US-Mexico border monument. Morning wind moves through sage and chain-link; a distant highway hums. Sparrows tick in the brush as packed dirt takes the first footsteps of a walk toward Canada.,"April 15, 2024",true,
+marker-74,"Past KMS, before cottonwood pass",-118.126207,36.350265,sierra-nevada,,"Not usable, maybe one sound at the end","June 8, 2025",false,9:31 AM
+marker-77,South Sierra,-118.156603,36.400765,sierra-nevada,,BUGS!,"June 8, 2025",false,3:12 PM
+marker-78,Horseshoe Meadow,-118.178567,36.447403,sierra-nevada,,An evening thunderstorm rolls in just as we descend from Trail Pass. Sounds like a good time to get into town.,"June 8, 2025",false,6:09 PM
+marker-80,Chicken Spring Lake,-118.226381,36.455569,sierra-nevada,,"Nighttime by the lake. It's freezing outside, but the tent is warm.","June 9, 2025",false,10:31 PM
+marker-81,South Sierra; SEKI National Park,-118.344929,36.499722,sierra-nevada,,A short rest to dry off following a deep morning river crossing.,"June 11, 2025",false,8:32 AM
+marker-82,Crabtree Meadow,-118.338556,36.567607,sierra-nevada,,"After a midnight wakeup and sunrise summit of Mt. Whitney, the descent back to Crabtree Meadows is nothing short of grueling. A quick stop only to fill up water before trudging on.","June 12, 2025",false,2:18 PM
+marker-83,Ascent to Forester Pass,-118.381977,36.677465,sierra-nevada,,"On the ascent to Forester Pass, everything is still frozen as the sun barely touches the horizon.","June 14, 2025",false,6:44 AM
+marker-87,Bubbs Creek,-118.407167,36.759261,sierra-nevada,,Town day. A quick climb over Kearsarge Pass and then it's a well-deserved rest in Bishop.,"June 15, 2025",false,8:17 AM
+marker-88,South of Kearsarge Pass,-118.409502,36.76231,sierra-nevada,,Bugs!,"June 15, 2025",false,8:38 AM
+marker-89,Bullfrog Lake,-118.402778,36.773014,sierra-nevada,,Enjoying the view and the calm waters.,"June 15, 2025",false,9:58 AM
+marker-90,Rae Lakes,-118.404,36.813689,sierra-nevada,,On the other side of Glen Pass awaits a stunning sunset over a chain of lakes nestled deep in the Sierra.,"June 19, 2025",false,6:24 PM
+marker-91,"Woods Creek, Kings CAnyon Natinoal Park",-118.428956,36.884828,sierra-nevada,,"Another beautiful, sunny day in the Sierra. A river runs through the canyon below.","June 20, 2025",false,2:00 PM
+marker-92,Kings Canyon National Park (need to confirm),-118.427034,36.88539,sierra-nevada,,"A steady breeze blows through the canyon, rustling a grove of poplar trees near trail. [are these burn areas where the poplars grow? seems like it per the photos. Or avalanche paths.]","June 20, 2025",false,2:05 PM
+marker-93,Kings Canyon National Park (need to confirm),-118.547011,37.05236,sierra-nevada,,[more poplar trees if the above isn't usable],"June 22, 2025",false,2:17 PM
+marker-94,John Muir Wilderness,-118.869514,37.239625,sierra-nevada,,Passing through a poplar forest on the way up to Selden Pass. Afternoon sounds.,"June 24, 2025",false,4:25 PM
+marker-95,South of Silver Pass,-118.912271,37.43966,sierra-nevada,,Waterfall,"June 27, 2025",false,8:21 AM
+marker-96,Cicadas right before Mammoth,-119.024344,37.551669,sierra-nevada,,Cicadas right before Mammoth,"June 28, 2025",false,9:52 AM
+marker-97,Tuolumne Meadows,-119.3664,37.8786,sierra-nevada,,Soda Springs,"July 5, 2025",false,6:44 PM
+marker-99,Yosemite National Park,-119.385668,37.985644,sierra-nevada,,"Brids, bugs. Maybe usable but quiet","July 6, 2025",false,11:12 AM
+marker-100,Stanislaus National Forest,-119.716347,38.448917,sierra-nevada,,"Evening sounds, cicadas AF","July 11, 2025",false,5:12 PM
+marker-101,Stanislaus National Forest,-119.742259,38.48113,sierra-nevada,,Morning birds (chickadees?),"July 12, 2025",false,8:46 AM
+marker-102,Right before Ebbetts Pass,-119.7939,38.5428,sierra-nevada,,Cold hail in a warm lake and it's bubbling?????,"July 12, 2025",false,2:23 PM
+marker-103,I think humbold-toiyabe national forest but idk,-119.795887,38.542699,sierra-nevada,,Gentle rain,"July 12, 2025",false,2:36 PM
+marker-104,Lake Aloha,-120.140867,38.870203,sierra-nevada,,Waves lapping against the shore of Lake Aloha,"July 17, 2025",false,4:20 PM
+marker-105,Tahoe Rim Trail,-120.242763,39.119119,sierra-nevada,,Almost at Alpine Meadows. Distant breezes. Vast space.,"July 19, 2025",false,1:33 PM
+marker-106,Granite Chief Wilderness,-120.268106,39.166942,sierra-nevada,,Evening Aspens.,"July 19, 2025",false,6:01 PM
+marker-107,Palisades Ski resort,-120.28125,39.201103,sierra-nevada,,Middle of the night winds on a ridge by Tahoe.,"July 20, 2025",false,3:11 AM
+marker-111,Hat Creek Rim,-121.507654,40.922343,northern-california,3-1.wav,Evening thunderstorm and rain drops around me and falling on the mic. Hiding out under a tree.,"July 25, 2025",false,7:12 PM
+marker-112,Burney Falls State Park,-121.661301,41.018632,northern-california,3-2.wav,Ospreys circle overhead and echo through the tall trees.,"July 27, 2025",false,12:30 PM
+marker-113,"Evening weird bird screeches, general quiet",-121.775466,41.055683,northern-california,3-3.wav,"Evening weird bird screeches, general quiet","July 27, 2025",false,7:16 PM
+marker-114,High voltage power lines overhead,-121.801511,41.07563,northern-california,3-4.wav,High voltage power lines overhead,"July 27, 2025",false,7:45 PM
+marker-115,South of Mt. Shasta,-121.992408,41.126022,northern-california,3-5.wav,Morning birds in the forest,"July 29, 2025",false,9:22 AM
+marker-116,Deer Creek; Shasta-Trinity National Forest,-122.001109,41.127899,northern-california,3-6.wav,"Loud water crossing in the most magical fairyland forest. The lush green all around me, ferns peeking out of every rock crevasse, giant jurassic leaves blanket the ground.","July 29, 2025",false,9:53 AM
+marker-117,Centipede Gulch Trail; Shasta-Trinity National Forest,-122.038248,41.115594,northern-california,3-7.wav,"A small creek is a reminder of the tiny beauty around me -- morning light filters through the dense canopy, illuminating a group of yellowjackets at the water; a mushroom grows atop a tree trunk; a perfect spiderweb is seemingly suspended in mid-air.","July 29, 2025",false,12:02 PM
+marker-120,Shasta Trinity NF,-122.499886,41.300819,northern-california,,"Those loud bugs!!! What are they?? and walking footsteps. An exposed ridge, the sun beats down. The funky bugs are everywhere hiding in the bushes, creating a ruckus when I walk by.","August 3, 2025",false,10:19 AM
+marker-123,Before Hwy 3,-122.646493,41.297271,northern-california,3-9.wav,"Walking through a puddle! Same as above. There must have been rain recently, though today's heat and blue skies show no indiciation that it ever happened.","August 4, 2025",false,9:09 AM
+marker-124,Oregon,-122.872064,42.033597,oregon-cascades,4-1.wav,"Bees in the wildflowers! Last night right before camp I crossed the border into Oregon -- finally!!!! Today another day full of wildflowers, denser forests, and sweeping vistas across multi colored landscapes.","August 7, 2025",false,10:13 AM
+marker-126,Before Ashland,-122.728048,42.080106,oregon-cascades,4-3.wav,In a grove of poplar trees.,"August 7, 2025",false,5:41 PM
+marker-128,Huge rock slides create sections of volcanic scree which...,-122.2768,42.3346,oregon-cascades,4-4.wav,"Huge rock slides create sections of volcanic scree which slows my travel. I roll into camp at exactly 30 miles for the day, praying for soft dirt again.","August 11, 2025",false,5:16 PM
+marker-129,Sky Lakes Wilderness,-122.276786,42.440633,oregon-cascades,4-5.wav,"Morning birds, a crisp, cool morning. Red and yellow dirt and huckleberries everywhere. Little did I know that this would be my final day on trail.","August 12, 2025",false,7:56 AM
+marker-130,Sky Lakes Wilderness,-122.253609,42.505409,oregon-cascades,4-6.wav,"Nighttime crickets. Late this afternoon, my foot pain got so bad, that I made the difficult decision to turn around and head back towards Hwy 3.","August 12, 2025",false,9:20 PM

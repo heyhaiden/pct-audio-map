@@ -1,7 +1,7 @@
 import { audioMarkers } from "@/data/audio-markers"
 
 /** Chapters past the WIP cutoff — no pins yet. */
-const HIDDEN_CHAPTERS = new Set(["oregon-cascades", "washington-cascades"])
+const HIDDEN_CHAPTERS = new Set(["washington-cascades"])
 
 export const AUDIO_MARKER_SOURCE_ID = "pct-audio-markers"
 export const AUDIO_MARKER_LAYER_ID = "pct-audio-markers-pin"
@@ -54,24 +54,22 @@ export function createPinImage(size = 64): { width: number; height: number; data
   }
 }
 
-/** Pins for one chapter. Chapters past the content edge render none. */
-export function chapterCollection(chapter: string) {
-  const features = HIDDEN_CHAPTERS.has(chapter)
-    ? []
-    : audioMarkers
-        .filter((marker) => marker.chapter === chapter)
-        .map((marker) => ({
-          type: "Feature" as const,
-          properties: {
-            id: marker.id,
-            name: marker.name,
-            elevation: marker.elevation,
-          },
-          geometry: {
-            type: "Point" as const,
-            coordinates: marker.coordinates,
-          },
-        }))
+/** Pins along the whole trail. Washington stays empty until that chapter has recordings. */
+export function chapterCollection(_chapter?: string) {
+  const features = audioMarkers
+    .filter((marker) => !HIDDEN_CHAPTERS.has(marker.chapter) && marker.coordinates?.length === 2)
+    .map((marker) => ({
+      type: "Feature" as const,
+      properties: {
+        id: marker.id,
+        name: marker.name,
+        elevation: marker.elevation,
+      },
+      geometry: {
+        type: "Point" as const,
+        coordinates: marker.coordinates,
+      },
+    }))
 
   return { type: "FeatureCollection" as const, features }
 }

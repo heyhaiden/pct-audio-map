@@ -25,6 +25,7 @@ export interface AudioMarker {
   featured: boolean
   description?: string
   recordingDate?: string
+  timeOfDay?: "sunrise" | "day" | "dusk" | "night"
 }
 
 export interface CameraPosition {

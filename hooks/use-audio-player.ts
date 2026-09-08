@@ -1,6 +1,12 @@
 "use client"
 
 import { useRef, useState, useCallback, useEffect } from "react"
+import {
+  crossfadeVolumes,
+  fadeOutVolume,
+  isPlayAbortError,
+  resolveOutgoingDeck,
+} from "@/lib/audio-crossfade"
 
 interface AudioPlayerState {
   isPlaying: boolean
@@ -19,6 +25,18 @@ export interface AudioTrack {
 }
 
 const DEFAULT_FADE_MS = 900
+/** Extra tail when the next recording is missing — outgoing ducks gently to silence. */
+const FAILED_INCOMING_FADE_MS = 1400
+
+function prepareIncomingDeck(deck: HTMLAudioElement, track: AudioTrack, muted: boolean) {
+  deck.pause()
+  deck.src = track.url
+  deck.load()
+  deck.currentTime = 0
+  deck.loop = track.loop ?? true
+  deck.volume = 0
+  deck.muted = muted
+}
 
 export function useAudioPlayer() {
   const decksRef = useRef<[HTMLAudioElement | null, HTMLAudioElement | null]>([null, null])
@@ -57,102 +75,172 @@ export function useAudioPlayer() {
 
   const transitionToTrack = useCallback(
     async (track: AudioTrack, fadeMs = DEFAULT_FADE_MS) => {
-      if (currentTrackRef.current === track.id) {
-        if (pendingTrackRef.current && pendingTrackRef.current !== track.id) {
-          transitionRef.current += 1
-          pendingTrackRef.current = null
-          const inactiveDeck = decksRef.current[activeDeckRef.current === 0 ? 1 : 0]
-          if (inactiveDeck) {
-            inactiveDeck.pause()
-            inactiveDeck.src = ""
-          }
-          const activeDeck = decksRef.current[activeDeckRef.current]
-          if (activeDeck) activeDeck.volume = currentTargetVolumeRef.current
-          setState((previous) => ({ ...previous, isLoading: false, error: null }))
-        }
-        return true
-      }
-
       const transition = ++transitionRef.current
       pendingTrackRef.current = track.id
       cancelFade()
 
-      const outgoingIndex = activeDeckRef.current
+      const { index: outgoingIndex, deck: outgoing, startVolume: outgoingStartVolume } =
+        resolveOutgoingDeck(decksRef.current, activeDeckRef.current, currentTargetVolumeRef.current)
+
       const incomingIndex = outgoingIndex === 0 ? 1 : 0
-      const outgoing = decksRef.current[outgoingIndex]
+      const interrupted = decksRef.current[incomingIndex]
+
+      if (interrupted && interrupted !== outgoing && interrupted.src) {
+        interrupted.pause()
+        interrupted.currentTime = 0
+        interrupted.src = ""
+      }
+
       const incoming = getDeck(incomingIndex)
       const targetVolume = Math.max(0, Math.min(1, track.volume ?? volumeRef.current))
 
-      incoming.pause()
-      incoming.src = track.url
-      incoming.currentTime = 0
-      incoming.loop = track.loop ?? true
-      incoming.volume = 0
-      incoming.muted = mutedRef.current
+      prepareIncomingDeck(incoming, track, mutedRef.current)
 
-      setState((previous) => ({ ...previous, isLoading: true, error: null }))
-
-      try {
-        await incoming.play()
-      } catch {
-        if (transition === transitionRef.current) {
-          pendingTrackRef.current = null
-          setState((previous) => ({
-            ...previous,
-            isLoading: false,
-            error: "Failed to play audio",
-          }))
-        }
-        incoming.src = ""
-        return false
-      }
-
-      if (transition !== transitionRef.current) {
-        incoming.pause()
-        incoming.src = ""
-        return false
-      }
-
-      activeDeckRef.current = incomingIndex
-      currentTrackRef.current = track.id
-      currentTargetVolumeRef.current = targetVolume
-      pendingTrackRef.current = null
       setState((previous) => ({
         ...previous,
-        currentTrack: track.id,
-        isPlaying: true,
-        isLoading: false,
+        isLoading: true,
         error: null,
+        currentTrack: track.id,
       }))
 
-      const outgoingStartVolume = outgoing && !outgoing.paused ? outgoing.volume : 0
       const startedAt = performance.now()
+      let incomingReady = false
+      let incomingFailed = false
+      let fadeComplete = false
+      let outgoingFadeStartedAt = startedAt
+      let outgoingFadeMs = fadeMs
+
+      const applyFadeFrame = (now: number) => {
+        if (incomingReady) {
+          const progress = Math.min(1, (now - startedAt) / Math.max(1, fadeMs))
+          const { incoming: inVol, outgoing: outVol } = crossfadeVolumes(
+            progress,
+            targetVolume,
+            outgoingStartVolume,
+          )
+
+          if (incomingReady) incoming.volume = inVol
+          if (outgoing && outgoingStartVolume > 0) outgoing.volume = outVol
+
+          return { mode: "crossfade" as const, progress }
+        }
+
+        if (incomingFailed) {
+          const progress = Math.min(1, (now - outgoingFadeStartedAt) / Math.max(1, outgoingFadeMs))
+          if (outgoing && outgoingStartVolume > 0) {
+            outgoing.volume = fadeOutVolume(progress, outgoingStartVolume)
+          }
+          return { mode: "fade-out" as const, progress }
+        }
+
+        if (outgoing && outgoingStartVolume > 0) {
+          outgoing.volume = outgoingStartVolume
+        }
+
+        return { mode: "loading" as const, progress: 0 }
+      }
+
+      const teardownOutgoing = () => {
+        if (!outgoing) return
+        outgoing.pause()
+        outgoing.currentTime = 0
+        outgoing.src = ""
+      }
+
+      const finishSuccess = () => {
+        if (transition !== transitionRef.current) return
+
+        fadeRafRef.current = 0
+        incoming.volume = targetVolume
+        teardownOutgoing()
+
+        activeDeckRef.current = incomingIndex
+        currentTrackRef.current = track.id
+        currentTargetVolumeRef.current = targetVolume
+        pendingTrackRef.current = null
+
+        setState((previous) => ({
+          ...previous,
+          currentTrack: track.id,
+          isPlaying: true,
+          isLoading: false,
+          error: null,
+        }))
+      }
+
+      const finishFailure = () => {
+        if (transition !== transitionRef.current) return
+
+        fadeRafRef.current = 0
+        incoming.pause()
+        incoming.src = ""
+        teardownOutgoing()
+
+        currentTrackRef.current = track.id
+        pendingTrackRef.current = null
+
+        setState((previous) => ({
+          ...previous,
+          currentTrack: track.id,
+          isPlaying: false,
+          isLoading: false,
+          error: "Audio unavailable",
+        }))
+      }
+
+      const settleFade = () => {
+        fadeComplete = true
+        if (incomingReady) finishSuccess()
+      }
 
       const fade = (now: number) => {
         if (transition !== transitionRef.current) return
 
-        const progress = Math.min(1, (now - startedAt) / Math.max(1, fadeMs))
-        incoming.volume = targetVolume * Math.sin((progress * Math.PI) / 2)
-        if (outgoing) {
-          outgoing.volume = outgoingStartVolume * Math.cos((progress * Math.PI) / 2)
-        }
+        const frame = applyFadeFrame(now)
 
-        if (progress < 1) {
-          fadeRafRef.current = requestAnimationFrame(fade)
+        if (frame.mode === "fade-out" && frame.progress >= 1) {
+          finishFailure()
           return
         }
 
-        fadeRafRef.current = 0
-        incoming.volume = targetVolume
-        if (outgoing) {
-          outgoing.pause()
-          outgoing.currentTime = 0
-          outgoing.src = ""
+        if (frame.mode === "crossfade" && frame.progress >= 1) {
+          settleFade()
+          return
         }
+
+        fadeRafRef.current = requestAnimationFrame(fade)
       }
 
       fadeRafRef.current = requestAnimationFrame(fade)
-      return true
+
+      const onIncomingError = () => {
+        if (transition !== transitionRef.current) return
+        incomingFailed = true
+        outgoingFadeStartedAt = performance.now()
+        outgoingFadeMs = Math.max(FAILED_INCOMING_FADE_MS, fadeMs)
+        if (fadeComplete) finishFailure()
+      }
+      incoming.addEventListener("error", onIncomingError, { once: true })
+
+      try {
+        await incoming.play()
+        if (transition !== transitionRef.current) return false
+
+        incomingReady = true
+        applyFadeFrame(performance.now())
+
+        if (fadeComplete) finishSuccess()
+      } catch (error) {
+        if (transition !== transitionRef.current || isPlayAbortError(error)) return false
+
+        incomingFailed = true
+        outgoingFadeStartedAt = performance.now()
+        outgoingFadeMs = Math.max(FAILED_INCOMING_FADE_MS, fadeMs)
+
+        if (fadeComplete) finishFailure()
+      }
+
+      return !incomingFailed
     },
     [cancelFade, getDeck],
   )
@@ -163,10 +251,10 @@ export function useAudioPlayer() {
       activeDeck
         .play()
         .then(() => {
-          setState((prev) => ({ ...prev, isPlaying: true }))
+          setState((prev) => ({ ...prev, isPlaying: true, error: null }))
         })
         .catch(() => {
-          setState((prev) => ({ ...prev, error: "Failed to play audio" }))
+          setState((prev) => ({ ...prev, error: "Audio unavailable" }))
         })
     }
   }, [])
@@ -190,13 +278,9 @@ export function useAudioPlayer() {
     })
     currentTrackRef.current = null
     pendingTrackRef.current = null
-    setState((prev) => ({ ...prev, isPlaying: false, currentTrack: null }))
+    setState((prev) => ({ ...prev, isPlaying: false, currentTrack: null, error: null }))
   }, [cancelFade])
 
-  /**
-   * Ease the current recording out instead of cutting it. Used on close, timed
-   * to the camera's return to the scroll rail so sound and view land together.
-   */
   const fadeOutAndStop = useCallback(
     (fadeMs = DEFAULT_FADE_MS) => {
       const transition = ++transitionRef.current
@@ -205,7 +289,7 @@ export function useAudioPlayer() {
       cancelFade()
 
       const active = decksRef.current[activeDeckRef.current]
-      setState((prev) => ({ ...prev, isPlaying: false, currentTrack: null }))
+      setState((prev) => ({ ...prev, isPlaying: false, currentTrack: null, error: null }))
 
       if (!active || active.paused) {
         decksRef.current.forEach((deck) => {
@@ -217,7 +301,6 @@ export function useAudioPlayer() {
         return
       }
 
-      // The other deck may still be finishing a crossfade — cut it now.
       const idle = decksRef.current[activeDeckRef.current === 0 ? 1 : 0]
       if (idle) {
         idle.pause()
