@@ -1,13 +1,12 @@
 "use client"
 
-import Link from "next/link"
-import { Flag, Music, RotateCcw } from "lucide-react"
+import { Flag, RotateCcw } from "lucide-react"
 import {
   OverlayActionLabel,
   OverlayIcon,
   OverlayShell,
 } from "@/components/overlay/overlay-shell"
-import { exitDocumentFullscreen, markNavigatedFromMap } from "@/lib/map-session"
+import { OverlaySiteLinks } from "@/components/overlay/overlay-site-links"
 
 interface CompletionScreenProps {
   isVisible: boolean
@@ -30,22 +29,10 @@ export function CompletionScreen({
           <Flag className="h-8 w-8 text-[#ed5a43]" />
         </OverlayIcon>
       }
-      kicker="Northern terminus"
-      title="End of Trail"
+      title="Northern Terminus"
       actions={
         <>
-          <Link
-            href="/library"
-            onClick={() => {
-              exitDocumentFullscreen()
-              markNavigatedFromMap()
-            }}
-            className="pct-link-row"
-          >
-            <OverlayActionLabel icon={<Music className="h-4 w-4" />}>
-              Audio library
-            </OverlayActionLabel>
-          </Link>
+          <OverlaySiteLinks />
           <button type="button" onClick={onRestart} className="pct-link-row">
             <OverlayActionLabel icon={<RotateCcw className="h-4 w-4" />}>
               Start over
