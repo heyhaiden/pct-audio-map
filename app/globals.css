@@ -134,11 +134,11 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 0.875rem 0.1875rem;
+    padding: 1.125rem 0.25rem;
     color: #f0eadc;
     border-top: 1px solid rgba(237, 90, 67, 0.18);
     font-family: var(--font-plex-mono), monospace;
-    font-size: var(--text-label);
+    font-size: var(--text-nav);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     transition:
@@ -146,6 +146,10 @@
       background-color 180ms ease,
       padding-left 220ms cubic-bezier(0.16, 1, 0.3, 1),
       transform 160ms ease;
+  }
+
+  .pct-link-row:last-child {
+    border-bottom: 1px solid rgba(237, 90, 67, 0.2);
   }
 
   .pct-link-row:hover {

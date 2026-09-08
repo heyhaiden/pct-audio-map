@@ -37,6 +37,7 @@ import {
   shouldShowChapterDrawerHandle,
 } from "@/lib/chapter-timeline-visibility"
 import { resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
+import { shouldRearmWipNotice } from "@/lib/wip-notice"
 import {
   clearMapSession,
   clearNavigatedFromMap,
@@ -352,10 +353,10 @@ export default function Home() {
   }, [currentChapter, journeyStarted])
 
   // WIP notice at early Oregon — shows once when you first reach the content
-  // edge. It's dismissible (you can keep exploring the map past it); once
-  // dismissed it won't reappear until you scroll back before the boundary.
+  // edge. Dismissed until you travel a real stretch south of the boundary;
+  // a one-mile jitter around 1800 used to rearm it and pop the overlay again.
   useEffect(() => {
-    if (currentMiles < WIP_MILE && wipDismissed) {
+    if (shouldRearmWipNotice(currentMiles, WIP_MILE) && wipDismissed) {
       setWipDismissed(false)
     }
   }, [currentMiles, wipDismissed])
@@ -809,7 +810,6 @@ export default function Home() {
 
       <CompletionScreen
         isVisible={showCompletion}
-        totalMiles={totalMiles}
         onRestart={handleRestart}
         onDismiss={handleDismissCompletion}
       />
