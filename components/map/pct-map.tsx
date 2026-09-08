@@ -6,7 +6,13 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
-import { configureRailingCameraForViewport } from "@/lib/railing-camera"
+import { computeRailingPose, configureRailingCameraForViewport } from "@/lib/railing-camera"
+import { applyFreeCameraPose } from "@/lib/node-camera"
+import {
+  isResumeTrailPosition,
+  resumeProgressFromMiles,
+  trailCoordinateAtProgress,
+} from "@/lib/map-resume"
 import { isFatalMapboxError, isMapAlive } from "@/lib/map-runtime-policy"
 import { createTrailDataLoader } from "@/lib/trail-data"
 import {
@@ -159,6 +165,10 @@ export function PCTMap({
   const onTrailheadProgressRef = useRef(onTrailheadProgress)
   const onOverviewReadyRef = useRef(onOverviewReady)
   const onMapErrorRef = useRef(onMapError)
+  const skipIntroRef = useRef(skipIntro)
+  const resumeMilesRef = useRef(externalMiles)
+  skipIntroRef.current = skipIntro
+  resumeMilesRef.current = externalMiles
 
   useEffect(() => {
     introPhaseRef.current = introPhase
@@ -263,6 +273,8 @@ export function PCTMap({
     map: map.current,
     trailCoordinates,
     enabled: initialAnimationDone && trailData !== null && !debugMode,
+    snapOnEnable: skipIntro,
+    resumeMiles: skipIntro ? externalMiles : undefined,
     onProgressChange: (progress, coordinates) => {
       setCurrentPosition(coordinates)
     },
@@ -341,13 +353,28 @@ export function PCTMap({
         const reducedGpu = preferReducedGpu()
         configureRailingCameraForViewport(reducedGpu)
         const overview = getOverviewCamera()
+        const resumeCenter =
+          skipIntroRef.current && isResumeTrailPosition(resumeMilesRef.current)
+            ? trailCoordinateAtProgress(
+                trailData.geometry.coordinates,
+                resumeProgressFromMiles(resumeMilesRef.current),
+              )
+            : null
+        const startView = resumeCenter
+          ? {
+              center: resumeCenter,
+              zoom: reducedGpu ? 8.4 : 9.55,
+              pitch: 60,
+              bearing: 0,
+            }
+          : overview
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/heyhaiden/cmhrxqwyy004a01sd9ngkgljo?optimize=true",
-          center: overview.center,
-          zoom: overview.zoom,
-          pitch: overview.pitch,
-          bearing: overview.bearing,
+          center: startView.center,
+          zoom: startView.zoom,
+          pitch: startView.pitch,
+          bearing: startView.bearing,
           antialias: !reducedGpu,
           interactive: false,
           attributionControl: false,
@@ -513,6 +540,16 @@ export function PCTMap({
 
           if (disposed || !isMapAlive(map.current)) return
 
+          const jumpToResumePose = () => {
+            if (!skipIntroRef.current || !isResumeTrailPosition(resumeMilesRef.current)) return
+            const path = getCameraPath()
+            if (!path?.length || !isMapAlive(map.current)) return
+            applyFreeCameraPose(
+              map.current,
+              computeRailingPose(path, resumeProgressFromMiles(resumeMilesRef.current)),
+            )
+          }
+
           const beginPrefetch = () => {
             if (disposed || !isMapAlive(map.current)) return
             prefetchRef.current?.cancel()
@@ -527,25 +564,32 @@ export function PCTMap({
             reducedGpu,
             // Any easeTo/jumpTo (even preloadOnly) would cancel the intro flyTo mid-flight
             isIntroFlying: () => introPhaseRef.current === "flying",
+            resumeMiles: skipIntroRef.current ? resumeMilesRef.current : undefined,
             })
           }
 
-          // Stay on the aerial overview while splash is up. Jumping to Campo
-          // (marker 1) to tessellate GeoJSON was visible through the glass
-          // scrim. idle here paints tiles, trail, and pins in the view the user
-          // can already see; corridor prefetch starts only after that gate.
-          void waitForOverviewScene(
-            map.current,
-            () => !disposed && introPhaseRef.current === "waiting",
-            {
-              onProgress: (progress) =>
-                onTrailheadProgressRef.current?.(0.25 + progress * 0.75),
-            },
-          ).then(() => {
-            if (disposed) return
+          if (skipIntroRef.current) {
+            jumpToResumePose()
             notifyTrailheadReady()
             beginPrefetch()
-          })
+          } else {
+            // Stay on the aerial overview while splash is up. Jumping to Campo
+            // (marker 1) to tessellate GeoJSON was visible through the glass
+            // scrim. idle here paints tiles, trail, and pins in the view the user
+            // can already see; corridor prefetch starts only after that gate.
+            void waitForOverviewScene(
+              map.current,
+              () => !disposed && introPhaseRef.current === "waiting",
+              {
+                onProgress: (progress) =>
+                  onTrailheadProgressRef.current?.(0.25 + progress * 0.75),
+              },
+            ).then(() => {
+              if (disposed) return
+              notifyTrailheadReady()
+              beginPrefetch()
+            })
+          }
           } catch (error) {
             failMap("The map loaded, but its trail layers could not be prepared.", error)
           }
@@ -685,12 +729,20 @@ export function PCTMap({
   // Resume mid-trail: enable scroll camera immediately, no overview/fly sequence.
   useEffect(() => {
     if (!skipIntro || !mapLoaded || initialAnimationDone) return
-    prefetchRef.current?.cancel()
+    if (isResumeTrailPosition(resumeMilesRef.current) && isMapAlive(map.current)) {
+      const path = getCameraPath()
+      if (path?.length) {
+        applyFreeCameraPose(
+          map.current,
+          computeRailingPose(path, resumeProgressFromMiles(resumeMilesRef.current)),
+        )
+      }
+    }
     introPhaseRef.current = "done"
     setIntroPhase("done")
     setInitialAnimationDone(true)
     onIntroComplete?.()
-  }, [skipIntro, mapLoaded, initialAnimationDone, onIntroComplete])
+  }, [skipIntro, mapLoaded, initialAnimationDone, onIntroComplete, getCameraPath])
 
   // Start intro: cancel warm, restore overview UNDER splash, then reveal + fly to trailhead.
   useEffect(() => {

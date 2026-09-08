@@ -12,6 +12,7 @@ import {
 } from "@/lib/railing-camera"
 import { getMapPrefetchPolicy, isMapAlive, isMapReadyForPreload } from "@/lib/map-runtime-policy"
 import { createTrailheadNotifier } from "@/lib/trailhead-readiness"
+import { isResumeTrailPosition } from "@/lib/map-resume"
 
 /** Warm style + terrain out to early Oregon; content ends there for now. */
 export const PREFETCH_END_MILES = 1800
@@ -220,6 +221,8 @@ export function startPathTilePrefetch(options: {
   reducedGpu?: boolean
   /** True while the intro flyTo is animating — any easeTo/jumpTo would cancel it. */
   isIntroFlying?: () => boolean
+  /** Back to Map: warm around the saved mile, not the Mexico trailhead. */
+  resumeMiles?: number
 }): PrefetchController {
   const {
     map,
@@ -231,6 +234,7 @@ export function startPathTilePrefetch(options: {
     trailheadAlreadyCached = false,
     reducedGpu = false,
     isIntroFlying = () => false,
+    resumeMiles,
   } = options
   const policy = getMapPrefetchPolicy(reducedGpu)
   let cancelled = false
@@ -307,6 +311,17 @@ export function startPathTilePrefetch(options: {
       if (cancelled) return
     }
     if (cancelled || !isMapReadyForPreload(map)) return
+
+    if (isResumeTrailPosition(resumeMiles)) {
+      // Do not mark the trailhead cached — this session never warmed Campo.
+      notifyTrailhead(false)
+      warmAhead(resumeMiles)
+      await warmDetail(
+        Math.max(0, resumeMiles - 20),
+        Math.min(PREFETCH_END_MILES, resumeMiles + policy.windowAheadMiles),
+      )
+      return
+    }
 
     if (trailheadAlreadyCached) {
       notifyTrailhead(true)
