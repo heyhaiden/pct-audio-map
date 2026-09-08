@@ -37,27 +37,29 @@ export function ChapterCard({
       style={{ opacity }}
       onClick={onDismiss}
     >
-      <div className="flex h-full flex-col items-center justify-center px-[clamp(30px,6vw,80px)] py-[clamp(34px,6dvh,72px)]">
-        <p className="pct-display text-[clamp(56px,8dvh,76px)] font-normal leading-none text-[#ed5a43]/90">
-          {romanNumerals[chapterIndex] ?? chapterIndex + 1}
-        </p>
-        <h2
-          id="desktop-chapter-title"
-          className="pct-display mb-3 mt-3.5 text-[clamp(31px,4.5dvh,46px)] font-normal text-[#f6f1e4]"
-        >
-          {chapter.title}
-        </h2>
-        <p
-          id="desktop-chapter-description"
-          className="pct-display max-w-lg text-[clamp(16px,2.1dvh,20px)] font-light leading-[1.65] text-[#cfc6b4]"
-        >
-          {chapter.description}
-        </p>
+      <div className="flex h-full flex-col items-center px-[clamp(30px,6vw,80px)]">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-[clamp(24px,5dvh,72px)]">
+          <p className="pct-display text-[clamp(56px,8dvh,76px)] font-normal leading-none text-[#ed5a43]/90">
+            {romanNumerals[chapterIndex] ?? chapterIndex + 1}
+          </p>
+          <h2
+            id="desktop-chapter-title"
+            className="pct-display mb-3 mt-3.5 text-[clamp(31px,4.5dvh,46px)] font-normal text-[#f6f1e4]"
+          >
+            {chapter.title}
+          </h2>
+          <p
+            id="desktop-chapter-description"
+            className="pct-display max-w-lg text-[clamp(16px,2.1dvh,20px)] font-light leading-[1.65] text-[#cfc6b4]"
+          >
+            {chapter.description}
+          </p>
+        </div>
 
         <button
           type="button"
           onClick={onDismiss}
-          className="absolute bottom-32 px-5 py-3 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
+          className="shrink-0 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))] pt-2 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43] md:pb-[clamp(1.5rem,5dvh,2.75rem)]"
         >
           Click to continue
         </button>
