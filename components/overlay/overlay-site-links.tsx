@@ -13,10 +13,13 @@ const SITE_ICONS: Record<Exclude<MobileNavigationPage, "home">, LucideIcon> = {
 /** Site pages on map overlays. Defaults to hamburger order without Home. */
 export function OverlaySiteLinks({
   pages,
+  onNavigate,
 }: {
   pages?: Array<Exclude<MobileNavigationPage, "home">>
+  onNavigate?: () => void
 }) {
   const leaveForSitePage = () => {
+    onNavigate?.()
     exitDocumentFullscreen()
     markNavigatedFromMap()
   }
