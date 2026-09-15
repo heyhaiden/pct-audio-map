@@ -7,6 +7,11 @@ export const AUDIO_MARKER_SOURCE_ID = "pct-audio-markers"
 export const AUDIO_MARKER_LAYER_ID = "pct-audio-markers-pin"
 export const AUDIO_MARKER_IMAGE_ID = "pct-audio-pin"
 
+export function markerIconSize(activeMarkerId: string | null) {
+  if (!activeMarkerId) return 0.9
+  return ["case", ["==", ["get", "id"], activeMarkerId], 1.2, 0.9]
+}
+
 /** Classic Mapbox-style teardrop pin as an ImageData for symbol layers. */
 export function createPinImage(size = 64): { width: number; height: number; data: Uint8Array } {
   const canvas = document.createElement("canvas")
@@ -115,7 +120,7 @@ export function installAudioMarkerLayer(map: any, initialChapter = "southern-cal
       source: AUDIO_MARKER_SOURCE_ID,
       layout: {
         "icon-image": AUDIO_MARKER_IMAGE_ID,
-        "icon-size": 0.9,
+        "icon-size": markerIconSize(null),
         "icon-anchor": "bottom",
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,

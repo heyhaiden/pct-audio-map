@@ -45,7 +45,7 @@ export default function ResourcesPage() {
         <main className="pct-stagger mx-auto max-w-4xl px-6 py-12 md:py-20">
           <section className="mb-12 text-center md:mb-16">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
-              Trail <span className="text-[#ed5a43]">Resources</span>
+              Trail <span className="pct-wordmark font-wordmark uppercase text-[#ed5a43]">Resources</span>
             </h1>
             <p className="pct-display mx-auto max-w-xl text-prose font-light leading-[1.65] text-[#b4aa9b]">
               Organizations and planning tools for the PCT, with a focus on communities supporting

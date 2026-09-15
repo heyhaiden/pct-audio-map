@@ -2,12 +2,18 @@
 
 import { useEffect, useRef } from "react"
 import { audioMarkers } from "@/data/audio-markers"
-import { AUDIO_MARKER_LAYER_ID, AUDIO_MARKER_SOURCE_ID, chapterCollection } from "@/lib/audio-marker-layer"
+import {
+  AUDIO_MARKER_LAYER_ID,
+  AUDIO_MARKER_SOURCE_ID,
+  chapterCollection,
+  markerIconSize,
+} from "@/lib/audio-marker-layer"
 import type { AudioMarker } from "@/types/map"
 
 interface AudioMarkersProps {
   map: any
   onMarkerClick: (marker: AudioMarker) => void
+  activeMarkerId?: string | null
   /** When false, canvas clicks never open a pin (opening crane / SoCal overlay). */
   enabled?: boolean
 }
@@ -20,7 +26,12 @@ interface AudioMarkersProps {
  * This component keeps the full trail pin set on the source — no install
  * retries, no style-loaded polling.
  */
-export function AudioMarkers({ map, onMarkerClick, enabled = true }: AudioMarkersProps) {
+export function AudioMarkers({
+  map,
+  onMarkerClick,
+  activeMarkerId = null,
+  enabled = true,
+}: AudioMarkersProps) {
   const onMarkerClickRef = useRef(onMarkerClick)
   onMarkerClickRef.current = onMarkerClick
   const enabledRef = useRef(enabled)
@@ -32,6 +43,11 @@ export function AudioMarkers({ map, onMarkerClick, enabled = true }: AudioMarker
     const applyMarkerData = () => {
       try {
         map.getSource?.(AUDIO_MARKER_SOURCE_ID)?.setData(chapterCollection())
+        map.setLayoutProperty?.(
+          AUDIO_MARKER_LAYER_ID,
+          "icon-size",
+          markerIconSize(activeMarkerId),
+        )
       } catch {
         /* map may already be gone */
       }
@@ -41,7 +57,7 @@ export function AudioMarkers({ map, onMarkerClick, enabled = true }: AudioMarker
     // A style reload rebuilds the layer empty; refill it once that lands.
     map.on("style.load", applyMarkerData)
     return () => map.off?.("style.load", applyMarkerData)
-  }, [map, audioMarkers])
+  }, [map, activeMarkerId])
 
   useEffect(() => {
     if (!map || map._removed) return

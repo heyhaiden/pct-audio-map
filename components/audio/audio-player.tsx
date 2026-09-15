@@ -116,33 +116,37 @@ export function AudioPlayer({
     >
       <div
         ref={cardRef}
-        className="pct-glass-panel relative flex items-center gap-2 p-[15px_12px] md:gap-4 md:p-[18px_18px]"
+        className="pct-glass-panel relative flex min-h-[292px] flex-col p-[15px_16px] md:min-h-[268px] md:p-[18px]"
       >
-        <button
-          type="button"
-          onClick={onPrevious}
-          disabled={!hasPrevious}
-          aria-label="Previous recording"
-          className={arrowClass}
-        >
-          <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
-        </button>
-
         <div className="min-w-0 flex-1 text-left">
           <AudioMarkerCardBody marker={shown} variant="map" />
-
-          <div className="mt-4 border-t border-white/15 pt-3">{status}</div>
         </div>
 
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!hasNext}
-          aria-label="Next recording"
-          className={arrowClass}
-        >
-          <ChevronRight className="h-6 w-6" strokeWidth={1.75} />
-        </button>
+        <div className="mt-4 grid grid-cols-[2rem_1fr_2rem] items-center border-t border-white/15 pt-1">
+          <button
+            type="button"
+            onClick={onPrevious}
+            disabled={!hasPrevious}
+            aria-label="Previous recording"
+            className={arrowClass}
+          >
+            <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
+          </button>
+
+          <div className="flex min-h-10 items-center justify-center text-center">
+            {status}
+          </div>
+
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={!hasNext}
+            aria-label="Next recording"
+            className={arrowClass}
+          >
+            <ChevronRight className="h-6 w-6" strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
     </div>
   )
