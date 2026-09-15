@@ -8,13 +8,23 @@ export type MapSessionState = {
   scrollRatio: number
   miles: number
   wipDismissed: boolean
+  /** Chapter intro that was actually visible when the user left, if any. */
+  chapterOverlay: number | null
+}
+
+type MapSessionInput = Omit<MapSessionState, "chapterOverlay"> & {
+  chapterOverlay?: number | null
 }
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined"
 }
 
-export function saveMapSession(state: MapSessionState): void {
+function normalizeChapterOverlay(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null
+}
+
+export function saveMapSession(state: MapSessionInput): void {
   if (!canUseStorage()) return
   try {
     sessionStorage.setItem(
@@ -23,6 +33,7 @@ export function saveMapSession(state: MapSessionState): void {
         scrollRatio: Math.max(0, Math.min(1, state.scrollRatio)),
         miles: Math.max(0, state.miles),
         wipDismissed: !!state.wipDismissed,
+        chapterOverlay: normalizeChapterOverlay(state.chapterOverlay),
       } satisfies MapSessionState),
     )
   } catch {
@@ -41,10 +52,26 @@ export function getMapSession(): MapSessionState | null {
       scrollRatio: Math.max(0, Math.min(1, parsed.scrollRatio)),
       miles: Math.max(0, parsed.miles),
       wipDismissed: !!parsed.wipDismissed,
+      chapterOverlay: normalizeChapterOverlay(parsed.chapterOverlay),
     }
   } catch {
     return null
   }
+}
+
+/** Preserve a chapter card only when it was visible at the moment of departure. */
+export function resolveDismissedChapterOnResume(
+  chapterOverlay: number | null,
+  currentChapter: number,
+): number | null {
+  return chapterOverlay === currentChapter ? null : currentChapter
+}
+
+/** Avoid reopening Trail Continues when returning from its library link. */
+export function markWipDismissedInMapSession(): void {
+  const session = getMapSession()
+  if (!session) return
+  saveMapSession({ ...session, wipDismissed: true })
 }
 
 export function clearMapSession(): void {

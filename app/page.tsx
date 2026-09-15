@@ -43,6 +43,7 @@ import {
   clearNavigatedFromMap,
   consumeResumeIntent,
   getMapSession,
+  resolveDismissedChapterOnResume,
   saveMapSession,
   type MapSessionState,
 } from "@/lib/map-session"
@@ -99,6 +100,13 @@ type ScrollControls = {
   getProgressFromCoordinates: (coordinates: [number, number]) => number
 }
 
+function chapterIndexForMiles(miles: number): number {
+  const index = CHAPTER_MILE_RANGES.findIndex(
+    ({ start, end }) => miles >= start && miles < end,
+  )
+  return index >= 0 ? index : CHAPTER_MILE_RANGES.length - 1
+}
+
 export default function Home() {
   const {
     transitionToTrack,
@@ -147,6 +155,8 @@ export default function Home() {
   const cameraAnimRef = useRef(0)
   const resumeRestoredRef = useRef(false)
   const navInitializedRef = useRef(false)
+  const resumeChapterRef = useRef<number | null>(null)
+  const visibleChapterOverlayRef = useRef<number | null>(null)
   /** True while the current position came from a chapter-tab jump, not scrolling. */
   const arrivedByJumpRef = useRef(false)
   const currentMilesRef = useRef(currentMiles)
@@ -163,10 +173,15 @@ export default function Home() {
 
     const session = consumeResumeIntent() ? getMapSession() : null
     if (session) {
+      const resumeChapter = chapterIndexForMiles(session.miles)
+      resumeChapterRef.current = resumeChapter
       setResumeSession(session)
       setNavMode("resume")
       setCurrentMiles(session.miles)
       setWipDismissed(session.wipDismissed)
+      setOverlayDismissedChapter(
+        resolveDismissedChapterOnResume(session.chapterOverlay, resumeChapter),
+      )
       setShowSplash(false)
       setRevealMap(true)
       setJourneyStarted(true)
@@ -196,13 +211,7 @@ export default function Home() {
   }, [navMode, resumeSession])
 
   const currentChapter = useMemo(() => {
-    for (let i = 0; i < CHAPTER_MILE_RANGES.length; i++) {
-      const range = CHAPTER_MILE_RANGES[i]
-      if (currentMiles >= range.start && currentMiles < range.end) {
-        return i
-      }
-    }
-    return CHAPTER_MILE_RANGES.length - 1
+    return chapterIndexForMiles(currentMiles)
   }, [currentMiles])
 
   const chapterIntro = useChapterIntro(currentMiles, introComplete && journeyStarted)
@@ -227,6 +236,7 @@ export default function Home() {
   const isChapterOverlayVisible = isDesktopViewport
     ? desktopIntroOpacity > 0.01
     : isMobileChapterOverlayVisible
+  visibleChapterOverlayRef.current = isChapterOverlayVisible ? introChapterIndex : null
   const mapPinsLocked = areOpeningMapPinsLocked({
     isResuming,
     introComplete,
@@ -257,8 +267,11 @@ export default function Home() {
 
   // Reset the manual overlay dismissal when we move to a different chapter.
   useEffect(() => {
+    if (navMode === "boot") return
+    if (resumeChapterRef.current === introChapterIndex) return
+    resumeChapterRef.current = null
     setOverlayDismissedChapter(null)
-  }, [introChapterIndex])
+  }, [introChapterIndex, navMode])
 
   // Timeline nodes: the five chapters. No trailing "End" tab.
   const timelineNodes = useMemo(
@@ -525,6 +538,7 @@ export default function Home() {
         scrollRatio: max > 0 ? window.scrollY / max : 0,
         miles: currentMilesRef.current,
         wipDismissed: wipDismissedRef.current,
+        chapterOverlay: visibleChapterOverlayRef.current,
       })
     }
 
@@ -884,6 +898,7 @@ export default function Home() {
           <AudioMarkers
             map={map}
             onMarkerClick={handleAudioMarkerClick}
+            activeMarkerId={selectedAudioMarker?.id}
             enabled={!mapPinsLocked}
           />
         )}
