@@ -1,16 +1,24 @@
-import { CalendarDays, MapPin, Milestone } from "lucide-react"
+import { CalendarDays, MapPin, Milestone, Moon, Sun, Sunrise, Sunset } from "lucide-react"
 import { getMarkerMile } from "@/lib/marker-miles"
+import { TIME_OF_DAY_LABEL, formatMonthDay, type TimeOfDay } from "@/lib/time-of-day"
 import type { AudioMarker } from "@/types/map"
 
 export const audioMarkerStatusClass =
   "flex items-center gap-2 font-mono text-micro uppercase tracking-[0.18em]"
 
+const TIME_OF_DAY_ICON: Record<TimeOfDay, typeof Sun> = {
+  sunrise: Sunrise,
+  day: Sun,
+  dusk: Sunset,
+  night: Moon,
+}
+
 interface AudioMarkerCardBodyProps {
   marker: AudioMarker
-  /** Extra classes on the title/date row (e.g. close-button gutter). */
-  headerClassName?: string
   /** Draw the rule the date aligns to. Off where the card is already busy. */
   showMetaRule?: boolean
+  /** Map cards show time of day instead of elevation, and dates without a year. */
+  variant?: "map" | "library"
 }
 
 /**
@@ -19,22 +27,27 @@ interface AudioMarkerCardBodyProps {
  */
 export function AudioMarkerCardBody({
   marker,
-  headerClassName = "",
   showMetaRule = true,
+  variant = "library",
 }: AudioMarkerCardBodyProps) {
   const mile = getMarkerMile(marker.id)
+  const dateLabel =
+    marker.recordingDate && variant === "map"
+      ? formatMonthDay(marker.recordingDate)
+      : marker.recordingDate
+  const TimeIcon = marker.timeOfDay ? TIME_OF_DAY_ICON[marker.timeOfDay] : null
 
   return (
     <>
       {/* Date sits above the rule, its right edge flush with the rule's end. */}
-      <div className={`flex items-start justify-between gap-3 ${headerClassName}`}>
+      <div className="flex items-start justify-between gap-3">
         <h3 className="pct-display min-w-0 text-[21px] font-medium leading-[1.14] text-[#ede8dc] md:text-[26px]">
           {marker.name}
         </h3>
-        {marker.recordingDate ? (
+        {dateLabel ? (
           <span className="mt-1 flex shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">
             <CalendarDays className="h-3 w-3" />
-            {marker.recordingDate}
+            {dateLabel}
           </span>
         ) : null}
       </div>
@@ -47,7 +60,13 @@ export function AudioMarkerCardBody({
               MI {mile.toLocaleString("en-US")}
             </span>
           ) : null}
-          {marker.elevation ? (
+          {variant === "map" && marker.timeOfDay && TimeIcon ? (
+            <span className="flex items-center gap-1.5">
+              <TimeIcon className="h-3 w-3" />
+              {TIME_OF_DAY_LABEL[marker.timeOfDay]}
+            </span>
+          ) : null}
+          {variant !== "map" && marker.elevation ? (
             <span className="flex items-center gap-1.5">
               <MapPin className="h-3 w-3" />
               {marker.elevation.toLocaleString("en-US")} ft

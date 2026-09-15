@@ -24,7 +24,7 @@ export default function AboutPage() {
         <main className="pct-stagger mx-auto max-w-4xl px-6 py-12 md:py-20">
           <section className="mb-12 text-center md:mb-16">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
-              About <span className="uppercase tracking-[0.1em] text-[#ed5a43]">Offbeat</span>
+              About <span className="pct-wordmark font-wordmark uppercase text-[#ed5a43]">Offbeat</span>
             </h1>
             <p className="pct-display mx-auto max-w-xl text-prose font-light leading-[1.65] text-[#b4aa9b]">
               An immersive audio journey documenting the sonic landscape of the Pacific Crest Trail,

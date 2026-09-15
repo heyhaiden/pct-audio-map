@@ -36,7 +36,8 @@ import {
   shouldHideChapterTimeline,
   shouldShowChapterDrawerHandle,
 } from "@/lib/chapter-timeline-visibility"
-import { resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
+import { areOpeningMapPinsLocked, resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
+import { shouldRearmWipNotice } from "@/lib/wip-notice"
 import {
   clearMapSession,
   clearNavigatedFromMap,
@@ -45,6 +46,9 @@ import {
   saveMapSession,
   type MapSessionState,
 } from "@/lib/map-session"
+import { adjacentPlayable, hasMarkerAudio } from "@/lib/marker-navigation"
+import { prefetchAudio } from "@/lib/prefetch-audio"
+import { resolveAudioUrl } from "@/lib/resolve-audio-url"
 import type { AudioMarker } from "@/types/map"
 
 /**
@@ -67,14 +71,22 @@ const END_MILE = 2640
 /** Camera return to the scroll rail on close — the audio fade is timed to match. */
 const CLOSE_CAMERA_MS = 2200
 
+/** Arrow hops between nodes: camera can linger while audio crossfades sooner. */
+const NODE_ARROW_CAMERA_MS = 2800
+const NODE_ARROW_AUDIO_FADE_MS = 1100
+
 /** Chapter labels hold long enough to read, then clear quickly as the trail resumes. */
 const MOBILE_INTRO_HOLD = 14
 const MOBILE_INTRO_FADE = 6
 const DESKTOP_INTRO_HOLD = 60
 const DESKTOP_INTRO_FADE = 20
 
-const ACTIVE_CHAPTERS = new Set(["southern-california", "sierra-nevada", "northern-california"])
-const navigableMarkers = audioMarkers.filter((marker) => ACTIVE_CHAPTERS.has(marker.chapter))
+const ACTIVE_CHAPTERS = new Set([
+  "southern-california",
+  "sierra-nevada",
+  "northern-california",
+  "oregon-cascades",
+])
 
 type ScrollControls = {
   pauseScrollAnimation: () => void
@@ -193,8 +205,6 @@ export default function Home() {
     return CHAPTER_MILE_RANGES.length - 1
   }, [currentMiles])
 
-  const currentChapterId = pctSegments[currentChapter]?.id || "southern-california"
-
   const chapterIntro = useChapterIntro(currentMiles, introComplete && journeyStarted)
 
   const introChapterIndex = chapterIntro?.index ?? currentChapter
@@ -217,6 +227,11 @@ export default function Home() {
   const isChapterOverlayVisible = isDesktopViewport
     ? desktopIntroOpacity > 0.01
     : isMobileChapterOverlayVisible
+  const mapPinsLocked = areOpeningMapPinsLocked({
+    isResuming,
+    introComplete,
+    isSoCalOverlayVisible: introChapterIndex === 0 && isChapterOverlayVisible,
+  })
   /** Any overlay that must be clicked away rather than scrolled past. */
   const isOverlayBlockingScroll = isChapterOverlayVisible || showWip || showCompletion
 
@@ -264,9 +279,12 @@ export default function Home() {
   }, [currentChapter, currentMiles])
 
   const handleMilesUpdate = useCallback((miles: number, total: number) => {
+    // The scroll hook publishes 0 before window scroll is restored. Keep the
+    // saved mile so the map can jump there instead of easing from Mexico.
+    if (isResuming && !resumeRestoredRef.current && miles < 1) return
     setCurrentMiles(miles)
     setTotalMiles(total)
-  }, [])
+  }, [isResuming])
 
   const handleIntroComplete = useCallback(() => {
     setIntroComplete(true)
@@ -352,10 +370,10 @@ export default function Home() {
   }, [currentChapter, journeyStarted])
 
   // WIP notice at early Oregon — shows once when you first reach the content
-  // edge. It's dismissible (you can keep exploring the map past it); once
-  // dismissed it won't reappear until you scroll back before the boundary.
+  // edge. Dismissed until you travel a real stretch south of the boundary;
+  // a one-mile jitter around 1800 used to rearm it and pop the overlay again.
   useEffect(() => {
-    if (currentMiles < WIP_MILE && wipDismissed) {
+    if (shouldRearmWipNotice(currentMiles, WIP_MILE) && wipDismissed) {
       setWipDismissed(false)
     }
   }, [currentMiles, wipDismissed])
@@ -530,8 +548,10 @@ export default function Home() {
   }, [journeyStarted, introComplete, showSplash, isResuming])
 
   // After resume, snap scroll once the tall map spacer exists.
+  // Do not wait for Mapbox — the camera loop must not arm at scrollY=0.
+  // Do not copy the live GL camera here; that was the Mexico overview.
   useEffect(() => {
-    if (!isResuming || !resumeSession || !introComplete || !map || resumeRestoredRef.current) return
+    if (!isResuming || !resumeSession || resumeRestoredRef.current) return
 
     const restore = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight
@@ -553,8 +573,6 @@ export default function Home() {
       if (window.scrollY < 10 && top > 50) return false
 
       resumeRestoredRef.current = true
-      scrollControlRef.current?.setBlocked(false)
-      scrollControlRef.current?.resumeScrollAnimation()
       return true
     }
 
@@ -579,7 +597,7 @@ export default function Home() {
       cancelAnimationFrame(raf)
       window.clearTimeout(delayed)
     }
-  }, [isResuming, resumeSession, introComplete, map, totalMiles])
+  }, [isResuming, resumeSession, totalMiles])
 
   // Fresh journeys: zero scroll when intro finishes in case anything leaked through.
   useEffect(() => {
@@ -639,31 +657,37 @@ export default function Home() {
   )
 
   const activateNode = useCallback(
-    (marker: AudioMarker, durationMs: number) => {
+    (marker: AudioMarker, cameraDurationMs: number, audioFadeMs?: number) => {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
       markDirectNavigation()
-      // Match the crossfade to the camera move so audio and view land together.
-      void transitionToTrack(
-        {
-          id: marker.id,
-          url: marker.audioUrl,
-          volume: 0.7,
-          loop: true,
-        },
-        durationMs,
-      )
+      const fadeMs = audioFadeMs ?? cameraDurationMs
+      // Match the crossfade to the camera move on first open; arrow hops can
+      // crossfade audio faster than the camera finishes repositioning.
+      if (hasMarkerAudio(marker)) {
+        void transitionToTrack(
+          {
+            id: marker.id,
+            url: resolveAudioUrl(marker.audioUrl),
+            volume: 0.7,
+            loop: true,
+          },
+          fadeMs,
+        )
+      } else {
+        fadeOutAndStop(fadeMs)
+      }
 
       if (map) {
         cancelFreeCameraAnimation()
         scrollControlRef.current?.pauseScrollAnimation()
         scrollControlRef.current?.setPendingSyncCoordinates(marker.coordinates)
-        void flyToMarkerPunchIn(marker, durationMs)
+        void flyToMarkerPunchIn(marker, cameraDurationMs)
       }
 
       setSelectedAudioMarker(marker)
     },
-    [flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack],
+    [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack],
   )
 
   const handleCloseAudio = async () => {
@@ -704,24 +728,31 @@ export default function Home() {
   }
 
   const handleAudioMarkerClick = (marker: AudioMarker) => {
+    if (mapPinsLocked) return
     activateNode(marker, 2400)
   }
 
-  const currentMarkerIndex = selectedAudioMarker
-    ? navigableMarkers.findIndex((marker) => marker.id === selectedAudioMarker.id)
-    : -1
-  const hasPreviousMarker = currentMarkerIndex > 0
-  const hasNextMarker = currentMarkerIndex >= 0 && currentMarkerIndex < navigableMarkers.length - 1
+  const { previous: previousPlayable, next: nextPlayable } = selectedAudioMarker
+    ? adjacentPlayable(audioMarkers, ACTIVE_CHAPTERS, selectedAudioMarker.id)
+    : { previous: null, next: null }
+  const hasPreviousMarker = Boolean(previousPlayable)
+  const hasNextMarker = Boolean(nextPlayable)
 
   const handlePreviousMarker = () => {
-    if (!hasPreviousMarker) return
-    activateNode(navigableMarkers[currentMarkerIndex - 1], 2800)
+    if (!previousPlayable) return
+    activateNode(previousPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
   }
 
   const handleNextMarker = () => {
-    if (!hasNextMarker) return
-    activateNode(navigableMarkers[currentMarkerIndex + 1], 2800)
+    if (!nextPlayable) return
+    activateNode(nextPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
   }
+
+  // Warm next/prev recordings only while a pin is open — not the full catalog.
+  useEffect(() => {
+    if (previousPlayable) prefetchAudio(previousPlayable.audioUrl)
+    if (nextPlayable) prefetchAudio(nextPlayable.audioUrl)
+  }, [previousPlayable, nextPlayable])
 
   const autoHideChapterTimeline = shouldHideChapterTimeline(
     Boolean(selectedAudioMarker),
@@ -809,7 +840,6 @@ export default function Home() {
 
       <CompletionScreen
         isVisible={showCompletion}
-        totalMiles={totalMiles}
         onRestart={handleRestart}
         onDismiss={handleDismissCompletion}
       />
@@ -832,7 +862,7 @@ export default function Home() {
         }}
       />
 
-      <div className="fixed inset-0 z-0 pointer-events-auto">
+      <div className={`fixed inset-0 z-0 ${mapPinsLocked ? "pointer-events-none" : "pointer-events-auto"}`}>
         <PCTMap
           onMapLoad={setMap}
           onMilesUpdate={handleMilesUpdate}
@@ -853,8 +883,8 @@ export default function Home() {
         {map && (
           <AudioMarkers
             map={map}
-            currentChapter={selectedAudioMarker?.chapter ?? currentChapterId}
             onMarkerClick={handleAudioMarkerClick}
+            enabled={!mapPinsLocked}
           />
         )}
       </div>

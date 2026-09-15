@@ -18,11 +18,20 @@ import {
   type CameraPathPoint,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
+import {
+  isResumeTrailPosition,
+  resolveResumeFrameProgress,
+  resumeProgressFromMiles,
+} from "@/lib/map-resume"
 
 interface TrailScrollOptions {
   map: any
   trailCoordinates: number[][]
   enabled: boolean
+  /** Jump to the railing pose instead of easing from the live GL camera. */
+  snapOnEnable?: boolean
+  /** Saved mile while Back to Map restores window scroll. */
+  resumeMiles?: number
   onProgressChange?: (progress: number, coordinates: [number, number]) => void
 }
 
@@ -44,10 +53,18 @@ export function useTrailScroll({
   map,
   trailCoordinates,
   enabled,
+  snapOnEnable = false,
+  resumeMiles,
   onProgressChange,
 }: TrailScrollOptions): TrailScrollReturn {
-  const [scrollProgress, setScrollProgress] = useState(0)
-  const [currentMiles, setCurrentMiles] = useState(0)
+  const [scrollProgress, setScrollProgress] = useState(() =>
+    snapOnEnable && isResumeTrailPosition(resumeMiles)
+      ? resumeProgressFromMiles(resumeMiles)
+      : 0,
+  )
+  const [currentMiles, setCurrentMiles] = useState(() =>
+    snapOnEnable && isResumeTrailPosition(resumeMiles) ? resumeMiles : 0,
+  )
   const [cameraPath, setCameraPath] = useState<CameraPathPoint[] | null>(null)
   const [isScrollPaused, setIsScrollPaused] = useState(false)
   const pendingSyncRef = useRef<[number, number] | null>(null)
@@ -70,6 +87,24 @@ export function useTrailScroll({
   })
   const hasInitializedFromMap = useRef(false)
   const previousFrameTimeRef = useRef<number | null>(null)
+  const snapOnEnableRef = useRef(snapOnEnable)
+  snapOnEnableRef.current = snapOnEnable
+  const resumeLockMilesRef = useRef<number | null>(
+    snapOnEnable && isResumeTrailPosition(resumeMiles) ? resumeMiles : null,
+  )
+  const resumeLockedRef = useRef(resumeLockMilesRef.current != null)
+
+  useEffect(() => {
+    if (!snapOnEnable || !isResumeTrailPosition(resumeMiles)) return
+    if (resumeLockMilesRef.current == null) {
+      resumeLockMilesRef.current = resumeMiles
+      resumeLockedRef.current = true
+    }
+    setCurrentMiles((prev) => (prev < 1 ? resumeMiles : prev))
+    setScrollProgress((prev) =>
+      prev < 0.001 ? resumeProgressFromMiles(resumeMiles) : prev,
+    )
+  }, [snapOnEnable, resumeMiles])
 
   useEffect(() => {
     cameraPathRef.current = cameraPath
@@ -259,10 +294,19 @@ export function useTrailScroll({
       const isScrolling = frameTime - lastScrollChangeMs < 150
 
       const rawPhase = scrollHeight > 0 ? Math.max(0, Math.min(1, scrollTop / scrollHeight)) : 0
-      const miles = rawPhase * PCT_TOTAL_MILES
+      const resumeLockMiles = resumeLockMilesRef.current
+      const resolved = resolveResumeFrameProgress({
+        scrollProgress: rawPhase,
+        resumeProgress:
+          resumeLockMiles != null ? resumeProgressFromMiles(resumeLockMiles) : null,
+        locked: resumeLockedRef.current,
+      })
+      resumeLockedRef.current = resolved.locked
+      const phase = resolved.progress
+      const miles = phase * PCT_TOTAL_MILES
 
-      const trail = sampleTrailAtProgress(cameraPath, rawPhase)
-      const { altitude: targetAltitude, pitch: targetPitch } = altitudeAndPitchForProgress(rawPhase)
+      const trail = sampleTrailAtProgress(cameraPath, phase)
+      const { altitude: targetAltitude, pitch: targetPitch } = altitudeAndPitchForProgress(phase)
       const groundOffsetKm = (targetAltitude * Math.tan((targetPitch * Math.PI) / 180)) / 1000
       const [targetLng, targetLat] = offsetLngLat(
         trail.lng,
@@ -277,28 +321,37 @@ export function useTrailScroll({
       if (now - lastUiPublishMs > 100 || Math.abs(miles - lastPublishedMiles) >= 0.5) {
         lastUiPublishMs = now
         lastPublishedMiles = miles
-        setScrollProgress(rawPhase)
+        setScrollProgress(phase)
         setCurrentMiles(miles)
-        onProgressChangeRef.current?.(rawPhase, [trail.lng, trail.lat])
+        onProgressChangeRef.current?.(phase, [trail.lng, trail.lat])
       }
 
       if (!hasInitializedFromMap.current && currentMap) {
-        try {
-          const camera = currentMap.getFreeCameraOptions()
-          if (camera && camera.position) {
-            const lngLat = camera.position.toLngLat()
-            cameraStateRef.current.lng = lngLat.lng
-            cameraStateRef.current.lat = lngLat.lat
-            cameraStateRef.current.altitude = camera.position.toAltitude()
+        if (snapOnEnableRef.current) {
+          cameraStateRef.current.lng = targetLng
+          cameraStateRef.current.lat = targetLat
+          cameraStateRef.current.altitude = targetAltitude
+          cameraStateRef.current.pitch = targetPitch
+          cameraStateRef.current.bearing = targetBearing
+          forceCameraWriteRef.current = true
+        } else {
+          try {
+            const camera = currentMap.getFreeCameraOptions()
+            if (camera && camera.position) {
+              const lngLat = camera.position.toLngLat()
+              cameraStateRef.current.lng = lngLat.lng
+              cameraStateRef.current.lat = lngLat.lat
+              cameraStateRef.current.altitude = camera.position.toAltitude()
+              cameraStateRef.current.pitch = currentMap.getPitch()
+              cameraStateRef.current.bearing = currentMap.getBearing()
+            }
+          } catch {
+            const center = currentMap.getCenter()
+            cameraStateRef.current.lng = center.lng
+            cameraStateRef.current.lat = center.lat
             cameraStateRef.current.pitch = currentMap.getPitch()
             cameraStateRef.current.bearing = currentMap.getBearing()
           }
-        } catch {
-          const center = currentMap.getCenter()
-          cameraStateRef.current.lng = center.lng
-          cameraStateRef.current.lat = center.lat
-          cameraStateRef.current.pitch = currentMap.getPitch()
-          cameraStateRef.current.bearing = currentMap.getBearing()
         }
         hasInitializedFromMap.current = true
       }

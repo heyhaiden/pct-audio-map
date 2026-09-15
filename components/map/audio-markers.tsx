@@ -7,8 +7,9 @@ import type { AudioMarker } from "@/types/map"
 
 interface AudioMarkersProps {
   map: any
-  currentChapter: string
   onMarkerClick: (marker: AudioMarker) => void
+  /** When false, canvas clicks never open a pin (opening crane / SoCal overlay). */
+  enabled?: boolean
 }
 
 /**
@@ -16,29 +17,31 @@ interface AudioMarkersProps {
  *
  * The source and layer themselves are created by `installAudioMarkerLayer()`
  * inside the map's `load` handler in pct-map.tsx, next to the trail layers.
- * This component only swaps the GeoJSON when the chapter changes — no install
+ * This component keeps the full trail pin set on the source — no install
  * retries, no style-loaded polling.
  */
-export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarkersProps) {
+export function AudioMarkers({ map, onMarkerClick, enabled = true }: AudioMarkersProps) {
   const onMarkerClickRef = useRef(onMarkerClick)
   onMarkerClickRef.current = onMarkerClick
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
 
   useEffect(() => {
     if (!map || map._removed) return
 
-    const applyChapterData = () => {
+    const applyMarkerData = () => {
       try {
-        map.getSource?.(AUDIO_MARKER_SOURCE_ID)?.setData(chapterCollection(currentChapter))
+        map.getSource?.(AUDIO_MARKER_SOURCE_ID)?.setData(chapterCollection())
       } catch {
         /* map may already be gone */
       }
     }
 
-    applyChapterData()
+    applyMarkerData()
     // A style reload rebuilds the layer empty; refill it once that lands.
-    map.on("style.load", applyChapterData)
-    return () => map.off?.("style.load", applyChapterData)
-  }, [map, currentChapter])
+    map.on("style.load", applyMarkerData)
+    return () => map.off?.("style.load", applyMarkerData)
+  }, [map, audioMarkers])
 
   useEffect(() => {
     if (!map || map._removed) return
@@ -47,6 +50,7 @@ export function AudioMarkers({ map, currentChapter, onMarkerClick }: AudioMarker
     if (!canvas) return
 
     const onCanvasClick = (event: MouseEvent) => {
+      if (!enabledRef.current) return
       if (!map.getLayer?.(AUDIO_MARKER_LAYER_ID)) return
 
       const rect = canvas.getBoundingClientRect()

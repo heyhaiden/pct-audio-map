@@ -17,6 +17,7 @@ const controlClass =
 export function AboutSocial({ className, soundEnabled, onSoundToggle }: AboutSocialProps) {
   return (
     <div
+      data-keep-audio-focus
       className={`fixed right-3 top-3 z-50 flex flex-col items-center gap-2 md:right-[22px] md:top-5 ${
         className ?? ""
       }`}

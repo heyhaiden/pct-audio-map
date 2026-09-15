@@ -5,6 +5,7 @@
   --font-sans: var(--font-archivo);
   --font-serif: var(--font-spectral);
   --font-mono: var(--font-plex-mono);
+  --font-wordmark: var(--font-mansalva);
 
   /* One type ladder for the whole app. The original v0 sizes ran small — 8.5px
      mono metadata, 12.5px body — so every step here is a size up from what it
@@ -66,11 +67,23 @@
     max-height: 100dvh;
   }
 
-  html:has(.site-page-root),
-  html:has(.site-page-root) body {
+  /* html is the only site-page scroller. overflow-y:auto on body too makes a
+     nested scrollport as soon as load-in transforms add a few extra pixels
+     (pct-stagger / fade-in), so the first wheel ticks eat body then html. */
+  html:has(.site-page-root) {
     overscroll-behavior: auto;
     overflow-x: clip;
     overflow-y: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    touch-action: auto !important;
+  }
+
+  html:has(.site-page-root) body {
+    overscroll-behavior: auto;
+    /* Both axes must stay visible. Mixing clip/auto with visible computes
+       visible → auto, and body becomes a second scroller again. */
+    overflow: visible !important;
     height: auto !important;
     max-height: none !important;
     touch-action: auto !important;
@@ -121,6 +134,14 @@
     font-family: var(--font-spectral), Georgia, serif;
   }
 
+  /* Wordmark only: splash + about titles. */
+  .pct-wordmark {
+    font-family: var(--font-mansalva), cursive;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
   .pct-kicker {
     color: var(--pct-glass-kicker);
     font-family: var(--font-plex-mono), monospace;
@@ -134,11 +155,11 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 0.875rem 0.1875rem;
+    padding: 1.125rem 0.25rem;
     color: #f0eadc;
     border-top: 1px solid rgba(237, 90, 67, 0.18);
     font-family: var(--font-plex-mono), monospace;
-    font-size: var(--text-label);
+    font-size: var(--text-nav);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     transition:
@@ -146,6 +167,10 @@
       background-color 180ms ease,
       padding-left 220ms cubic-bezier(0.16, 1, 0.3, 1),
       transform 160ms ease;
+  }
+
+  .pct-link-row:last-child {
+    border-bottom: 1px solid rgba(237, 90, 67, 0.2);
   }
 
   .pct-link-row:hover {
@@ -261,14 +286,9 @@
   }
 }
 
-/* Short viewports (most phones): drop the footer line, tighten the stack, and
-   keep "Best with headphones" — it's the one instruction that changes how the
-   piece is heard, so it stays on mobile. */
+/* Short viewports (most phones): tighten the stack, and keep "Best with
+   headphones" — it's the one instruction that changes how the piece is heard. */
 @media (max-height: 720px) {
-  .pct-splash-footer {
-    display: none;
-  }
-
   .pct-splash-body {
     padding-top: 1.5rem;
     padding-bottom: 1.5rem;

@@ -3,14 +3,16 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import { Menu, X } from "lucide-react"
+import { BookOpen, Info, Menu, Mountain, Music, X, type LucideIcon } from "lucide-react"
+import { OverlayActionLabel, OverlayShell } from "@/components/overlay/overlay-shell"
 import {
   exitDocumentFullscreen,
   goHomeToSplash,
   markNavigatedFromMap,
 } from "@/lib/map-session"
 import {
-  MOBILE_NAV_ITEMS,
+  visibleMobileNavItems,
+  shouldCloseMobileNavOnNavigate,
   type MobileNavigationPage,
   type MobileNavigationSource,
 } from "@/lib/mobile-navigation"
@@ -24,8 +26,12 @@ interface MobileNavigationMenuProps {
 const defaultControlClass =
   "pct-glass-control grid h-11 w-11 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
 
-const menuLinkClass =
-  "pct-display flex items-center justify-between border-b border-[#ed5a43]/15 py-[13px] text-[27px] text-[#f0eadc] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
+const NAV_ICONS: Record<MobileNavigationPage, LucideIcon> = {
+  home: Mountain,
+  library: Music,
+  about: Info,
+  resources: BookOpen,
+}
 
 export function MobileNavigationMenu({
   source,
@@ -90,22 +96,17 @@ export function MobileNavigationMenu({
     document.body.style.overflow = "hidden"
 
     const handleKeydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        setIsOpen(false)
-        controlRef.current?.focus()
-        return
-      }
       if (event.key !== "Tab") return
 
       const menu = document.getElementById(menuId)
-      const focusable = [controlRef.current, ...Array.from(
-        menu?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      )].filter((element): element is HTMLElement =>
-        !!element && element.getClientRects().length > 0,
-      )
+      const focusable = [
+        controlRef.current,
+        ...Array.from(
+          menu?.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ) ?? [],
+        ),
+      ].filter((element): element is HTMLElement => !!element && element.getClientRects().length > 0)
       if (focusable.length === 0) return
 
       const first = focusable[0]
@@ -121,13 +122,15 @@ export function MobileNavigationMenu({
 
     window.addEventListener("keydown", handleKeydown)
     return () => {
-      // Cleared, not restored: a snapshot taken while another lock was active
-      // would re-apply "hidden" after that lock had released, freezing touch
-      // scrolling. The splash lock is CSS-class based and survives this.
       document.body.style.removeProperty("overflow")
       window.removeEventListener("keydown", handleKeydown)
     }
   }, [isOpen, menuId])
+
+  const closeMenu = () => {
+    setIsOpen(false)
+    controlRef.current?.focus()
+  }
 
   const handleNavigation = (
     page: MobileNavigationPage,
@@ -145,10 +148,13 @@ export function MobileNavigationMenu({
       markNavigatedFromMap()
     }
 
-    setIsOpen(false)
+    if (shouldCloseMobileNavOnNavigate(page, current)) {
+      setIsOpen(false)
+    }
   }
 
   const showLiftedControl = liftControl && triggerBox !== null
+  const items = visibleMobileNavItems(source, current)
 
   return (
     <>
@@ -169,60 +175,39 @@ export function MobileNavigationMenu({
       {hasMounted
         ? createPortal(
             <>
-              <div
-                aria-hidden={!isOpen}
-                inert={!isOpen}
-                className={`pct-glass-terminal fixed inset-0 z-[110] transition-opacity duration-500 ${
-                  isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-                }`}
-              >
-                <aside
-                  role="dialog"
-                  aria-modal="true"
-                  id={menuId}
-                  aria-label="Site menu"
-                  className={`flex h-full w-full flex-col items-center overflow-y-auto px-[30px] py-[34px] transition-transform duration-500 ${
-                    isOpen ? "translate-y-0" : "translate-y-2"
-                  }`}
-                >
-                  <div className="my-auto w-full max-w-sm py-10">
-                    <p className="mb-5 font-mono text-micro uppercase tracking-[0.24em] text-[#8b8271]">
-                      Offbeat: Soundscapes of the PCT
-                    </p>
-
-                    {/* Map always lists Home as 01. On site pages, Home drops
-                        off only while you're already on the splash. */}
-                    <nav aria-label="Mobile site navigation">
-                      {MOBILE_NAV_ITEMS.map((item, index) => ({ item, index }))
-                        .filter(
-                          ({ item }) =>
-                            source === "map" ||
-                            !(item.id === "home" && current === "home"),
-                        )
-                        .map(({ item, index }) => (
-                          <Link
-                            key={item.id}
-                            href={item.href}
-                            onClick={(event) => handleNavigation(item.id, event)}
-                            aria-current={current === item.id ? "page" : undefined}
-                            className={`${menuLinkClass} ${
-                              current === item.id ? "text-[#ed5a43]" : ""
-                            }`}
-                          >
-                            <span>{item.label}</span>
-                            <span className="font-mono text-micro tracking-[0.16em] text-[#8b8271]">
-                              {String(index + 1).padStart(2, "0")}
-                            </span>
-                          </Link>
-                        ))}
-                    </nav>
-                  </div>
-                </aside>
-              </div>
+              <OverlayShell
+                isVisible={isOpen}
+                onDismiss={closeMenu}
+                appearDelayMs={0}
+                className="z-[110]"
+                closeControl={null}
+                ariaLabel="Site menu"
+                actions={
+                  <nav id={menuId} aria-label="Site">
+                    {items.map((item) => {
+                      const Icon = NAV_ICONS[item.id]
+                      return (
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          onClick={(event) => handleNavigation(item.id, event)}
+                          aria-current={current === item.id ? "page" : undefined}
+                          className={`pct-link-row ${current === item.id ? "text-[#ed5a43]" : ""}`}
+                        >
+                          <OverlayActionLabel icon={<Icon className="h-4 w-4" />}>
+                            {item.label}
+                          </OverlayActionLabel>
+                        </Link>
+                      )
+                    })}
+                  </nav>
+                }
+              />
               {showLiftedControl ? (
                 <button
                   ref={controlRef}
                   type="button"
+                  data-keep-audio-focus
                   onClick={() => setIsOpen((open) => !open)}
                   aria-label={isOpen ? "Close menu" : "Open menu"}
                   aria-expanded={isOpen}
