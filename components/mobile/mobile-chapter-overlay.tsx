@@ -55,7 +55,7 @@ export function MobileChapterOverlay({
         startYRef.current = null
       }}
     >
-      <div className="flex h-full flex-col items-center px-[30px] text-center">
+      <div className="relative flex h-full flex-col items-center px-[30px] text-center">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
           <p className="pct-display text-[56px] font-normal leading-none text-[#ed5a43]/90">
             {romanNumerals[chapterIndex] ?? chapterIndex + 1}
@@ -74,7 +74,7 @@ export function MobileChapterOverlay({
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))] pt-2 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
+          className="pct-mobile-explore-cue absolute left-1/2 -translate-x-1/2 px-5 py-2 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
         >
           Tap to continue
         </button>
