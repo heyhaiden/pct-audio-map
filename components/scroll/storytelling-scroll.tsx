@@ -27,7 +27,7 @@ export function StorytellingScroll({ map, chapters, onChapterChange }: Storytell
           // Update terrain exaggeration
           if (chapter.terrain) {
             map.setTerrain({
-              source: "mapbox-terrain-rgb",
+              source: "mapbox-terrain-dem",
               exaggeration: chapter.terrain.exaggeration,
             })
           }
