@@ -88,7 +88,7 @@ export function ScrollHint({
   return (
     <div
       aria-hidden={!visible}
-      className={`pointer-events-none fixed bottom-32 left-1/2 z-30 -translate-x-1/2 transition-[opacity,translate] duration-700 ease-out md:bottom-20 ${
+      className={`pct-mobile-explore-cue pointer-events-none fixed left-1/2 z-30 -translate-x-1/2 transition-[opacity,translate] duration-700 ease-out ${
         visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
       }`}
     >

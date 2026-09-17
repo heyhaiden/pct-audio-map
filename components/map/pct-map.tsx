@@ -403,15 +403,15 @@ export function PCTMap({
           mapLoadedRef.current = true
           onTrailheadProgressRef.current?.(0.25)
 
-          map.current.addSource("mapbox-terrain-rgb", {
+          map.current.addSource("mapbox-terrain-dem", {
             type: "raster-dem",
-            url: "mapbox://mapbox.terrain-rgb",
+            url: "mapbox://mapbox.mapbox-terrain-dem-v1",
             tileSize: 512,
             maxzoom: 14,
           })
 
           map.current.setTerrain({
-            source: "mapbox-terrain-rgb",
+            source: "mapbox-terrain-dem",
             exaggeration: 1.8,
           })
 

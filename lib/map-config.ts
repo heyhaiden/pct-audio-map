@@ -34,7 +34,7 @@ The map leverages Mapbox's advanced storytelling capabilities including:
    - Choreographed flight paths between major trail segments
 
 2. **3D Terrain Visualization** (https://docs.mapbox.com/mapbox-gl-js/example/add-terrain/)
-   - Mapbox terrain-rgb source for elevation data
+   - Mapbox Terrain-DEM v1 source for elevation data
    - 3D terrain rendering to show PCT's dramatic elevation changes
    - Enhanced depth perception for Sierra Nevada, Cascades sections
 
@@ -49,7 +49,7 @@ MAPBOX CONFIGURATION:
 const mapConfig = {
   style: 'mapbox://styles/mapbox/satellite-v9', // Dark satellite base
   terrain: {
-    source: 'mapbox-terrain-rgb',
+    source: 'mapbox-terrain-dem',
     exaggeration: 1.5 // Emphasize elevation changes
   },
   camera: {
@@ -71,7 +71,7 @@ const mapConfig = {
 \`\`\`
 
 KEY MAPBOX APIS TO IMPLEMENT:
-- \`map.addSource()\` for terrain-rgb and trail data
+- \`map.addSource()\` for Terrain-DEM and trail data
 - \`map.easeTo()\` and \`map.flyTo()\` for camera animations  
 - \`map.setTerrain()\` for 3D terrain activation
 - Custom easing functions for natural camera movement

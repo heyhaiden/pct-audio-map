@@ -244,11 +244,12 @@ export function SplashScreen({
               onClick={handleEnter}
               className="px-[38px] py-4"
             />
-            <div className="pct-splash-headphones mt-6 flex items-center gap-2.5 font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
-              <Headphones className="h-4 w-4" />
-              Best with headphones
-            </div>
           </div>
+        </div>
+
+        <div className="pct-splash-headphones absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex w-auto items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
+          <Headphones className="h-4 w-4 shrink-0" />
+          Best with headphones
         </div>
       </div>
     </div>

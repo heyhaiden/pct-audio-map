@@ -17,6 +17,7 @@ import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import {
   computePunchInPose,
+  shouldShowNorthernTerminus,
   type CameraPathPoint,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
@@ -65,9 +66,6 @@ const PCTMap = dynamic(() => import("@/components/map/pct-map").then((m) => m.PC
 
 /** Early Oregon — produced audio content ends here for now (informational notice). */
 const WIP_MILE = 1800
-
-/** Near the Canadian border — reaching here shows the end-of-trail screen. */
-const END_MILE = 2640
 
 /** Camera return to the scroll rail on close — the audio fade is timed to match. */
 const CLOSE_CAMERA_MS = 2200
@@ -394,7 +392,7 @@ export default function Home() {
   useEffect(() => {
     if (
       currentMiles >= WIP_MILE &&
-      currentMiles < END_MILE &&
+      !shouldShowNorthernTerminus(currentMiles) &&
       journeyStarted &&
       !showWip &&
       !wipDismissed &&
@@ -405,12 +403,17 @@ export default function Home() {
     }
   }, [currentMiles, journeyStarted, showWip, wipDismissed, selectedAudioMarker])
 
-  // End-of-trail screen near the Canadian border. Resets if you scroll back.
+  // End-of-trail screen only after the railing camera has tipped to top-down.
   useEffect(() => {
-    if (currentMiles >= END_MILE && journeyStarted && !selectedAudioMarker && !completionDismissed) {
+    if (
+      shouldShowNorthernTerminus(currentMiles) &&
+      journeyStarted &&
+      !selectedAudioMarker &&
+      !completionDismissed
+    ) {
       setShowCompletion(true)
       setShowWip(false)
-    } else if (currentMiles < END_MILE) {
+    } else if (!shouldShowNorthernTerminus(currentMiles)) {
       if (showCompletion) setShowCompletion(false)
       if (completionDismissed) setCompletionDismissed(false)
     }
@@ -768,9 +771,11 @@ export default function Home() {
     if (nextPlayable) prefetchAudio(nextPlayable.audioUrl)
   }, [previousPlayable, nextPlayable])
 
+  const openingChapterTabsLocked = introChapterIndex === 0 && isChapterOverlayVisible
   const autoHideChapterTimeline = shouldHideChapterTimeline(
     Boolean(selectedAudioMarker),
     isNodeCameraBusy,
+    openingChapterTabsLocked,
   )
 
   // Opening an audio node collapses the drawer; closing it clears peek/tuck overrides.
@@ -914,7 +919,10 @@ export default function Home() {
           activeIndex={activeNodeIndex}
           progress={timelineProgress}
           hidden={hideChapterTimeline}
-          showDrawerHandle={shouldShowChapterDrawerHandle(Boolean(selectedAudioMarker))}
+          showDrawerHandle={shouldShowChapterDrawerHandle(
+            Boolean(selectedAudioMarker),
+            openingChapterTabsLocked,
+          )}
           onToggleDrawer={handleToggleChapterDrawer}
           onNodeClick={handleChapterClick}
         />
