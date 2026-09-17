@@ -1,7 +1,7 @@
 export const PCT_TOTAL_MILES = 2650
 export const CAMERA_PATH_POINTS = 500
 export const OPENING_TRANSITION_MILES = 80
-export const END_TRANSITION_MILES = 35
+export const END_TRANSITION_MILES = 14
 export const CRUISING_ALTITUDE_METERS = 26000
 /** Higher cruise on mobile so more trail is visible in portrait. */
 export const CRUISING_ALTITUDE_METERS_MOBILE = 42000
@@ -10,14 +10,68 @@ export const INTRO_ALTITUDE_METERS_MOBILE = 65000
 export const PEAK_PITCH = 60
 /** Punch-in lowers altitude to this fraction of the railing altitude. */
 export const PUNCH_IN_ALTITUDE_FACTOR = 0.68
+/** Pitch at or below this counts as the end-of-trail top-down framing. */
+export const TOP_DOWN_PITCH_DEG = 5
+
+/** Exponential follow time constants (seconds). Higher = smoother, laggier. */
+export const CAMERA_FOLLOW_POSITION_TAU = 0.16
+export const CAMERA_FOLLOW_BEARING_TAU = 0.28
+export const CAMERA_FOLLOW_POSITION_TAU_MOBILE = 0.28
+export const CAMERA_FOLLOW_BEARING_TAU_MOBILE = 0.48
+/** Release / hold: shorter tau so the camera snaps to rest instead of trailing. */
+export const CAMERA_FOLLOW_POSITION_TAU_SETTLE = 0.08
+export const CAMERA_FOLLOW_BEARING_TAU_SETTLE = 0.14
+export const CAMERA_FOLLOW_POSITION_TAU_MOBILE_SETTLE = 0.12
+export const CAMERA_FOLLOW_BEARING_TAU_MOBILE_SETTLE = 0.18
 
 let activeCruisingAltitude = CRUISING_ALTITUDE_METERS
 let activeIntroAltitude = INTRO_ALTITUDE_METERS
+let activeMobileViewport = false
 
-/** Call once at map construction — never toggle mid-session. */
+/** Call at map construction and when the viewport crosses the mobile breakpoint. */
 export function configureRailingCameraForViewport(mobile: boolean) {
   activeCruisingAltitude = mobile ? CRUISING_ALTITUDE_METERS_MOBILE : CRUISING_ALTITUDE_METERS
   activeIntroAltitude = mobile ? INTRO_ALTITUDE_METERS_MOBILE : INTRO_ALTITUDE_METERS
+  activeMobileViewport = mobile
+}
+
+export function isMobileRailingViewport() {
+  return activeMobileViewport
+}
+
+export function cameraFollowFactors(
+  deltaSeconds: number,
+  mobile: boolean,
+  settling = false,
+) {
+  const positionTau = settling
+    ? mobile
+      ? CAMERA_FOLLOW_POSITION_TAU_MOBILE_SETTLE
+      : CAMERA_FOLLOW_POSITION_TAU_SETTLE
+    : mobile
+      ? CAMERA_FOLLOW_POSITION_TAU_MOBILE
+      : CAMERA_FOLLOW_POSITION_TAU
+  const bearingTau = settling
+    ? mobile
+      ? CAMERA_FOLLOW_BEARING_TAU_MOBILE_SETTLE
+      : CAMERA_FOLLOW_BEARING_TAU_SETTLE
+    : mobile
+      ? CAMERA_FOLLOW_BEARING_TAU_MOBILE
+      : CAMERA_FOLLOW_BEARING_TAU
+  return {
+    positionFactor: 1 - Math.exp(-deltaSeconds / positionTau),
+    bearingFactor: 1 - Math.exp(-deltaSeconds / bearingTau),
+  }
+}
+
+/** Skip every-other-frame camera writes when a scroll frame ran over budget. */
+export function shouldDecimateCameraWrites(
+  isScrolling: boolean,
+  deltaSeconds: number,
+  mobile: boolean,
+) {
+  if (mobile) return false
+  return isScrolling && deltaSeconds > 0.02
 }
 
 
@@ -131,10 +185,22 @@ export function altitudeAndPitchForProgress(progress: number): { altitude: numbe
 
   if (progress >= endTransitionStart) {
     const endPhase = (progress - endTransitionStart) / (1 - endTransitionStart)
-    pitch = PEAK_PITCH * (1 - endPhase)
+    // Ease-in: hold cruise pitch while the terminus is still ahead in frame,
+    // then tip down onto it in the final stretch. A linear drop over a long
+    // window shrinks look-ahead and the terminus never enters the viewport.
+    const tilt = endPhase * endPhase * endPhase
+    pitch = PEAK_PITCH * (1 - tilt)
   }
 
   return { altitude, pitch }
+}
+
+/** True only in the final end-tilt when the camera has tipped to top-down. */
+export function shouldShowNorthernTerminus(miles: number): boolean {
+  const progress = miles / PCT_TOTAL_MILES
+  const endTransitionStart = 1 - END_TRANSITION_MILES / PCT_TOTAL_MILES
+  if (progress < endTransitionStart) return false
+  return altitudeAndPitchForProgress(progress).pitch <= TOP_DOWN_PITCH_DEG
 }
 
 /** Exact railing free-camera pose for a given progress along the camera path. */

@@ -9,12 +9,15 @@ import { lineString } from "@turf/helpers"
 import {
   CAMERA_PATH_POINTS,
   PCT_TOTAL_MILES,
+  cameraFollowFactors,
   computeRailingPose,
   findProgressFromCoordinates,
+  isMobileRailingViewport,
   lerpBearing,
   offsetLngLat,
   sampleTrailAtProgress,
   altitudeAndPitchForProgress,
+  shouldDecimateCameraWrites,
   type CameraPathPoint,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
@@ -23,6 +26,7 @@ import {
   resolveResumeFrameProgress,
   resumeProgressFromMiles,
 } from "@/lib/map-resume"
+import { isTrailCameraSettling } from "@/lib/inverted-touch-scroll"
 
 interface TrailScrollOptions {
   map: any
@@ -360,8 +364,13 @@ export function useTrailScroll({
       const deltaSeconds = Math.min((frameTime - previousFrameTime) / 1000, 0.1)
       previousFrameTimeRef.current = frameTime
 
-      const positionFactor = 1 - Math.exp(-deltaSeconds / 0.16)
-      const bearingFactor = 1 - Math.exp(-deltaSeconds / 0.28)
+      const mobile = isMobileRailingViewport()
+      const settling = !isScrolling || isTrailCameraSettling(frameTime)
+      const { positionFactor, bearingFactor } = cameraFollowFactors(
+        deltaSeconds,
+        mobile,
+        settling,
+      )
       const state = cameraStateRef.current
 
       state.lng += (targetLng - state.lng) * positionFactor
@@ -386,9 +395,9 @@ export function useTrailScroll({
         altErr < 3
 
       frameIndex += 1
-      // Only decimate writes when the previous frame ran over budget — keeps
-      // 60Hz camera motion on machines that can sustain it.
-      const decimate = isScrolling && deltaSeconds > 0.02
+      // Desktop can skip a write when a scroll frame ran over budget. Mobile
+      // keeps every frame — half-rate free-camera updates read as a jagged trail.
+      const decimate = shouldDecimateCameraWrites(isScrolling, deltaSeconds, mobile)
       const shouldWriteCamera =
         forceCameraWriteRef.current || (!settled && (!decimate || frameIndex % 2 === 0))
 
