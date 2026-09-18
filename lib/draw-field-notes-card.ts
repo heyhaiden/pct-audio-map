@@ -91,7 +91,7 @@ export function drawFieldNotesCard(
 
   ctx.fillStyle = KICKER
   ctx.font = `400 ${10 * s}px ${fonts.mono}`
-  drawTracked(ctx, "FIELD NOTES", padL, y, 0.18 * 10 * s)
+  drawTracked(ctx, "FIELD NOTES", padL, y - 6 * s, 0.18 * 10 * s)
   y += 28 * s
 
   ctx.font = `400 ${26 * s}px ${fonts.serif}`

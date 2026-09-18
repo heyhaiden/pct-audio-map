@@ -64,7 +64,7 @@ const team = [
     name: "Haiden McGill",
     role: "Design & development",
     description:
-      "Designed and built the interactive experience, transforming hours of field recordings into a scroll-driven journey. An aspiring thru-hiker, this project is a love letter to the trail.",
+      "Designed and built the interactive experience, transforming hours of field recordings into a scroll-driven journey. Anna and I started our queer backpacking troop during COVID and have hiked Patagonia, Catalina, the High Sierras, and Norway since. An avid thru-hiker, this project is a love letter to those who walked these paths before us, and to the stewards who cared for this land long before we arrived.",    
     photoAlt: "Portrait of Haiden McGill on trail",
     links: [
       {
@@ -105,7 +105,7 @@ export default function AboutPage() {
   return (
     <SitePage current="about">
         <main className="pct-stagger mx-auto max-w-4xl px-6 py-12 md:py-20">
-          <section className="mb-12 text-left md:mb-16">
+          <section className="mb-3 text-left md:mb-4">
             <h1 className="pct-display mb-8 text-center text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
               About <span className="pct-wordmark font-wordmark uppercase text-[#ed5a43]">Offbeat</span>
             </h1>
@@ -201,8 +201,10 @@ export default function AboutPage() {
           <section id="get-in-touch" className="mb-16 scroll-mt-24">
             <SectionHeading>Get in touch</SectionHeading>
             <p className="pct-display mb-8 text-prose font-light leading-[1.65] text-[#b4aa9b]">
-              Hear something you like? Have your own story or sounds to share? Just want to say hi?
-              We&apos;d love to hear from you.
+              Hear something you like? Have your own story or sounds to share? Just want to say hi? We&apos;d love to hear from you.
+              <br />
+              <br />
+              You can reach us at <a href="mailto:hello@offbeathike.com" className="text-[#ed5a43] hover:text-[#f06b57]">hello@offbeathike.com</a>.
             </p>
             <a
               href="mailto:hello@offbeathike.com"
