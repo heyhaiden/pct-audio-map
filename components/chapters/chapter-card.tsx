@@ -50,7 +50,7 @@ export function ChapterCard({
           </h2>
           <p
             id="desktop-chapter-description"
-            className="pct-display max-w-lg text-[clamp(16px,2.1dvh,20px)] font-light leading-[1.65] text-[#cfc6b4]"
+            className="pct-display max-w-xl text-[clamp(16px,2.1dvh,20px)] font-light leading-[1.65] text-[#cfc6b4]"
           >
             {chapter.description}
           </p>

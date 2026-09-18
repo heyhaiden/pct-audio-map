@@ -5,7 +5,7 @@ export const pctSegments: PCTChapter[] = [
     id: "southern-california",
     title: "Southern California",
     description:
-      "From the Mexican border through the Sonoran Desert, featuring sparse vegetation and extreme heat. The trail winds through chaparral-covered mountains and desert valleys.",
+      "From the Southern Terminus at the US-Mexico border to the Mojave Desert, the trail winds through chaparral-covered mountains and desert valleys. Sparse vegetation and extreme heat are juxtaposed with high alpine trees and snow.",
     camera: {
       center: [-116.46, 32.6],
       zoom: 8,
@@ -20,9 +20,9 @@ export const pctSegments: PCTChapter[] = [
   },
   {
     id: "sierra-nevada",
-    title: "Sierra Nevada",
+    title: "The Sierra",
     description:
-      "The crown jewel of the PCT, featuring dramatic granite peaks, alpine lakes, and the highest elevations on the trail. Home to Mount Whitney and countless wilderness areas.",
+      "Home to countless protected wilderness areas, national parks, and Mount Whitney, the tallest peak in the Lower 48. This section features dramatic granite peaks, alpine lakes, and the highest elevations on the entire trail.",
     camera: {
       center: [-118.29, 36.58],
       zoom: 9,
@@ -39,7 +39,7 @@ export const pctSegments: PCTChapter[] = [
     id: "northern-california",
     title: "Northern California",
     description:
-      "Volcanic landscapes featuring Mount Shasta and Lassen Peak, with diverse forests transitioning from Sierra granite to Cascade volcanoes.",
+      "The Sierra Nevada granite gives way to the volcanic landscape of the Cascades, featuring Mount Shasta and Lassen Peak. Denser forests, immense waterfalls, and fewer people mark the end of the trail's longest state.",
     camera: {
       center: [-121.5, 40.5],
       zoom: 8,
@@ -65,7 +65,7 @@ export const pctSegments: PCTChapter[] = [
     id: "oregon-cascades",
     title: "Oregon",
     description:
-      "Dense forests, volcanic peaks, and pristine lakes. The trail passes near Crater Lake and through old-growth forests with incredible biodiversity.",
+      "Rolling terrain, lava fields, and abundant lakes dominate this section, featuring the volcanically-formed Crater Lake. Where the trail has survived recent wildfires, it passes through old growth forests with incredible biodiversity.",
     camera: {
       center: [-121.7, 44.2],
       zoom: 7,
@@ -82,7 +82,7 @@ export const pctSegments: PCTChapter[] = [
     id: "washington-cascades",
     title: "Washington",
     description:
-      "The final stretch through temperate rainforests, glaciated peaks, and the dramatic North Cascades. Ending at the Canadian border in Manning Park.",
+      "The final stretch for northbound hikers, this section winds through volcanic ridges, alpine meadows full of berries, and the dramatic North Cascades. The trail's Northern Terminus lies at the US-Canada border, 2,650 miles from its start.",
     camera: {
       center: [-121.15, 47.75],
       zoom: 8,

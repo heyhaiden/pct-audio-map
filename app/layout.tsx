@@ -34,7 +34,7 @@ const mansalva = Mansalva({
 
 export const metadata: Metadata = {
   title: "Offbeat: Soundscapes of the PCT",
-  description: "Interactive audio journey along the Pacific Crest Trail",
+  description: "An audio journey along the Pacific Crest Trail",
   generator: "v0.app",
 }
 

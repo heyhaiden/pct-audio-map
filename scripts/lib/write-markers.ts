@@ -8,7 +8,7 @@ export interface EnrichedMarker extends CsvRow {
 
 const CHAPTER_LABELS: Record<string, string> = {
   "southern-california": "Southern California",
-  "sierra-nevada": "Sierra Nevada",
+  "sierra-nevada": "The Sierra",
   "northern-california": "Northern California",
   "oregon-cascades": "Oregon",
   "washington-cascades": "Washington",
