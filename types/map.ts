@@ -21,6 +21,8 @@ export interface AudioMarker {
   coordinates: [number, number]
   elevation: number
   audioUrl: string
+  /** Whole-file duration from ingest (ffprobe), used by the library instead of fetching the blob. */
+  durationSeconds?: number
   chapter: string
   featured: boolean
   description?: string

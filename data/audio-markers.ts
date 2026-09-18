@@ -8,13 +8,14 @@ export const audioMarkers: AudioMarker[] = [
     coordinates: [-116.470375, 32.600903],
     elevation: 2680,
     audioUrl: "/audio/campo.mp3",
+    durationSeconds: 35,
     chapter: "southern-california",
     featured: true,
     description:
       "The southern terminus sits in dry chaparral beside the US-Mexico border monument. Morning wind moves through sage and chain-link; a distant highway hums. Sparrows tick in the brush as packed dirt takes the first footsteps of a walk toward Canada.",
     recordingDate: "April 15, 2024",
   },
-  // Sierra Nevada
+  // The Sierra
   {
     id: "marker-74",
     name: "Past KMS, before cottonwood pass",
@@ -372,7 +373,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Hat Creek Rim",
     coordinates: [-121.507654, 40.922343],
     elevation: 3428,
-    audioUrl: "/audio/3-1.wav",
+    audioUrl: "/audio/3-1.mp3",
+    durationSeconds: 72,
     chapter: "northern-california",
     featured: false,
     description:
@@ -385,7 +387,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Burney Falls State Park",
     coordinates: [-121.661301, 41.018632],
     elevation: 2909,
-    audioUrl: "/audio/3-2.wav",
+    audioUrl: "/audio/3-2.mp3",
+    durationSeconds: 58,
     chapter: "northern-california",
     featured: false,
     description:
@@ -398,7 +401,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Evening weird bird screeches, general quiet",
     coordinates: [-121.775466, 41.055683],
     elevation: 4930,
-    audioUrl: "/audio/3-3.wav",
+    audioUrl: "/audio/3-3.mp3",
+    durationSeconds: 29,
     chapter: "northern-california",
     featured: false,
     description:
@@ -411,7 +415,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "High voltage power lines overhead",
     coordinates: [-121.801511, 41.07563],
     elevation: 5197,
-    audioUrl: "/audio/3-4.wav",
+    audioUrl: "/audio/3-4.mp3",
+    durationSeconds: 15,
     chapter: "northern-california",
     featured: false,
     description:
@@ -424,7 +429,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "South of Mt. Shasta",
     coordinates: [-121.992408, 41.126022],
     elevation: 4565,
-    audioUrl: "/audio/3-5.wav",
+    audioUrl: "/audio/3-5.mp3",
+    durationSeconds: 79,
     chapter: "northern-california",
     featured: false,
     description:
@@ -437,7 +443,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Deer Creek; Shasta-Trinity National Forest",
     coordinates: [-122.001109, 41.127899],
     elevation: 4296,
-    audioUrl: "/audio/3-6.wav",
+    audioUrl: "/audio/3-6.mp3",
+    durationSeconds: 68,
     chapter: "northern-california",
     featured: false,
     description:
@@ -450,7 +457,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Centipede Gulch Trail; Shasta-Trinity National Forest",
     coordinates: [-122.038248, 41.115594],
     elevation: 3109,
-    audioUrl: "/audio/3-7.wav",
+    audioUrl: "/audio/3-7.mp3",
+    durationSeconds: 67,
     chapter: "northern-california",
     featured: false,
     description:
@@ -476,7 +484,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Before Hwy 3",
     coordinates: [-122.646493, 41.297271],
     elevation: 5962,
-    audioUrl: "/audio/3-9.wav",
+    audioUrl: "/audio/3-9.mp3",
+    durationSeconds: 43,
     chapter: "northern-california",
     featured: false,
     description:
@@ -490,7 +499,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Oregon",
     coordinates: [-122.872064, 42.033597],
     elevation: 6841,
-    audioUrl: "/audio/4-1.wav",
+    audioUrl: "/audio/4-1.mp3",
+    durationSeconds: 35,
     chapter: "oregon-cascades",
     featured: false,
     description:
@@ -503,7 +513,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Before Ashland",
     coordinates: [-122.728048, 42.080106],
     elevation: 6635,
-    audioUrl: "/audio/4-3.wav",
+    audioUrl: "/audio/4-3.mp3",
+    durationSeconds: 69,
     chapter: "oregon-cascades",
     featured: false,
     description:
@@ -516,7 +527,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Huge rock slides create sections of volcanic scree which...",
     coordinates: [-122.2768, 42.3346],
     elevation: 5216,
-    audioUrl: "/audio/4-4.wav",
+    audioUrl: "/audio/4-4.mp3",
+    durationSeconds: 72,
     chapter: "oregon-cascades",
     featured: false,
     description:
@@ -529,7 +541,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Sky Lakes Wilderness",
     coordinates: [-122.276786, 42.440633],
     elevation: 6158,
-    audioUrl: "/audio/4-5.wav",
+    audioUrl: "/audio/4-5.mp3",
+    durationSeconds: 84,
     chapter: "oregon-cascades",
     featured: false,
     description:
@@ -542,7 +555,8 @@ export const audioMarkers: AudioMarker[] = [
     name: "Sky Lakes Wilderness",
     coordinates: [-122.253609, 42.505409],
     elevation: 6290,
-    audioUrl: "/audio/4-6.wav",
+    audioUrl: "/audio/4-6.mp3",
+    durationSeconds: 73,
     chapter: "oregon-cascades",
     featured: false,
     description:

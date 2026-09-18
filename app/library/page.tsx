@@ -148,11 +148,6 @@ export default function LibraryPage() {
                           durationSeconds={durations[marker.id] || 0}
                           onPlayPause={() => handlePlayPause(marker.id, marker.audioUrl)}
                           onSeek={(percent) => handleSeek(marker.id, percent)}
-                          onDuration={(seconds) =>
-                            setDurations((prev) =>
-                              prev[marker.id] ? prev : { ...prev, [marker.id]: seconds },
-                            )
-                          }
                         />
                       ))}
                     </div>

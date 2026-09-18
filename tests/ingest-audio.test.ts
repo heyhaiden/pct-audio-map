@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { parseMarkerCsv } from "../scripts/lib/parse-csv.ts"
 import { computeMarkerMiles } from "../scripts/lib/compute-marker-miles.ts"
+import { formatAudioMarkersTs } from "../scripts/lib/write-markers.ts"
 
 test("parseMarkerCsv reads required columns and quoted descriptions", () => {
   const csv = `id,name,lng,lat,chapter,filename,description,recording_date,featured,recording_time
@@ -34,4 +35,27 @@ test("computeMarkerMiles scales nearest trail vertex to 2650 miles", () => {
 
   const miles = computeMarkerMiles(trail, [{ id: "a", lng: 0, lat: 1 }])
   assert.equal(miles.a, 1325)
+})
+
+test("formatAudioMarkersTs writes probed duration and mp3 delivery URLs", () => {
+  const ts = formatAudioMarkersTs([
+    {
+      id: "marker-111",
+      name: "Hat Creek Rim",
+      lng: -121.5,
+      lat: 40.9,
+      chapter: "northern-california",
+      filename: "3-1.wav",
+      description: "Storm",
+      recordingDate: "July 25, 2025",
+      recordingTime: "7:12 PM",
+      featured: false,
+      elevation: 3428,
+      audioUrl: "/audio/3-1.mp3",
+      durationSeconds: 119,
+    },
+  ])
+
+  assert.match(ts, /audioUrl: "\/audio\/3-1.mp3"/)
+  assert.match(ts, /durationSeconds: 119/)
 })
