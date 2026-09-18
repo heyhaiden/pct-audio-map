@@ -65,7 +65,7 @@ export function MobileChapterOverlay({
           </h2>
           <p
             id="mobile-chapter-description"
-            className="pct-display max-w-[224px] text-base font-light leading-[1.65] text-[#cfc6b4]"
+            className="pct-display max-w-[300px] text-base font-light leading-[1.65] text-[#cfc6b4]"
           >
             {chapter.description}
           </p>

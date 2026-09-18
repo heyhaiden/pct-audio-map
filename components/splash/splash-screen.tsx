@@ -232,9 +232,9 @@ export function SplashScreen({
             </span>
           </h1>
 
-          <p className="pct-splash-lede pct-display mb-10 max-w-[325px] text-lede font-light leading-[1.65] text-[#c7beac] md:max-w-[400px]">
-            An audio journey along the Pacific Crest Trail. Scroll to walk it. Stop anywhere and stay
-            as long as you like.
+          <p className="pct-splash-lede pct-display mb-10 max-w-[325px] text-lede font-light leading-[1.65] text-[#c7beac] md:max-w-[420px]">
+            An audio journey along the Pacific Crest Trail. Scroll to explore. Stop at waypoints to
+            listen. Stay as long as you like.
           </p>
 
           <div className="flex flex-col items-center">

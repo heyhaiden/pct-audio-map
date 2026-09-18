@@ -31,7 +31,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
         <>
           <button type="button" onClick={onDismiss} className="pct-link-row">
             <OverlayActionLabel icon={<Map className="h-4 w-4" />}>
-              Continue
+              Keep exploring
             </OverlayActionLabel>
           </button>
           <OverlaySiteLinks
@@ -47,7 +47,7 @@ export function WipScreen({ isVisible, onRestart, onDismiss }: WipScreenProps) {
       }
     >
       <p className="pct-display mt-6 max-w-[22rem] text-lede font-light leading-[1.6] text-[#c0b7a6]">
-        You&apos;ve reached the edge of where we&apos;ve recorded. More soundscapes are still ahead.
+        You&apos;ve reached the edge of what we&apos;ve recorded so far. Thank you for pausing to listen.
       </p>
     </OverlayShell>
   )

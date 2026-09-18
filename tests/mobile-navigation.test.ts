@@ -7,7 +7,7 @@ test("compact chapter labels stay short enough for constrained screens", async (
 
   const labels = [
     navigation.getCompactChapterLabel("Southern California"),
-    navigation.getCompactChapterLabel("Sierra Nevada"),
+    navigation.getCompactChapterLabel("The Sierra"),
     navigation.getCompactChapterLabel("Northern California"),
     navigation.getCompactChapterLabel("Oregon"),
     navigation.getCompactChapterLabel("Washington"),

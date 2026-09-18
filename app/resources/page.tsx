@@ -8,24 +8,14 @@ const resources = [
     href: "https://www.pcta.org",
   },
   {
-    name: "Unlikely Hikers",
-    description: "Diverse, anti-racist, body-liberating outdoor community",
-    href: "https://www.unlikelyhikers.org",
+    name: "Halfway Anywhere",
+    description: "Annual PCT hiker survey and comprehensive planning guides",
+    href: "https://www.halfwayanywhere.com",
   },
   {
-    name: "Melanin Base Camp",
-    description: "Increasing diversity in outdoor spaces and adventure sports",
-    href: "https://www.melaninbasecamp.com",
-  },
-  {
-    name: "Outdoor Outreach",
-    description: "Connecting underserved youth with the transformative power of the outdoors",
-    href: "https://www.outdooroutreach.org",
-  },
-  {
-    name: "Venture Out Project",
-    description: "LGBTQ+ wilderness adventures and community building",
-    href: "https://www.venture-out.org",
+    name: "Eastern Sierra Conservation Corps",
+    description: "Queer and BIPOC founded trail conservation nonprofit",
+    href: "https://www.easternsierracc.org",
   },
   {
     name: "GirlVentures",
@@ -33,9 +23,14 @@ const resources = [
     href: "https://girlventures.org",
   },
   {
-    name: "Halfway Anywhere",
-    description: "Annual PCT hiker survey and comprehensive planning guides",
-    href: "https://www.halfwayanywhere.com",
+    name: "Basecamp Outdoor",
+    description: "Women-owned job board and networking platform for the outdoor industry",
+    href: "https://www.wearetheoutdoorindustry.com/",
+  },
+  {
+    name: "Rare Earth Adventures",
+    description: "LGBTQ+ guided backpacking trips on the Pacific Crest Trail",
+    href: "https://rareearthadventures.com/tour/lgbtq-pct-backpacking/",
   },
 ]
 
@@ -79,7 +74,7 @@ export default function ResourcesPage() {
         <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
           <div className="mx-auto max-w-4xl px-6 text-center">
             <p className="font-mono text-micro uppercase tracking-[0.14em] text-[#6b6455]">
-              Offbeat: Soundscapes of the PCT · Field recordings collected 2025
+              {"Offbeat: Soundscapes of the PCT \u00b7 Field recordings collected 2025"}
             </p>
           </div>
         </footer>
