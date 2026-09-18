@@ -1,11 +1,9 @@
 "use client"
 
-import { useEffect, useRef } from "react"
 import { Pause, Play } from "lucide-react"
 import { AudioMarkerCardBody } from "@/components/audio/audio-marker-card"
 import { ScrubBar } from "@/components/audio/scrub-bar"
 import { formatTimecode } from "@/lib/format-timecode"
-import { resolveAudioUrl } from "@/lib/resolve-audio-url"
 import type { AudioMarker } from "@/types/map"
 
 interface LibraryRecordingCardProps {
@@ -15,7 +13,6 @@ interface LibraryRecordingCardProps {
   durationSeconds?: number
   onPlayPause: () => void
   onSeek: (percent: number) => void
-  onDuration: (seconds: number) => void
 }
 
 /**
@@ -31,30 +28,11 @@ export function LibraryRecordingCard({
   durationSeconds = 0,
   onPlayPause,
   onSeek,
-  onDuration,
 }: LibraryRecordingCardProps) {
-  const onDurationRef = useRef(onDuration)
-  onDurationRef.current = onDuration
-
-  useEffect(() => {
-    if (durationSeconds > 0) return
-    const audio = new Audio()
-    audio.preload = "metadata"
-    const onMeta = () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) {
-        onDurationRef.current(audio.duration)
-      }
-    }
-    audio.addEventListener("loadedmetadata", onMeta)
-    audio.src = resolveAudioUrl(marker.audioUrl)
-    return () => {
-      audio.removeEventListener("loadedmetadata", onMeta)
-      audio.src = ""
-    }
-  }, [durationSeconds, marker.audioUrl])
+  const knownDuration = durationSeconds > 0 ? durationSeconds : marker.durationSeconds ?? 0
 
   const currentSeconds =
-    durationSeconds > 0 ? (Math.max(0, Math.min(100, progress)) / 100) * durationSeconds : 0
+    knownDuration > 0 ? (Math.max(0, Math.min(100, progress)) / 100) * knownDuration : 0
 
   return (
     <article
@@ -87,7 +65,7 @@ export function LibraryRecordingCard({
           />
           <div className="mt-1.5 flex items-center justify-between font-mono text-micro tabular-nums tracking-[0.08em] text-[#8b8271]">
             <span>{formatTimecode(currentSeconds)}</span>
-            <span>{formatTimecode(durationSeconds)}</span>
+            <span>{formatTimecode(knownDuration)}</span>
           </div>
         </div>
       </div>

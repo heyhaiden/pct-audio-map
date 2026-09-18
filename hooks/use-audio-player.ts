@@ -67,7 +67,7 @@ export function useAudioPlayer() {
     let deck = decksRef.current[index]
     if (!deck) {
       deck = new Audio()
-      deck.preload = "auto"
+      deck.preload = "metadata"
       decksRef.current[index] = deck
     }
     return deck
