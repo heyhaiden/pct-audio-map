@@ -4,16 +4,17 @@ export const audioMarkers: AudioMarker[] = [
   // Southern California
   {
     id: "marker-1",
-    name: "Campo Trailhead",
+    name: "Campo, CA - Southern Terminus",
     coordinates: [-116.470375, 32.600903],
     elevation: 2680,
-    audioUrl: "/audio/campo.mp3",
-    durationSeconds: 35,
+    audioUrl: "/audio/1-1.mp3",
+    durationSeconds: 14,
     chapter: "southern-california",
     featured: true,
     description:
-      "The southern terminus sits in dry chaparral beside the US-Mexico border monument. Morning wind moves through sage and chain-link; a distant highway hums. Sparrows tick in the brush as packed dirt takes the first footsteps of a walk toward Canada.",
-    recordingDate: "April 15, 2024",
+      "Power lines buzz overhead as I make my way out of Campo, rain drizzling nonstop for hours. It's dreary, and I don't see another soul almost the entire day. So it begins.",
+    recordingDate: "March 31, 2025",
+    timeOfDay: "midday",
   },
   {
     id: "marker-2",
