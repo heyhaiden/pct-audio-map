@@ -35,6 +35,13 @@
   --pct-glass-kicker: #9b8e7a;
   --pct-control-bg: rgba(12, 11, 9, 0.62);
   --pct-control-border: rgba(237, 232, 220, 0.2);
+
+  /* Chapter tabs: type + pad → thickness. Breakpoints in chapter-tab-layout.ts. */
+  --pct-tab-type: var(--text-label);
+  --pct-tab-pad: 8px;
+  --pct-tab-thickness: calc(var(--pct-tab-type) + var(--pct-tab-pad) * 2);
+  --pct-tab-thickness-selected: calc(var(--pct-tab-thickness) + 6px);
+  --pct-tabs-edge: 24px;
 }
 
 @layer base {
@@ -56,6 +63,31 @@
     overflow-x: hidden;
     /* Journey page: block browser pinch-zoom so it cannot fight the camera. */
     touch-action: none;
+    /* Hold-to-stop should not summon iOS text selection or the callout menu. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Chrome iOS ignores user-select on html/body alone — it still offers
+     Copy / Search with Google unless every descendant opts out. */
+  html:not(:has(.site-page-root)) * {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+
+  html:not(:has(.site-page-root)) ::selection {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  html:not(:has(.site-page-root)) canvas,
+  html:not(:has(.site-page-root)) img {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-drag: none;
   }
 
   /* Splash is position:fixed; html is still the scroller. Freeze both. */
@@ -105,6 +137,37 @@
       0 14px 38px rgba(0, 0, 0, 0.55);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
+  }
+
+  /* Cream index card for the Offbeat dictionary on About. */
+  .pct-field-card {
+    position: relative;
+    color: #2a241c;
+    background-color: #efe4cc;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 27px,
+      rgba(90, 70, 40, 0.14) 27px,
+      rgba(90, 70, 40, 0.14) 28px
+    );
+    border: 1px solid rgba(90, 68, 42, 0.28);
+    border-radius: 2px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 249, 236, 0.75),
+      0 1px 0 rgba(0, 0, 0, 0.08),
+      0 18px 42px rgba(0, 0, 0, 0.42);
+  }
+
+  .pct-field-card::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2.35rem;
+    width: 1px;
+    pointer-events: none;
+    content: "";
+    background: rgba(196, 72, 54, 0.42);
   }
 
   .pct-glass-control {
@@ -178,30 +241,72 @@
   }
 
   .pct-chapter-tabs-shell {
-    /* Shortens the rail from both ends — tabs are flex-1, so this is what
-       controls their length. */
-    --pct-tabs-edge-room: clamp(18px, 6dvh, 64px);
-    /* Tab widths live here as variables so the drawer handle can sit on the
-       exact same value. Driving the handle from JS (measure -> state -> render)
-       always landed a frame late and let it float mid-transition. */
-    --pct-tab-w: clamp(21px, 3.1vmin, 28px);
-    --pct-tab-w-lifted: clamp(26px, 3.7vmin, 33px);
-    --pct-handle-offset: var(--pct-tab-w);
-    top: calc(env(safe-area-inset-top) + var(--pct-tabs-edge-room));
-    bottom: calc(env(safe-area-inset-bottom) + var(--pct-tabs-edge-room));
+    /* Thickness tokens live on :root. Shell only owns handle offset + placement.
+       Breakpoints stay in sync with lib/chapter-tab-layout.ts. */
+    --pct-handle-offset: var(--pct-tab-thickness);
+
+    left: 0;
+    top: calc(env(safe-area-inset-top) + var(--pct-tabs-edge));
+    bottom: calc(env(safe-area-inset-bottom) + var(--pct-tabs-edge));
   }
 
-  /* The connected tab is wider when it's active or under the pointer, so the
-     handle's offset switches on exactly the same condition, in the same tick. */
+  /* Connected tab thickens on active/hover (rail only); handle tracks it. */
   .pct-chapter-tabs-shell:has(.pct-chapter-tab[data-connected="true"][data-active="true"]),
   .pct-chapter-tabs-shell:has(.pct-chapter-tab[data-connected="true"]:hover),
   .pct-chapter-tabs-shell:has(.pct-chapter-tab[data-connected="true"]:focus-visible) {
-    --pct-handle-offset: var(--pct-tab-w-lifted);
+    --pct-handle-offset: var(--pct-tab-thickness-selected);
   }
 
-  /* Position comes from `left-full` on the connected tab's wrapper, not from a
-     variable — only the colour states transition here. */
+  .pct-chapter-tabs-motion {
+    height: 100%;
+  }
+
+  .pct-chapter-tabs-motion[data-hidden="false"] {
+    translate: 0 0;
+    opacity: 1;
+  }
+
+  .pct-chapter-tabs-motion[data-hidden="true"] {
+    translate: calc(-100% - 8px) 0;
+    opacity: 0;
+  }
+
+  .pct-chapter-tabs-cluster {
+    display: flex;
+    flex-direction: column-reverse;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .pct-chapter-tabs-progress {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .pct-chapter-tabs-progress-fill {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--pct-tab-progress, 0%);
+  }
+
+  .pct-chapter-tab-handle-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .pct-chapter-tab-handle-wrap > .pct-chapter-tab {
+    height: 100%;
+  }
+
+  /* Desktop rail: no drawer. Mobile rail media turns it back on. */
   .pct-chapter-drawer-handle {
+    display: none;
+    place-items: center;
     transition:
       background-color 300ms ease,
       color 180ms ease;
@@ -213,46 +318,189 @@
     }
   }
 
-  /* Journal tabs: the active chapter is a solid paper tab that runs wider than
-     its translucent neighbours, so it reads as pulled out of the stack. */
   .pct-chapter-tab {
-    width: clamp(28px, 4vmin, 36px);
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    width: var(--pct-tab-thickness);
     min-height: 0;
-    padding: clamp(2px, 0.65dvh, 7px) clamp(4px, 0.75vmin, 8px);
-    font-size: var(--pct-tab-font-size);
+    padding: var(--pct-tab-pad);
+    overflow: hidden;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-right: 2px solid transparent;
+    border-radius: 0 5px 5px 0;
+    font-size: var(--pct-tab-type);
     line-height: 1;
-    letter-spacing: clamp(0.03em, 0.12dvh, 0.1em);
+    letter-spacing: 0.06em;
+    box-shadow: 2px 0 9px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
   }
 
-  /* The active tab steps up only slightly, matching the Field Notes proportions
-     (inactive 15px side padding vs active 16px) — a nudge, not a jump. */
-  .pct-chapter-tab[data-active="true"] {
-    width: var(--pct-tab-w-lifted);
+  .pct-chapter-tab-label {
+    display: block;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
   }
 
-  /* Unselected chapters sit back: narrower, smaller type, slightly dimmed. */
-  .pct-chapter-tab[data-active="false"] {
-    width: var(--pct-tab-w);
-    font-size: calc(var(--pct-tab-font-size) * 0.9);
+  .pct-chapter-tab--idle {
+    background: rgba(12, 11, 9, 0.62);
+    color: #b9b0a2;
     opacity: 0.78;
   }
 
-  /* Hover grows the tab toward the active size — the affordance that says
-     these are clickable, not just labels. */
-  /* Hover previews selection: the tab grows to exactly the active width. */
-  .pct-chapter-tab[data-active="false"]:hover,
-  .pct-chapter-tab[data-active="false"]:focus-visible {
-    width: var(--pct-tab-w-lifted);
+  .pct-chapter-tab--active {
+    width: var(--pct-tab-thickness-selected);
+    border-top-color: rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-right-color: #ed5a43;
+    background: rgba(23, 21, 17, 0.93);
+    color: #ede8dc;
+    box-shadow: 3px 0 14px rgba(0, 0, 0, 0.45);
     opacity: 1;
   }
 
-  /* Touch: vmin is the short side on a phone, so the clamps collapse to their
-     minimum and the tabs come out far narrower than on desktop. Pin mobile to
-     the same widths desktop resolves to, keeping the active/inactive ratio. */
-  @media (max-width: 768px) {
+  .pct-chapter-tab--idle:hover,
+  .pct-chapter-tab--idle:focus-visible {
+    width: var(--pct-tab-thickness-selected);
+    border-right-color: #ed5a43;
+    background: rgba(23, 21, 17, 0.88);
+    color: #ede8dc;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4);
+    opacity: 1;
+  }
+
+  /* Mobile rail: narrow + tall enough. Scale type/pad; show drawer; no lift.
+     Mirrors chapterTabsIsMobileRail(). */
+  @media (max-width: 767px) and (min-height: 640px) {
     .pct-chapter-tabs-shell {
-      --pct-tab-w: 28px;
-      --pct-tab-w-lifted: 33px;
+      --pct-tab-type: 11px;
+      --pct-tab-pad: 6px;
+      --pct-tab-thickness-selected: var(--pct-tab-thickness);
+      --pct-tabs-edge: 16px;
+      --pct-handle-offset: var(--pct-tab-thickness);
+    }
+
+    .pct-chapter-tabs-motion[data-hidden="true"][data-peek="true"] {
+      translate: calc(var(--pct-handle-offset) * -1) 0;
+      opacity: 1;
+    }
+
+    .pct-chapter-drawer-handle {
+      display: grid;
+    }
+
+    .pct-chapter-tab--active,
+    .pct-chapter-tab--idle:hover,
+    .pct-chapter-tab--idle:focus-visible {
+      width: var(--pct-tab-thickness);
+    }
+
+    /* Peeked rail: hide the selected red edge so it does not sit on-screen. */
+    .pct-chapter-tabs-shell:has([data-hidden="true"]) .pct-chapter-tab--active {
+      border-right-color: transparent;
+    }
+  }
+
+  /* Bottom dock: short height only. Mirrors chapterTabsShouldDock(). */
+  @media (max-height: 639px) {
+    .pct-chapter-tabs-shell {
+      --pct-tab-thickness-selected: var(--pct-tab-thickness);
+      --pct-handle-offset: var(--pct-tab-thickness);
+
+      left: calc(env(safe-area-inset-left) + var(--pct-tabs-edge));
+      right: calc(env(safe-area-inset-right) + var(--pct-tabs-edge));
+      top: auto;
+      bottom: env(safe-area-inset-bottom);
+    }
+
+    .pct-chapter-tabs-motion {
+      height: auto;
+      width: 100%;
+    }
+
+    .pct-chapter-tabs-motion[data-hidden="true"],
+    .pct-chapter-tabs-motion[data-hidden="true"][data-peek="true"] {
+      translate: 0 calc(100% + 8px);
+      opacity: 0;
+    }
+
+    .pct-chapter-tabs-cluster {
+      flex-direction: row;
+      height: auto;
+      width: 100%;
+    }
+
+    .pct-chapter-tabs-progress {
+      top: 0;
+      right: 0;
+      bottom: auto;
+      left: 0;
+      width: auto;
+      height: 1px;
+    }
+
+    .pct-chapter-tabs-progress-fill {
+      top: 0;
+      bottom: auto;
+      left: 0;
+      width: var(--pct-tab-progress, 0%);
+      height: 100%;
+    }
+
+    .pct-chapter-tab-handle-wrap {
+      flex: 1 1 auto;
+      min-width: 0;
+      width: auto;
+    }
+
+    .pct-chapter-tab-handle-wrap > .pct-chapter-tab {
+      width: 100%;
+      height: var(--pct-tab-thickness);
+    }
+
+    .pct-chapter-drawer-handle {
+      display: none;
+    }
+
+    .pct-chapter-tab {
+      width: auto;
+      height: var(--pct-tab-thickness);
+      min-width: 0;
+      /* Horizontal labels: keep block pad for thickness; tighten sides. */
+      padding-inline: 4px;
+      border-top: 2px solid transparent;
+      border-right: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 5px 5px 0 0;
+      box-shadow: 0 -2px 9px rgba(0, 0, 0, 0.34);
+    }
+
+    .pct-chapter-tab-label {
+      writing-mode: horizontal-tb;
+      transform: none;
+    }
+
+    .pct-chapter-tab--active {
+      width: auto;
+      height: var(--pct-tab-thickness);
+      border-top-color: #ed5a43;
+      border-bottom: none;
+      border-left-color: rgba(255, 255, 255, 0.15);
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 -3px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .pct-chapter-tab--idle:hover,
+    .pct-chapter-tab--idle:focus-visible {
+      width: auto;
+      height: var(--pct-tab-thickness);
+      border-top-color: #ed5a43;
+      border-right: none;
+      box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.4);
     }
   }
 
@@ -310,10 +558,6 @@
   .pct-splash-lede {
     margin-bottom: 1.5rem;
     font-size: 15px;
-  }
-
-  .pct-splash-headphones {
-    margin-top: 1.125rem;
   }
 }
 
@@ -401,6 +645,24 @@
 
 .duration-300 {
   animation-duration: 300ms;
+}
+
+/* Same bottom slot: scroll hint and chapter "tap to continue".
+   Rail uses a fixed lift; short-height dock sits just above the tabs. */
+.pct-mobile-explore-cue {
+  bottom: 8rem;
+}
+
+@media (min-height: 640px) {
+  .pct-mobile-explore-cue {
+    bottom: 5rem;
+  }
+}
+
+@media (max-height: 639px) {
+  .pct-mobile-explore-cue {
+    bottom: calc(var(--pct-tab-thickness) + env(safe-area-inset-bottom) + 12px);
+  }
 }
 
 /* Touch scroll hint: a finger drifting downward, then fading out. */

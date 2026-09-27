@@ -30,7 +30,7 @@ test("a recoverable tile error is not fatal after map load", () => {
     isFatalMapboxError(
       {
         error: { message: "Failed to load tile" },
-        sourceId: "mapbox-terrain-rgb",
+        sourceId: "mapbox-terrain-dem",
       },
       true,
     ),
@@ -43,7 +43,7 @@ test("a source tile 404 is recoverable while the map is starting", () => {
     isFatalMapboxError(
       {
         error: { status: 404, message: "Tile not found" },
-        sourceId: "mapbox-terrain-rgb",
+        sourceId: "mapbox-terrain-dem",
       },
       false,
     ),

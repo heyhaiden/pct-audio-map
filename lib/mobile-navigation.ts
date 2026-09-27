@@ -41,7 +41,7 @@ export function shouldCloseMobileNavOnNavigate(
 
 const COMPACT_CHAPTER_LABELS: Record<string, string> = {
   "Southern California": "SOCAL",
-  "Sierra Nevada": "SIERRA",
+  "The Sierra": "SIERRA",
   "Northern California": "NORCAL",
   Oregon: "OREGON",
   Washington: "WASH",

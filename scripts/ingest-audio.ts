@@ -1,7 +1,17 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, existsSync } from "node:fs"
-import { join, extname, basename } from "node:path"
-import { put } from "@vercel/blob"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { del, put } from "@vercel/blob"
+import { audioMarkers } from "../data/audio-markers.ts"
+import {
+  blobPathname,
+  needsTranscode,
+  probeDurationSeconds,
+  publicAudioUrl,
+  sourceBlobPathname,
+  transcodeToMp3,
+} from "./lib/deliver-audio.ts"
 import { parseMarkerCsv } from "./lib/parse-csv.ts"
 import { sampleElevationFeet } from "./lib/mapbox-terrain.ts"
 import { computeMarkerMiles } from "./lib/compute-marker-miles.ts"
@@ -10,6 +20,8 @@ import {
   formatMarkerMilesTs,
   type EnrichedMarker,
 } from "./lib/write-markers.ts"
+
+const BLOB_CACHE_MAX_AGE = 60 * 60 * 24 * 365
 
 function loadEnvFile(path: string) {
   if (!existsSync(path)) return
@@ -39,12 +51,14 @@ function parseArgs(argv: string[]) {
     audioDir: "content/audio",
     dryRun: false,
     skipUpload: false,
+    skipElevation: false,
   }
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--dry-run") options.dryRun = true
     else if (arg === "--skip-upload") options.skipUpload = true
+    else if (arg === "--skip-elevation") options.skipElevation = true
     else if (arg === "--csv") options.csv = argv[++i]
     else if (arg === "--audio-dir") options.audioDir = argv[++i]
     else if (arg === "--help" || arg === "-h") {
@@ -54,7 +68,10 @@ Options:
   --csv <path>        CSV file (default: content/audio-markers.csv)
   --audio-dir <path>  Local audio folder (default: content/audio)
   --skip-upload       Regenerate marker files only
+  --skip-elevation    Reuse elevations already in data/audio-markers.ts
   --dry-run           Validate without uploads or file writes
+
+Uncompressed sources (.wav/.aiff/.flac) are transcoded to 128k MP3 before upload.
 `)
       process.exit(0)
     }
@@ -64,21 +81,12 @@ Options:
 }
 
 function audioContentType(filename: string): string {
-  const ext = extname(filename).toLowerCase()
-  if (ext === ".mp3") return "audio/mpeg"
-  if (ext === ".m4a" || ext === ".aac") return "audio/mp4"
-  if (ext === ".wav") return "audio/wav"
-  if (ext === ".ogg") return "audio/ogg"
+  if (filename.toLowerCase().endsWith(".mp3")) return "audio/mpeg"
+  if (filename.toLowerCase().endsWith(".m4a") || filename.toLowerCase().endsWith(".aac")) {
+    return "audio/mp4"
+  }
+  if (filename.toLowerCase().endsWith(".ogg")) return "audio/ogg"
   return "application/octet-stream"
-}
-
-function normalizeAudioUrl(filename: string): string {
-  const base = basename(filename)
-  return `/audio/${base}`
-}
-
-function blobPathname(filename: string): string {
-  return `audio/${basename(filename)}`
 }
 
 async function main() {
@@ -96,43 +104,74 @@ async function main() {
   const rows = parseMarkerCsv(readFileSync(options.csv, "utf8"))
   console.log(`Parsed ${rows.length} markers from ${options.csv}`)
 
-  if (!mapboxToken) {
-    throw new Error("MAPBOX_ACCESS_TOKEN is required for elevation sampling")
+  if (!mapboxToken && !options.skipElevation) {
+    throw new Error("MAPBOX_ACCESS_TOKEN is required for elevation sampling (or pass --skip-elevation)")
   }
+
+  const elevationById = Object.fromEntries(
+    audioMarkers.map((marker) => [marker.id, marker.elevation]),
+  )
 
   if (!options.skipUpload && !options.dryRun && !blobToken) {
     throw new Error("BLOB_READ_WRITE_TOKEN is required for uploads (or pass --skip-upload)")
   }
 
   const enriched: EnrichedMarker[] = []
+  const transcodeDir = mkdtempSync(join(tmpdir(), "pct-audio-"))
 
-  for (const row of rows) {
-    const localPath = row.filename ? join(options.audioDir, row.filename) : ""
-    if (row.filename && !options.skipUpload && !existsSync(localPath)) {
-      throw new Error(`Audio file not found: ${localPath}`)
-    }
+  try {
+    for (const row of rows) {
+      const localPath = row.filename ? join(options.audioDir, row.filename) : ""
+      if (row.filename && !options.skipUpload && !existsSync(localPath)) {
+        throw new Error(`Audio file not found: ${localPath}`)
+      }
 
-    console.log(`Sampling elevation for ${row.id} (${row.name})…`)
-    const elevation = await sampleElevationFeet(row.lng, row.lat, mapboxToken)
+      let elevation = options.skipElevation ? elevationById[row.id] : undefined
+      if (elevation == null) {
+        if (!mapboxToken) {
+          throw new Error(`No stored elevation for ${row.id}; MAPBOX_ACCESS_TOKEN is required`)
+        }
+        console.log(`Sampling elevation for ${row.id} (${row.name})…`)
+        elevation = await sampleElevationFeet(row.lng, row.lat, mapboxToken)
+      }
 
-    if (row.filename && !options.skipUpload && !options.dryRun) {
-      const fileBuffer = readFileSync(localPath)
-      const pathname = blobPathname(row.filename)
-      console.log(`Uploading ${pathname}…`)
-      await put(pathname, fileBuffer, {
-        access: "public",
-        token: blobToken,
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        contentType: audioContentType(row.filename),
+      const durationSeconds =
+        row.filename && existsSync(localPath) ? probeDurationSeconds(localPath) : null
+
+      if (row.filename && !options.skipUpload && !options.dryRun) {
+        const pathname = blobPathname(row.filename)
+        let uploadPath = localPath
+        if (needsTranscode(row.filename)) {
+          uploadPath = join(transcodeDir, pathname.replaceAll("/", "_"))
+          console.log(`Transcoding ${row.filename} → ${pathname}…`)
+          transcodeToMp3(localPath, uploadPath)
+        }
+        const fileBuffer = readFileSync(uploadPath)
+        console.log(`Uploading ${pathname} (${(fileBuffer.byteLength / 1024 / 1024).toFixed(1)} MB)…`)
+        await put(pathname, fileBuffer, {
+          access: "public",
+          token: blobToken,
+          addRandomSuffix: false,
+          allowOverwrite: true,
+          cacheControlMaxAge: BLOB_CACHE_MAX_AGE,
+          contentType: audioContentType(pathname),
+        })
+        const leftover = sourceBlobPathname(row.filename)
+        if (leftover) {
+          console.log(`Deleting uncompressed ${leftover}…`)
+          await del(leftover, { token: blobToken })
+        }
+      }
+
+      enriched.push({
+        ...row,
+        elevation,
+        audioUrl: row.filename ? publicAudioUrl(row.filename) : "",
+        durationSeconds: durationSeconds ?? undefined,
       })
     }
-
-    enriched.push({
-      ...row,
-      elevation,
-      audioUrl: row.filename ? normalizeAudioUrl(row.filename) : "",
-    })
+  } finally {
+    rmSync(transcodeDir, { recursive: true, force: true })
   }
 
   const trail = JSON.parse(readFileSync(join(process.cwd(), "public/pct-trail.geojson"), "utf8"))

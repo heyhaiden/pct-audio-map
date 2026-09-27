@@ -14,7 +14,7 @@ const SITE_PATTERN =
 /**
  * Shell for About / Library / Resources.
  *
- * Header stays static; only page content fades on entry. Clears map scroll locks
+ * Header scrolls with the page. Only page content fades on entry. Clears map scroll locks
  * and forces scrollTop=0 so a mid-trail map exit can't leave the page frozen.
  */
 export function SitePage({
@@ -33,7 +33,7 @@ export function SitePage({
 
     const hash = window.location.hash.slice(1)
     if (hash) {
-      // Allow layout to settle, then honor in-page anchors (e.g. #get-involved).
+      // Allow layout to settle, then honor in-page anchors (e.g. #get-in-touch).
       requestAnimationFrame(() => {
         document.getElementById(hash)?.scrollIntoView()
       })

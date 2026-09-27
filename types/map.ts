@@ -1,3 +1,5 @@
+import type { TimeOfDay } from "@/lib/time-of-day"
+
 export interface PCTChapter {
   id: string
   title: string
@@ -21,11 +23,13 @@ export interface AudioMarker {
   coordinates: [number, number]
   elevation: number
   audioUrl: string
+  /** Whole-file duration from ingest (ffprobe), used by the library instead of fetching the blob. */
+  durationSeconds?: number
   chapter: string
   featured: boolean
   description?: string
   recordingDate?: string
-  timeOfDay?: "sunrise" | "day" | "dusk" | "night"
+  timeOfDay?: TimeOfDay
 }
 
 export interface CameraPosition {

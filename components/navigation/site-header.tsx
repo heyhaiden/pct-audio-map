@@ -33,7 +33,7 @@ interface SiteHeaderProps {
 }
 
 /**
- * Shared sticky header for splash and secondary pages.
+ * Shared header for splash and secondary pages.
  * Left slot: the mountain home mark, shown everywhere including the splash. It
  * is replaced by Back to Map only on a secondary page reached from a running
  * journey. Nav on the right always lists every page — the current one is
@@ -55,7 +55,7 @@ export function SiteHeader({ current }: SiteHeaderProps) {
   }, [showHomeLink, current])
 
   return (
-    <header className="sticky top-0 z-50 bg-transparent">
+    <header className="bg-transparent">
       <div className="flex items-center justify-between gap-4 px-[18px] py-4 md:px-[28px]">
         <div className="flex min-w-0 items-center gap-3">
           {current !== "home" && showBackToMap ? (

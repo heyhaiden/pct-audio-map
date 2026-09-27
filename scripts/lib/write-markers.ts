@@ -4,11 +4,12 @@ import { classifyTimeOfDay } from "../../lib/time-of-day.ts"
 export interface EnrichedMarker extends CsvRow {
   elevation: number
   audioUrl: string
+  durationSeconds?: number
 }
 
 const CHAPTER_LABELS: Record<string, string> = {
   "southern-california": "Southern California",
-  "sierra-nevada": "Sierra Nevada",
+  "sierra-nevada": "The Sierra",
   "northern-california": "Northern California",
   "oregon-cascades": "Oregon",
   "washington-cascades": "Washington",
@@ -37,6 +38,9 @@ export function formatAudioMarkersTs(markers: EnrichedMarker[]): string {
       `    coordinates: [${marker.lng}, ${marker.lat}],`,
       `    elevation: ${marker.elevation},`,
       `    audioUrl: "${escapeTsString(marker.audioUrl)}",`,
+      marker.durationSeconds != null
+        ? `    durationSeconds: ${marker.durationSeconds},`
+        : undefined,
       `    chapter: "${escapeTsString(marker.chapter)}",`,
       `    featured: ${marker.featured},`,
       marker.description

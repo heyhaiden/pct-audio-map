@@ -232,9 +232,9 @@ export function SplashScreen({
             </span>
           </h1>
 
-          <p className="pct-splash-lede pct-display mb-10 max-w-[325px] text-lede font-light leading-[1.65] text-[#c7beac] md:max-w-[400px]">
-            An audio journey along the Pacific Crest Trail. Scroll to walk it. Stop anywhere and stay
-            as long as you like.
+          <p className="pct-splash-lede pct-display mb-10 max-w-[325px] text-lede font-light leading-[1.65] text-[#c7beac] md:max-w-[420px]">
+            An audio journey along the Pacific Crest Trail. Scroll to explore. Stop at waypoints to
+            listen. Stay as long as you like.
           </p>
 
           <div className="flex flex-col items-center">
@@ -244,11 +244,12 @@ export function SplashScreen({
               onClick={handleEnter}
               className="px-[38px] py-4"
             />
-            <div className="pct-splash-headphones mt-6 flex items-center gap-2.5 font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
-              <Headphones className="h-4 w-4" />
-              Best with headphones
-            </div>
           </div>
+        </div>
+
+        <div className="pct-splash-headphones absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex w-auto items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
+          <Headphones className="h-4 w-4 shrink-0" />
+          Best with headphones
         </div>
       </div>
     </div>

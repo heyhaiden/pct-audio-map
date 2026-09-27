@@ -1,11 +1,13 @@
 const CHAPTER_TIMELINE_EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)"
 
-/** Auto-collapse while an audio node owns the view (or exit camera is mid-flight). */
+/** Auto-collapse while an audio node owns the view, the exit camera is mid-flight,
+ *  or the opening SoCal overlay is still up. */
 export function shouldHideChapterTimeline(
   hasSelectedAudioMarker: boolean,
   isExitCameraBusy: boolean,
+  openingOverlayPending = false,
 ) {
-  return hasSelectedAudioMarker || isExitCameraBusy
+  return hasSelectedAudioMarker || isExitCameraBusy || openingOverlayPending
 }
 
 /**
@@ -23,19 +25,10 @@ export function resolveChapterTimelineCollapsed(
   return false
 }
 
-export function getChapterTimelineMotionStyle(hidden: boolean, peekHandle = false) {
-  // The handle sits on the connected tab's right edge — not the column's, which
-  // is as wide as its widest tab — so a tuck travels exactly that far to land
-  // the handle on the viewport edge. Same variable the handle's `left` uses.
-  const peekOffset = "calc(var(--pct-handle-offset) * -1)"
-
+/** Duration + easing only. Axis of travel lives on `[data-hidden]` in CSS so
+ *  the dock query can flip X ↔ Y without JS. */
+export function getChapterTimelineMotionStyle() {
   return {
-    // CSS `translate` (not `transform`) — Tailwind v4 owns `transform` and
-    // ignores inline transform on this node.
-    translate: hidden ? (peekHandle ? peekOffset : "calc(-100% - 8px)") : "0%",
-    // Peek keeps opacity so the attached handle stays visible at the edge.
-    opacity: hidden && !peekHandle ? 0 : 1,
-    // Same length both ways — the rail withdraws at the cadence it returns at.
     transitionDuration: "760ms",
     transitionTimingFunction: CHAPTER_TIMELINE_EASE_OUT,
   }
@@ -49,9 +42,12 @@ export function getChapterDrawerHandleIndex(chapterCount: number) {
   return Math.min(CHAPTER_DRAWER_HANDLE_INDEX, chapterCount - 1)
 }
 
-/** The peek handle is gone while a recording card owns the bottom of the view. */
-export function shouldShowChapterDrawerHandle(hasSelectedAudioMarker: boolean) {
-  return !hasSelectedAudioMarker
+/** The peek handle is gone while a recording card owns the view, or until SoCal is cleared. */
+export function shouldShowChapterDrawerHandle(
+  hasSelectedAudioMarker: boolean,
+  openingOverlayPending = false,
+) {
+  return !hasSelectedAudioMarker && !openingOverlayPending
 }
 
 /**

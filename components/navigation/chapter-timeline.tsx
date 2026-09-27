@@ -15,22 +15,23 @@ interface ChapterTimelineProps {
   activeIndex: number
   /**
    * Continuous trail progress, 0–1. The rail fills upward from Chapter 1 at
-   * the bottom toward the last chapter at the top.
+   * the bottom toward the last chapter at the top; the dock fills rightward.
    */
   progress: number
-  /** Slide the rail fully off-canvas while the audio experience owns the view. */
+  /** Slide the rail/dock fully off-canvas while the audio experience owns the view. */
   hidden: boolean
   onNodeClick: (index: number) => void
-  /** Toggle the drawer open/closed (mobile arrow; also usable on desktop). */
+  /** Toggle the drawer open/closed (rail peek handle on phones). */
   onToggleDrawer?: () => void
   /** Hide the peek handle while the audio card owns the view. */
   showDrawerHandle?: boolean
 }
 
 /**
- * Shared chapter navigation for desktop + mobile: a vertical tab rail pinned
- * to the left edge. It mirrors the northbound map: Chapter 1 sits at the
- * bottom, the last chapter at the top, and progress fills upward.
+ * Shared chapter navigation: left rail on desktop (no drawer), scaled mobile
+ * rail with a peek drawer, and a bottom dock when the viewport is too short.
+ * Chapter 1 stays first in the DOM; CSS `flex-col-reverse` puts it at the
+ * bottom of the rail.
  */
 export function ChapterTimeline({
   nodes,
@@ -42,42 +43,37 @@ export function ChapterTimeline({
   showDrawerHandle = true,
 }: ChapterTimelineProps) {
   const fill = Math.max(0, Math.min(1, progress))
-  const displayNodes = nodes.map((node, index) => ({ node, index })).reverse()
   const roman = ["I", "II", "III", "IV", "V", "VI"]
   const handleIndex = getChapterDrawerHandleIndex(nodes.length)
   const peekHandle = Boolean(onToggleDrawer && showDrawerHandle)
-
-  // The handle's offset is pure CSS (--pct-handle-offset), matched to the
-  // connected tab's own width variable. Measuring the tab from JS meant the
-  // handle updated a frame behind and visibly floated during hover.
   const connectedTab = (index: number) => (index === handleIndex ? "true" : "false")
 
   return (
-    <div
-      className="pct-chapter-tabs-shell pointer-events-none fixed left-0 z-30"
-      style={{
-        "--pct-tab-font-size": `clamp(9px, ${(12 / Math.max(1, nodes.length)).toFixed(3)}dvh, 15px)`,
-      } as CSSProperties}
-    >
+    <div className="pct-chapter-tabs-shell pointer-events-none fixed z-30">
       <div
         data-hidden={hidden ? "true" : "false"}
+        data-peek={peekHandle ? "true" : "false"}
         data-progress={fill.toFixed(4)}
-        className="relative flex h-full min-h-0 items-stretch will-change-[transform,opacity] transition-[translate,opacity] motion-reduce:transition-none"
-        style={getChapterTimelineMotionStyle(hidden, peekHandle)}
+        className="pct-chapter-tabs-motion relative will-change-[translate,opacity] transition-[translate,opacity] motion-reduce:transition-none"
+        style={getChapterTimelineMotionStyle()}
       >
         {/* `inert` sits on the tabs themselves, not this column: the drawer
             handle is nested inside the connected tab's wrapper, and an inert
             column would take the handle down with it — leaving no way to reopen
             a tucked rail. */}
-        <div className="relative flex h-full min-h-0 flex-col items-stretch">
-          <div aria-hidden className="absolute bottom-0 left-0 top-0 w-px bg-white/10">
+        <div className="pct-chapter-tabs-cluster relative items-stretch">
+          <div aria-hidden className="pct-chapter-tabs-progress">
             <div
-              className="absolute bottom-0 left-0 w-full bg-[#ed5a43]/70 transition-[height] duration-150 ease-out"
-              style={{ height: `${fill * 100}%` }}
+              className="pct-chapter-tabs-progress-fill absolute bg-[#ed5a43]/70 transition-[height,width] duration-150 ease-out"
+              style={
+                {
+                  "--pct-tab-progress": `${fill * 100}%`,
+                } as CSSProperties
+              }
             />
           </div>
 
-          {displayNodes.map(({ node, index }) => {
+          {nodes.map((node, index) => {
             const isActive = index === activeIndex
             const number = roman[index] ?? `${index + 1}`
             const shortName = getCompactChapterLabel(node.title)
@@ -95,20 +91,15 @@ export function ChapterTimeline({
                 onClick={() => onNodeClick(index)}
                 aria-label={`Go to Chapter ${index + 1}: ${node.title}`}
                 aria-current={isActive ? "true" : undefined}
-                className={`pct-chapter-tab pointer-events-auto relative flex min-h-0 items-center justify-center overflow-hidden rounded-r-[5px] border-t font-mono uppercase shadow-[2px_0_9px_rgba(0,0,0,0.34)] backdrop-blur-[4px] transition-[color,background-color,border-color,box-shadow,width,opacity] duration-300 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] motion-reduce:transition-none ${
-                  index === handleIndex && peekHandle ? "h-full" : "flex-1"
-                } ${
-                  isActive
-                    ? "border-y-white/15 border-r-[3px] border-r-[#ed5a43] bg-[rgba(23,21,17,0.93)] text-[#ede8dc] shadow-[3px_0_14px_rgba(0,0,0,0.45)]"
-                    : "border-t-white/15 border-r-2 border-r-transparent bg-[rgba(12,11,9,0.62)] text-[#b9b0a2] hover:border-r-[#ed5a43]/70 hover:bg-[rgba(23,21,17,0.88)] hover:text-[#ede8dc] hover:shadow-[2px_0_12px_rgba(0,0,0,0.4)]"
+                className={`pct-chapter-tab pointer-events-auto relative font-mono uppercase transition-[color,background-color,border-color,box-shadow,width,height,opacity] duration-300 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] motion-reduce:transition-none ${
+                  isActive ? "pct-chapter-tab--active" : "pct-chapter-tab--idle"
                 }`}
               >
-                <span
-                  className="block whitespace-nowrap leading-none"
-                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-                >
+                <span className="pct-chapter-tab-label whitespace-nowrap leading-none">
                   <b
-                    className={`font-semibold ${isActive ? "text-[#ed5a43]" : "text-current opacity-80"}`}
+                    className={`font-semibold ${
+                      isActive ? "text-[#ed5a43]" : "text-current opacity-80"
+                    }`}
                   >
                     {number}
                   </b>
@@ -125,14 +116,14 @@ export function ChapterTimeline({
             // edge by construction — it tracks the width transition with no
             // measurement and no frame of lag, so they can never separate.
             return (
-              <div key={node.id} className="relative flex w-fit min-h-0 flex-1">
+              <div key={node.id} className="pct-chapter-tab-handle-wrap relative flex min-h-0 w-fit">
                 {tab}
                 <button
                   type="button"
                   onClick={onToggleDrawer}
                   aria-label={hidden ? "Show chapter tabs" : "Hide chapter tabs"}
                   aria-expanded={!hidden}
-                  className={`pct-chapter-drawer-handle pointer-events-auto absolute left-full top-1/2 z-10 grid h-14 w-6 -translate-y-1/2 place-items-center rounded-r-[5px] border-y border-r border-y-white/15 border-r-[#ed5a43]/45 text-[#b9b0a2] shadow-[2px_0_9px_rgba(0,0,0,0.34)] backdrop-blur-[4px] hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] md:hidden ${
+                  className={`pct-chapter-drawer-handle pointer-events-auto absolute left-full top-1/2 z-10 h-14 w-6 -translate-y-1/2 rounded-r-[5px] border-y border-r border-y-white/15 border-r-[#ed5a43]/45 text-[#b9b0a2] shadow-[2px_0_9px_rgba(0,0,0,0.34)] backdrop-blur-[4px] hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] ${
                     activeIndex === handleIndex
                       ? "bg-[rgba(23,21,17,0.93)]"
                       : "bg-[rgba(12,11,9,0.62)]"
