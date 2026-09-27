@@ -1,8 +1,18 @@
-export type TimeOfDay = "sunrise" | "day" | "dusk" | "night"
+export type TimeOfDay =
+  | "dawn"
+  | "morning"
+  | "midday"
+  | "afternoon"
+  | "evening"
+  | "dusk"
+  | "night"
 
 export const TIME_OF_DAY_LABEL: Record<TimeOfDay, string> = {
-  sunrise: "Sunrise",
-  day: "Day",
+  dawn: "Dawn",
+  morning: "Morning",
+  midday: "Midday",
+  afternoon: "Afternoon",
+  evening: "Evening",
   dusk: "Dusk",
   night: "Night",
 }
@@ -24,15 +34,22 @@ export function minutesFromClock(value: string): number | null {
 }
 
 /**
- * Trail-side buckets: sunrise 5–8am, day until 5pm, dusk until 8:30pm, else night.
+ * Recording clock → card period. Bounds are inclusive of the printed end
+ * and exclusive of the next period's start (7:00am is dawn, 7:01am is morning).
+ *
+ * Dawn 4:01am–7:00am, morning –10:30am, midday –1:30pm, afternoon –4:30pm,
+ * evening –7:00pm, dusk –9:00pm, night 9:01pm–4:00am.
  */
 export function classifyTimeOfDay(value: string): TimeOfDay | null {
   const minutes = minutesFromClock(value)
   if (minutes == null) return null
-  if (minutes >= 5 * 60 && minutes < 8 * 60) return "sunrise"
-  if (minutes >= 8 * 60 && minutes < 17 * 60) return "day"
-  if (minutes >= 17 * 60 && minutes < 20 * 60 + 30) return "dusk"
-  return "night"
+  if (minutes >= 21 * 60 + 1 || minutes <= 4 * 60) return "night"
+  if (minutes <= 7 * 60) return "dawn"
+  if (minutes <= 10 * 60 + 30) return "morning"
+  if (minutes <= 13 * 60 + 30) return "midday"
+  if (minutes <= 16 * 60 + 30) return "afternoon"
+  if (minutes <= 19 * 60) return "evening"
+  return "dusk"
 }
 
 /** "June 8, 2025" / "April 15 2024" → "June 8" / "April 15". */

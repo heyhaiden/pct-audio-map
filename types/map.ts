@@ -1,3 +1,5 @@
+import type { TimeOfDay } from "@/lib/time-of-day"
+
 export interface PCTChapter {
   id: string
   title: string
@@ -27,7 +29,7 @@ export interface AudioMarker {
   featured: boolean
   description?: string
   recordingDate?: string
-  timeOfDay?: "sunrise" | "day" | "dusk" | "night"
+  timeOfDay?: TimeOfDay
 }
 
 export interface CameraPosition {
