@@ -59,3 +59,29 @@ test("formatAudioMarkersTs writes probed duration and mp3 delivery URLs", () => 
   assert.match(ts, /audioUrl: "\/audio\/3-1.mp3"/)
   assert.match(ts, /durationSeconds: 119/)
 })
+
+test("formatAudioMarkersTs writes every overlapping territory", () => {
+  const ts = formatAudioMarkersTs([
+    {
+      id: "marker-1",
+      name: "Campo",
+      lng: -116.47,
+      lat: 32.6,
+      chapter: "southern-california",
+      filename: "1-1.mp3",
+      description: "",
+      recordingDate: "",
+      recordingTime: "",
+      featured: true,
+      elevation: 2680,
+      audioUrl: "/audio/1-1.mp3",
+      lands: [
+        { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+        { name: "Cahuilla", slug: "cahuilla" },
+      ],
+    },
+  ])
+
+  assert.match(ts, /name: "Kumeyaay\/Kumiais"/)
+  assert.match(ts, /slug: "cahuilla"/)
+})

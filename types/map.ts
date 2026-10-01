@@ -30,6 +30,12 @@ export interface AudioMarker {
   description?: string
   recordingDate?: string
   timeOfDay?: TimeOfDay
+  /**
+   * Indigenous territories overlapping this coordinate, from Native Land.
+   * A point can sit in more than one. Empty means the dataset has no polygon here.
+   * These are not official or legal boundaries.
+   */
+  lands?: { name: string; slug: string }[]
 }
 
 export interface CameraPosition {

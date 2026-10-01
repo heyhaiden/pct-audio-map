@@ -15,6 +15,9 @@ export const audioMarkers: AudioMarker[] = [
       "Power lines buzz overhead as I make my way out of Campo, rain drizzling nonstop for hours. It's dreary, and I don't see another soul almost the entire day. So it begins.",
     recordingDate: "March 31, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-2",
@@ -29,6 +32,9 @@ export const audioMarkers: AudioMarker[] = [
       "The morning breeze is freezing cold. Yesterday's snowstorm forced me into an early zero day in Mount Laguna.",
     recordingDate: "April 5, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-4",
@@ -43,6 +49,9 @@ export const audioMarkers: AudioMarker[] = [
       "Wind whips on this desert lookout point. Nothing but vast expanse all around.",
     recordingDate: "April 5, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-5",
@@ -57,6 +66,9 @@ export const audioMarkers: AudioMarker[] = [
       "Walking along a high ridgeline overlooking Anza Borrego State Park. A day hiker walks by and offers candy bars -- my first trail magic!",
     recordingDate: "April 5, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-14",
@@ -71,6 +83,9 @@ export const audioMarkers: AudioMarker[] = [
       "Morning birds around 9am",
     recordingDate: "April 7, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-21",
@@ -85,6 +100,9 @@ export const audioMarkers: AudioMarker[] = [
       "The wind is incessant. Low-lying brush shakes, a dried out tree creaks.",
     recordingDate: "April 7, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-26",
@@ -99,6 +117,9 @@ export const audioMarkers: AudioMarker[] = [
       "Save for an occasional butterfly floating by, the desert heat is as oppressive as it is silent -- nothing stirs. Even the sound of my footsteps doesn't carry very far out here.",
     recordingDate: "April 10, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-30",
@@ -113,6 +134,9 @@ export const audioMarkers: AudioMarker[] = [
       "At first glance, the desert appears to be devoid of any living things. Stop long enough to listen, and it comes to life.",
     recordingDate: "April 11, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-31",
@@ -127,6 +151,10 @@ export const audioMarkers: AudioMarker[] = [
       "The low brush and scorching heat of the desert give way to pastures, rolling green hills, and giant oak trees. The breeze and sudden change of scenery are welcome after days of oppressive heat.",
     recordingDate: "April 11, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Cupeño", slug: "cupeno" },
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-34",
@@ -141,6 +169,10 @@ export const audioMarkers: AudioMarker[] = [
       "A symphony of frogs sings all night while the water rushes past. It's a welcome change to the stillness of the last few nights.",
     recordingDate: "April 11, 2025",
     timeOfDay: "night",
+    lands: [
+      { name: "Cupeño", slug: "cupeno" },
+      { name: "Kumeyaay/Kumiais", slug: "kumeyaay" },
+    ],
   },
   {
     id: "marker-36",
@@ -155,6 +187,9 @@ export const audioMarkers: AudioMarker[] = [
       "It's golden hour. I'm in the shade of a giant oak tree, enjoying a moment of peace as a morning dove coos nearby. I'm grateful to be clean again, thanks to an outdoor shower and a laundry bucket at the Warner Springs Community Center earlier today.",
     recordingDate: "April 12, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Cupeño", slug: "cupeno" },
+    ],
   },
   {
     id: "marker-38",
@@ -169,6 +204,9 @@ export const audioMarkers: AudioMarker[] = [
       "A refreshingly chilly morning as I begin the ascent towards San Jacinto. The desert scrub soon begins to change into high alpine forests and burn scars. For now, a low-lying cloud provides respite from the heat, but warns of an impending storm -- a storm that ultimately forces me to seek shelter in town until it passes.",
     recordingDate: "April 16, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Ɂívil̃uwenetem Meytémak (Cahuilla)", slug: "cahuilla" },
+    ],
   },
   {
     id: "marker-40",
@@ -183,6 +221,9 @@ export const audioMarkers: AudioMarker[] = [
       "I cross long snowfields on the ascent up to San Jacinto peak. While the trail is obscured, the bootpack (usually) guides me in the right direction.",
     recordingDate: "April 22, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Ɂívil̃uwenetem Meytémak (Cahuilla)", slug: "cahuilla" },
+    ],
   },
   {
     id: "marker-41",
@@ -197,6 +238,9 @@ export const audioMarkers: AudioMarker[] = [
       "A breeze through the Jeffrey pines kicks up the smell of butterscotch as chickadees sing. San Jacinto peak offers incredible views of the Inland Empire and Coachella Valley. Looking out from this high up, it's hard to imagine the scorching heat of the desert floor just days ago.",
     recordingDate: "April 22, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Ɂívil̃uwenetem Meytémak (Cahuilla)", slug: "cahuilla" },
+    ],
   },
   {
     id: "marker-42",
@@ -211,6 +255,9 @@ export const audioMarkers: AudioMarker[] = [
       "Wind blows steadily over the ridgeline, but I'm sheltered by a cluster of boulders and pines. I can still see the hazy desert floor far below.",
     recordingDate: "April 22, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Ɂívil̃uwenetem Meytémak (Cahuilla)", slug: "cahuilla" },
+    ],
   },
   {
     id: "marker-43",
@@ -225,6 +272,9 @@ export const audioMarkers: AudioMarker[] = [
       "A crisp morning following a cold night. I begin the long descent back down to the desert floor.",
     recordingDate: "April 23, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Ɂívil̃uwenetem Meytémak (Cahuilla)", slug: "cahuilla" },
+    ],
   },
   {
     id: "marker-44",
@@ -239,6 +289,9 @@ export const audioMarkers: AudioMarker[] = [
       "Wind whips through the brush and the power lines. Dozens of wind turbines spin furiously as they tower over me.",
     recordingDate: "April 25, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Ɂívil̃uwenetem Meytémak (Cahuilla)", slug: "cahuilla" },
+    ],
   },
   {
     id: "marker-48",
@@ -253,6 +306,9 @@ export const audioMarkers: AudioMarker[] = [
       "The birds wake up first; soon, other hikers begin to stir, while the true early birds are already hiking past.",
     recordingDate: "April 29, 2025",
     timeOfDay: "dawn",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-49",
@@ -267,6 +323,9 @@ export const audioMarkers: AudioMarker[] = [
       "Leaving the town of Big Bear Lake, I tread carefully over numerous scree fields.",
     recordingDate: "May 1, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-50",
@@ -281,6 +340,9 @@ export const audioMarkers: AudioMarker[] = [
       "Clouds roll in; an afternoon sprinkle catches me in an exposed area. Back at lower elevation, the alpine forest gives way to scraggly manzanitas and succulents.",
     recordingDate: "May 2, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-51",
@@ -295,6 +357,9 @@ export const audioMarkers: AudioMarker[] = [
       "Young willow trees grow all along the water's edge. I stop for a refill.",
     recordingDate: "May 2, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-53",
@@ -309,6 +374,9 @@ export const audioMarkers: AudioMarker[] = [
       "I stand on a bridge overlooking Deep Creek a few hundred feet below, deliberating whether to continue on or take a detour to the Cedar Glen Malt Shop. Onion rings win this time.",
     recordingDate: "May 3, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-54",
@@ -323,6 +391,9 @@ export const audioMarkers: AudioMarker[] = [
       "A solitary campsite near the water. Resting up for another side quest tomorrow: Deep Creek Hot Springs.",
     recordingDate: "May 3, 2025",
     timeOfDay: "dusk",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-56",
@@ -337,6 +408,9 @@ export const audioMarkers: AudioMarker[] = [
       "Last night's rainstorm continues through the morning. Everything is wet, but inside the tent I am warm and dry.",
     recordingDate: "May 5, 2025",
     timeOfDay: "dawn",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-58",
@@ -351,6 +425,9 @@ export const audioMarkers: AudioMarker[] = [
       "Powerlines overhead remind me that I'm getting closer to civilization. The infamous McDonald's stop is near.",
     recordingDate: "May 6, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+    ],
   },
   {
     id: "marker-60",
@@ -365,6 +442,9 @@ export const audioMarkers: AudioMarker[] = [
       "Unable to get to a water source before sundown, I dry camp on the descent from Mt. Baden-Powell. Morning wind wakes me and the birds.",
     recordingDate: "May 11, 2025",
     timeOfDay: "dawn",
+    lands: [
+      { name: "Tongva (Gabrieleno)", slug: "tongva-gabrieleno" },
+    ],
   },
   {
     id: "marker-62",
@@ -379,6 +459,10 @@ export const audioMarkers: AudioMarker[] = [
       "Camping on a blustery ridge. I cook dinner and quickly retreat to the tent as the temperature drops. Every guyline I have is pinned to the ground.",
     recordingDate: "May 12, 2025",
     timeOfDay: "night",
+    lands: [
+      { name: "Tongva (Gabrieleno)", slug: "tongva-gabrieleno" },
+      { name: "Fernandeño Tataviam", slug: "fernandeno-tataviam" },
+    ],
   },
   {
     id: "marker-65",
@@ -393,6 +477,10 @@ export const audioMarkers: AudioMarker[] = [
       "Tonight's campsite is straight out of a post-apocalyptic film. Ravaged by fire years ago, now completely overgrown, it's equally peaceful and disturbing.",
     recordingDate: "May 18, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Yuhaaviatam/Maarenga’yam (Serrano)", slug: "yuhaviatam-serrano" },
+      { name: "Fernandeño Tataviam", slug: "fernandeno-tataviam" },
+    ],
   },
   {
     id: "marker-69",
@@ -407,6 +495,9 @@ export const audioMarkers: AudioMarker[] = [
       "Surrounded by giants. Wind turbines spin wildly as far as the eye can see.",
     recordingDate: "May 23, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Kitanemuk", slug: "kitanemuk" },
+    ],
   },
   {
     id: "marker-70",
@@ -421,6 +512,9 @@ export const audioMarkers: AudioMarker[] = [
       "One of the toughest climbs yet -- my pack is filled to the brim with food and water leaving Tehachapi.",
     recordingDate: "May 26, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Kawaiisu", slug: "kawaiisu" },
+    ],
   },
   {
     id: "marker-71",
@@ -435,6 +529,9 @@ export const audioMarkers: AudioMarker[] = [
       "Momentarily in a lush forest, I have no idea what awaits me -- the next day I drop back into the scorching desert for one of the trail's longest water carries.",
     recordingDate: "May 28, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Kawaiisu", slug: "kawaiisu" },
+    ],
   },
   {
     id: "marker-72",
@@ -449,6 +546,9 @@ export const audioMarkers: AudioMarker[] = [
       "The scenery hints at the beginnings of the Sierra -- trees grow taller, the wind blows cooler. One last stretch of desert, then it's all mountains.",
     recordingDate: "May 28, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Kawaiisu", slug: "kawaiisu" },
+    ],
   },
   // The Sierra
   {
@@ -464,6 +564,10 @@ export const audioMarkers: AudioMarker[] = [
       "Afternoon snack break and a quick water refill. Clear skies, warm sun, and some very vocal bugs hiding in the grass.",
     recordingDate: "June 8, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Newe Sogobia (Western Shoshone)", slug: "newe-western-shoshone" },
+      { name: "Tübatulabal", slug: "tubatulabal" },
+    ],
   },
   {
     id: "marker-78",
@@ -478,6 +582,10 @@ export const audioMarkers: AudioMarker[] = [
       "An evening thunderstorm rolls in just as I descend from Trail Pass. Sounds like a good time to get into town.",
     recordingDate: "June 8, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Newe Sogobia (Western Shoshone)", slug: "newe-western-shoshone" },
+      { name: "Tübatulabal", slug: "tubatulabal" },
+    ],
   },
   {
     id: "marker-80",
@@ -492,6 +600,10 @@ export const audioMarkers: AudioMarker[] = [
       "Nighttime by the lake. It's freezing outside, but the tent is warm. I'm beat after climbing back up the pass with a fresh resupply weighing me down, but the frogs keep me awake.",
     recordingDate: "June 9, 2025",
     timeOfDay: "night",
+    lands: [
+      { name: "Newe Sogobia (Western Shoshone)", slug: "newe-western-shoshone" },
+      { name: "Tübatulabal", slug: "tubatulabal" },
+    ],
   },
   {
     id: "marker-81",
@@ -506,6 +618,9 @@ export const audioMarkers: AudioMarker[] = [
       "A short rest to dry off following a deep river crossing. I'm surrounded by lush grass, but see the snowy caps peeking out from behind the pines. Birdsong bounces off the steep granite walls.",
     recordingDate: "June 11, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Tübatulabal", slug: "tubatulabal" },
+    ],
   },
   {
     id: "marker-82",
@@ -520,6 +635,9 @@ export const audioMarkers: AudioMarker[] = [
       "After a midnight wakeup and sunrise summit of Mt. Whitney, the descent back to Crabtree Meadows is nothing short of grueling. A quick pause by the river to fill up water before trudging on.",
     recordingDate: "June 12, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Tübatulabal", slug: "tubatulabal" },
+    ],
   },
   {
     id: "marker-83",
@@ -534,6 +652,9 @@ export const audioMarkers: AudioMarker[] = [
       "Beginning the ascent to Forester Pass before sunrise, the world is frozen. Puddles thaw and crunch underfoot as the sun peeks over the horizon.",
     recordingDate: "June 14, 2025",
     timeOfDay: "dawn",
+    lands: [
+      { name: "Tübatulabal", slug: "tubatulabal" },
+    ],
   },
   {
     id: "marker-87",
@@ -548,6 +669,9 @@ export const audioMarkers: AudioMarker[] = [
       "Town day! A relatively quick climb over Kearsarge Pass, and then it's a well-deserved rest in Bishop.",
     recordingDate: "June 15, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-88",
@@ -562,6 +686,9 @@ export const audioMarkers: AudioMarker[] = [
       "Cicadas in the trees -- for now, I'm surrounded by them, but in a few miles I'll be well above the treeline and hear nothing but wind.",
     recordingDate: "June 15, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-89",
@@ -576,6 +703,9 @@ export const audioMarkers: AudioMarker[] = [
       "The sun warms my skin as a cool breeze blows. Small waves lap up against the lake's edge as I pause for a snack, taking in the granite peaks that surround me.",
     recordingDate: "June 15, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-90",
@@ -590,6 +720,9 @@ export const audioMarkers: AudioMarker[] = [
       "Coming down from snowy Glen Pass, I'm greeted by a stunning sunset over a chain of crystal clear lakes. Wildflowers and lush grasses line their banks.",
     recordingDate: "June 19, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-91",
@@ -604,6 +737,9 @@ export const audioMarkers: AudioMarker[] = [
       "Another beautiful, cloudless day in the Sierra. A river runs through the canyon below.",
     recordingDate: "June 20, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-92",
@@ -618,6 +754,9 @@ export const audioMarkers: AudioMarker[] = [
       "A steady breeze blows through the canyon, rustling a grove of poplar trees near the trail.",
     recordingDate: "June 20, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-93",
@@ -632,6 +771,10 @@ export const audioMarkers: AudioMarker[] = [
       "Branches sway, leaves flutter -- poplar trees dance in the wind.",
     recordingDate: "June 22, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Nüümü (Northern Paiute)", slug: "northern-paiute" },
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-94",
@@ -646,6 +789,10 @@ export const audioMarkers: AudioMarker[] = [
       "Groves of trees amidst rocky outcroppings, I make my way up toward Selden Pass. An entire valley comes into view as I ascend.",
     recordingDate: "June 24, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Nüümü (Northern Paiute)", slug: "northern-paiute" },
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-95",
@@ -660,6 +807,10 @@ export const audioMarkers: AudioMarker[] = [
       "A waterfall cascades down granite boulders, while a refreshing mist settles on my face.",
     recordingDate: "June 27, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Nüümü (Northern Paiute)", slug: "northern-paiute" },
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-96",
@@ -674,6 +825,10 @@ export const audioMarkers: AudioMarker[] = [
       "Cicadas chirp overhead, flies buzz around me as I eat my last snack. I'm just a few short miles away from my next resupply, Mammoth Lakes, so the trail is more crowded than it's been over the last few days.",
     recordingDate: "June 28, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Nüümü (Northern Paiute)", slug: "northern-paiute" },
+      { name: "Nyyhmy (Western Mono/Monache)", slug: "southern-mono-monache" },
+    ],
   },
   {
     id: "marker-97",
@@ -688,6 +843,11 @@ export const audioMarkers: AudioMarker[] = [
       "A cold spring bubbles beneath me. As I lean down to inspect it, I notice tiny carbonation bubbles rising through the water.",
     recordingDate: "July 5, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Nüümü (Northern Paiute)", slug: "northern-paiute" },
+      { name: "Miwok", slug: "plains-miwok" },
+      { name: "Me-Wuk (Central Sierra Miwok)", slug: "central-sierra-miwok" },
+    ],
   },
   {
     id: "marker-99",
@@ -702,6 +862,11 @@ export const audioMarkers: AudioMarker[] = [
       "Long, exposed meadows in between patches of mosquito-ridden forest. I can't stop for long or I'll get eaten alive.",
     recordingDate: "July 6, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Nüümü (Northern Paiute)", slug: "northern-paiute" },
+      { name: "Miwok", slug: "plains-miwok" },
+      { name: "Me-Wuk (Central Sierra Miwok)", slug: "central-sierra-miwok" },
+    ],
   },
   {
     id: "marker-100",
@@ -716,6 +881,9 @@ export const audioMarkers: AudioMarker[] = [
       "After an unexpected overnight stopover in Kennedy Meadows North, I continue on through endless fields of wildflowers -- some of them grow taller than my head.",
     recordingDate: "July 11, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+    ],
   },
   {
     id: "marker-101",
@@ -730,6 +898,9 @@ export const audioMarkers: AudioMarker[] = [
       "One of my favorite bird calls of the Sierra Nevada -- the XXX?? What is this bird?",
     recordingDate: "July 12, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+    ],
   },
   {
     id: "marker-102",
@@ -744,6 +915,9 @@ export const audioMarkers: AudioMarker[] = [
       "A cloudless day rapidly turns to hail and thunderstorms over the pass. Cold hail lands in a warm pond and appears to be bubbling -- I'm witnessing a rare phenomenon known as thermal effervescence.",
     recordingDate: "July 12, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+    ],
   },
   {
     id: "marker-103",
@@ -758,6 +932,9 @@ export const audioMarkers: AudioMarker[] = [
       "After waiting out the worst of the storm, I crest the pass and continue on in the rain. Spirits are low until I stumble upon a bike race, and I'm welcomed over to their basecamp with hot ramen -- the best possible trail magic for a cold, wet day.",
     recordingDate: "July 12, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+    ],
   },
   {
     id: "marker-104",
@@ -772,6 +949,11 @@ export const audioMarkers: AudioMarker[] = [
       "A serene moment at the water's edge: the late afternoon sun glistens against the lake; snowy granite peaks surround me.",
     recordingDate: "July 17, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+      { name: "Nisenan", slug: "nisenan" },
+    ],
   },
   {
     id: "marker-105",
@@ -786,6 +968,10 @@ export const audioMarkers: AudioMarker[] = [
       "Passing over the backs of ski resorts, the trail follows a windy ridge. Vast valleys sprawl out on either side, and I catch glimpses of Lake Tahoe.",
     recordingDate: "July 19, 2025",
     timeOfDay: "afternoon",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+    ],
   },
   {
     id: "marker-106",
@@ -800,6 +986,11 @@ export const audioMarkers: AudioMarker[] = [
       "Steady wind rustles poplar leaves.",
     recordingDate: "July 19, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+      { name: "Nisenan", slug: "nisenan" },
+    ],
   },
   {
     id: "marker-107",
@@ -814,6 +1005,11 @@ export const audioMarkers: AudioMarker[] = [
       "The winds pick up at night, but my campsite is protected. Ski lifts sway in the distance.",
     recordingDate: "July 20, 2025",
     timeOfDay: "night",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Wašišiw Ɂítdeʔ (Washoe)", slug: "washoe" },
+      { name: "Nisenan", slug: "nisenan" },
+    ],
   },
   // Northern California
   {
@@ -829,6 +1025,10 @@ export const audioMarkers: AudioMarker[] = [
       "A sunny day turns to night as dark clouds roll in, releasing thunder, lightning, and golf ball-sized hail. This section of trail is very exposed, so I pause near a cluster of trees to let the storm pass.",
     recordingDate: "July 25, 2025",
     timeOfDay: "dusk",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Pit River", slug: "pit-river" },
+    ],
   },
   {
     id: "marker-112",
@@ -843,6 +1043,11 @@ export const audioMarkers: AudioMarker[] = [
       "Ospreys circle overhead and echo through the tall trees. I'm back on trail after a quick detour to see the majestic Burney Falls.",
     recordingDate: "July 27, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Achumawi", slug: "achumawi" },
+      { name: "Pit River", slug: "pit-river" },
+    ],
   },
   {
     id: "marker-113",
@@ -857,6 +1062,11 @@ export const audioMarkers: AudioMarker[] = [
       "Tree trunks here are drooping with moss. Tonight's campsite is a ridge overlooking Mt. Shasta, but I have to hack my way through the undergrowth first.",
     recordingDate: "July 27, 2025",
     timeOfDay: "dusk",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Achumawi", slug: "achumawi" },
+      { name: "Pit River", slug: "pit-river" },
+    ],
   },
   {
     id: "marker-114",
@@ -871,6 +1081,11 @@ export const audioMarkers: AudioMarker[] = [
       "I exit the dense forest for just a moment to pass under high voltage power lines.",
     recordingDate: "July 27, 2025",
     timeOfDay: "dusk",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Achumawi", slug: "achumawi" },
+      { name: "Pit River", slug: "pit-river" },
+    ],
   },
   {
     id: "marker-115",
@@ -885,6 +1100,13 @@ export const audioMarkers: AudioMarker[] = [
       "The forest comes alive in the mornings. A deer wanders onto the trail, mere feet away from me.",
     recordingDate: "July 29, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Okwanuchu", slug: "okwanuchu" },
+      { name: "Wintʰu• Po•m (Northern Wintu)", slug: "northern-wintu" },
+      { name: "Winnimem Wintu", slug: "winnimem-wintu" },
+      { name: "Pit River", slug: "pit-river" },
+    ],
   },
   {
     id: "marker-116",
@@ -899,6 +1121,13 @@ export const audioMarkers: AudioMarker[] = [
       "A water crossing in the most magical, fairyland forest. Lush green all around me, ferns peek out of every rock crevasse and massive leaves blanket the ground.",
     recordingDate: "July 29, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Okwanuchu", slug: "okwanuchu" },
+      { name: "Wintʰu• Po•m (Northern Wintu)", slug: "northern-wintu" },
+      { name: "Winnimem Wintu", slug: "winnimem-wintu" },
+      { name: "Pit River", slug: "pit-river" },
+    ],
   },
   {
     id: "marker-117",
@@ -913,6 +1142,12 @@ export const audioMarkers: AudioMarker[] = [
       "A small creek is a reminder of the tiny beauty around me -- morning light filters through the dense canopy, illuminating a group of yellowjackets at the water; a mushroom grows atop a tree trunk; a perfect spiderweb is seemingly suspended in mid-air.",
     recordingDate: "July 29, 2025",
     timeOfDay: "midday",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Okwanuchu", slug: "okwanuchu" },
+      { name: "Wintʰu• Po•m (Northern Wintu)", slug: "northern-wintu" },
+      { name: "Winnimem Wintu", slug: "winnimem-wintu" },
+    ],
   },
   {
     id: "marker-120",
@@ -927,6 +1162,13 @@ export const audioMarkers: AudioMarker[] = [
       "I walk down an exposed ridge, the sun suprisingly hot today. Large bugs hide in the bushes and jump in front of me as I walk by.",
     recordingDate: "August 3, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Modoc", slug: "modoc" },
+      { name: "Wintʰu• Po•m (Northern Wintu)", slug: "northern-wintu" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+      { name: "Nom Sus Wintu", slug: "nom-sus-wintu" },
+    ],
   },
   {
     id: "marker-123",
@@ -941,6 +1183,13 @@ export const audioMarkers: AudioMarker[] = [
       "There must have been rain recently, though today's heat and blue skies show no indication that it ever happened. I quicken my pace -- town is near, and a home cooked meal from a kind trail angel awaits.",
     recordingDate: "August 4, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Shasta", slug: "shasta" },
+      { name: "Wintʰu• Po•m (Northern Wintu)", slug: "northern-wintu" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+      { name: "Nom Sus Wintu", slug: "nom-sus-wintu" },
+    ],
   },
   // Oregon
   {
@@ -956,6 +1205,15 @@ export const audioMarkers: AudioMarker[] = [
       "Last night, I officially crossed the Oregon border! Today, I'm greeted by bees in the wildflowers, hemlock forests, and sweeping vistas across multi colored landscapes.",
     recordingDate: "August 7, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Takelma", slug: "takelma" },
+      { name: "Cow Creek Umpqua", slug: "cow-creek-umpqua" },
+      { name: "Modoc", slug: "modoc" },
+      { name: "Tolowa Dee-ni’", slug: "coquille-umpqua-chetco-tolowa-tututni" },
+      { name: "Confederated Tribes of Grand Ronde", slug: "confederated-tribes-of-grand-ronde" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+    ],
   },
   {
     id: "marker-125",
@@ -970,6 +1228,15 @@ export const audioMarkers: AudioMarker[] = [
       "Stumbled upon a cooler full of sodas today -- more trail magic!",
     recordingDate: "August 7, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Takelma", slug: "takelma" },
+      { name: "Cow Creek Umpqua", slug: "cow-creek-umpqua" },
+      { name: "Modoc", slug: "modoc" },
+      { name: "Tolowa Dee-ni’", slug: "coquille-umpqua-chetco-tolowa-tututni" },
+      { name: "Confederated Tribes of Grand Ronde", slug: "confederated-tribes-of-grand-ronde" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+    ],
   },
   {
     id: "marker-126",
@@ -984,6 +1251,15 @@ export const audioMarkers: AudioMarker[] = [
       "Stopped in a grove of poplar trees. Multi-colored wildflowers grow tall alongside the trail.",
     recordingDate: "August 7, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Shasta", slug: "shasta" },
+      { name: "Takelma", slug: "takelma" },
+      { name: "Cow Creek Umpqua", slug: "cow-creek-umpqua" },
+      { name: "Modoc", slug: "modoc" },
+      { name: "Confederated Tribes of Grand Ronde", slug: "confederated-tribes-of-grand-ronde" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+    ],
   },
   {
     id: "marker-128",
@@ -998,6 +1274,13 @@ export const audioMarkers: AudioMarker[] = [
       "Huge rock slides create sections of volcanic scree which slows my travel. I roll into camp at exactly 30 miles for the day, hoping for soft dirt tomorrow.",
     recordingDate: "August 11, 2025",
     timeOfDay: "evening",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Cow Creek Umpqua", slug: "cow-creek-umpqua" },
+      { name: "Modoc", slug: "modoc" },
+      { name: "Confederated Tribes of Grand Ronde", slug: "confederated-tribes-of-grand-ronde" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+    ],
   },
   {
     id: "marker-129",
@@ -1012,6 +1295,14 @@ export const audioMarkers: AudioMarker[] = [
       "The dirt is red and yellow, the air is crisp and cool. Birds chatter excitedly, and ripe huckleberries are everywhere. Little did I know that this would be my final day on trail.",
     recordingDate: "August 12, 2025",
     timeOfDay: "morning",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Takelma", slug: "takelma" },
+      { name: "Cow Creek Umpqua", slug: "cow-creek-umpqua" },
+      { name: "Modoc", slug: "modoc" },
+      { name: "Confederated Tribes of Grand Ronde", slug: "confederated-tribes-of-grand-ronde" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+    ],
   },
   {
     id: "marker-130",
@@ -1026,5 +1317,13 @@ export const audioMarkers: AudioMarker[] = [
       "Only crickets keep me company tonight. Earlier this afternoon, my foot pain dramatically increased, and I made the difficult decision to turn around hike 12 miles back to Hwy 140. This would be my final night on trail.",
     recordingDate: "August 12, 2025",
     timeOfDay: "night",
+    lands: [
+      { name: "Cayuse, Umatilla and Walla Walla", slug: "cayuse-umatilla-and-walla-walla" },
+      { name: "Takelma", slug: "takelma" },
+      { name: "Modoc", slug: "modoc" },
+      { name: "Klamath", slug: "klamath" },
+      { name: "Confederated Tribes of Grand Ronde", slug: "confederated-tribes-of-grand-ronde" },
+      { name: "Confederated Tribes of Siletz Indians", slug: "confederated-tribes-of-siletz-indians" },
+    ],
   },
 ]
