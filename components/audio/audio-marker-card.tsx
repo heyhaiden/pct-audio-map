@@ -54,6 +54,9 @@ const TIME_OF_DAY_ICON = {
   night: Moon,
 } satisfies Record<TimeOfDay, typeof SunMedium | typeof TwilightIcon>
 
+/** Map playback cards hide the recording date. Set true to show it again. */
+const SHOW_MAP_RECORDING_DATE = false
+
 interface AudioMarkerCardBodyProps {
   marker: AudioMarker
   /** Draw the rule the date aligns to. Off where the card is already busy. */
@@ -73,9 +76,11 @@ export function AudioMarkerCardBody({
 }: AudioMarkerCardBodyProps) {
   const mile = getMarkerMile(marker.id)
   const dateLabel =
-    marker.recordingDate && variant === "map"
-      ? formatMonthDay(marker.recordingDate)
-      : marker.recordingDate
+    variant === "map" && !SHOW_MAP_RECORDING_DATE
+      ? null
+      : marker.recordingDate && variant === "map"
+        ? formatMonthDay(marker.recordingDate)
+        : marker.recordingDate
   const TimeIcon = marker.timeOfDay ? TIME_OF_DAY_ICON[marker.timeOfDay] : null
 
   return (
@@ -120,6 +125,14 @@ export function AudioMarkerCardBody({
       {marker.description ? (
         <p className="pct-display mt-3 text-copy font-light leading-[1.6] text-[#ada396] md:text-prose">
           {marker.description}
+        </p>
+      ) : null}
+
+      {marker.lands && marker.lands.length > 0 ? (
+        <p className="mt-3">
+          <span className="inline-block max-w-full rounded-full bg-[#ed5a43]/20 px-3 py-1 font-mono text-[11px] leading-snug text-[#ed5a43]">
+            {marker.lands.map((land) => land.name).join(" · ")}
+          </span>
         </p>
       ) : null}
     </>

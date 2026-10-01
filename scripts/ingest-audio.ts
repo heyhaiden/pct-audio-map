@@ -16,10 +16,18 @@ import { parseMarkerCsv } from "./lib/parse-csv.ts"
 import { sampleElevationFeet } from "./lib/mapbox-terrain.ts"
 import { computeMarkerMiles } from "./lib/compute-marker-miles.ts"
 import {
+  cachedLands,
+  fetchTerritoriesAtPosition,
+  type NativeLandCache,
+} from "./lib/native-land.ts"
+import {
   formatAudioMarkersTs,
   formatMarkerMilesTs,
   type EnrichedMarker,
 } from "./lib/write-markers.ts"
+
+const NATIVE_LAND_CACHE_PATH = join(process.cwd(), "data/native-lands.json")
+const NATIVE_LAND_REQUEST_GAP_MS = 200
 
 const BLOB_CACHE_MAX_AGE = 60 * 60 * 24 * 365
 
@@ -52,6 +60,7 @@ function parseArgs(argv: string[]) {
     dryRun: false,
     skipUpload: false,
     skipElevation: false,
+    skipLands: false,
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -59,6 +68,7 @@ function parseArgs(argv: string[]) {
     if (arg === "--dry-run") options.dryRun = true
     else if (arg === "--skip-upload") options.skipUpload = true
     else if (arg === "--skip-elevation") options.skipElevation = true
+    else if (arg === "--skip-lands") options.skipLands = true
     else if (arg === "--csv") options.csv = argv[++i]
     else if (arg === "--audio-dir") options.audioDir = argv[++i]
     else if (arg === "--help" || arg === "-h") {
@@ -69,6 +79,7 @@ Options:
   --audio-dir <path>  Local audio folder (default: content/audio)
   --skip-upload       Regenerate marker files only
   --skip-elevation    Reuse elevations already in data/audio-markers.ts
+  --skip-lands        Reuse Indigenous territory names already in data/native-lands.json
   --dry-run           Validate without uploads or file writes
 
 Uncompressed sources (.wav/.aiff/.flac) are transcoded to 128k MP3 before upload.
@@ -111,6 +122,19 @@ async function main() {
   const elevationById = Object.fromEntries(
     audioMarkers.map((marker) => [marker.id, marker.elevation]),
   )
+  const durationById = Object.fromEntries(
+    audioMarkers.flatMap((marker) =>
+      marker.durationSeconds != null ? [[marker.id, marker.durationSeconds] as const] : [],
+    ),
+  )
+  const landsCache = loadNativeLandCache()
+  const nativeLandKey = process.env.NATIVE_LAND_API_KEY
+  const needsLandLookup =
+    !options.skipLands &&
+    rows.some((row) => cachedLands(landsCache, row.id, row.lng, row.lat) == null)
+  if (needsLandLookup && !nativeLandKey) {
+    throw new Error("NATIVE_LAND_API_KEY is required for territory lookup (or pass --skip-lands)")
+  }
 
   if (!options.skipUpload && !options.dryRun && !blobToken) {
     throw new Error("BLOB_READ_WRITE_TOKEN is required for uploads (or pass --skip-upload)")
@@ -118,6 +142,7 @@ async function main() {
 
   const enriched: EnrichedMarker[] = []
   const transcodeDir = mkdtempSync(join(tmpdir(), "pct-audio-"))
+  let landsCacheDirty = false
 
   try {
     for (const row of rows) {
@@ -135,8 +160,26 @@ async function main() {
         elevation = await sampleElevationFeet(row.lng, row.lat, mapboxToken)
       }
 
-      const durationSeconds =
+      const probedDuration =
         row.filename && existsSync(localPath) ? probeDurationSeconds(localPath) : null
+      const durationSeconds = probedDuration ?? durationById[row.id]
+
+      let lands = cachedLands(landsCache, row.id, row.lng, row.lat)
+      if (!options.skipLands && lands == null) {
+        if (!nativeLandKey) {
+          throw new Error(`No stored territories for ${row.id}; NATIVE_LAND_API_KEY is required`)
+        }
+        console.log(`Looking up territories for ${row.id} (${row.name})…`)
+        try {
+          lands = await fetchTerritoriesAtPosition(row.lat, row.lng, nativeLandKey)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          throw new Error(`${row.id}: ${message}`)
+        }
+        landsCache[row.id] = { lng: row.lng, lat: row.lat, lands }
+        landsCacheDirty = true
+        await sleep(NATIVE_LAND_REQUEST_GAP_MS)
+      }
 
       if (row.filename && !options.skipUpload && !options.dryRun) {
         const pathname = blobPathname(row.filename)
@@ -168,10 +211,14 @@ async function main() {
         elevation,
         audioUrl: row.filename ? publicAudioUrl(row.filename) : "",
         durationSeconds: durationSeconds ?? undefined,
+        lands: lands ?? undefined,
       })
     }
   } finally {
     rmSync(transcodeDir, { recursive: true, force: true })
+    if (landsCacheDirty && !options.dryRun) {
+      writeFileSync(NATIVE_LAND_CACHE_PATH, `${JSON.stringify(landsCache, null, 2)}\n`)
+    }
   }
 
   const trail = JSON.parse(readFileSync(join(process.cwd(), "public/pct-trail.geojson"), "utf8"))
@@ -189,7 +236,7 @@ async function main() {
     console.log("\nDry run complete:")
     for (const marker of enriched) {
       console.log(
-        `  ${marker.id}: ${marker.name} @ ${marker.elevation} ft, mile ${markerMiles[marker.id]}, ${marker.audioUrl}`,
+        `  ${marker.id}: ${marker.name} @ ${marker.elevation} ft, mile ${markerMiles[marker.id]}, ${marker.lands?.map((land) => land.name).join(", ") || "no territory"}, ${marker.audioUrl}`,
       )
     }
     return
@@ -208,6 +255,17 @@ async function main() {
       ? "Skipped Blob upload (--skip-upload)"
       : "Uploaded audio files to Vercel Blob",
   )
+}
+
+function loadNativeLandCache(): NativeLandCache {
+  if (!existsSync(NATIVE_LAND_CACHE_PATH)) return {}
+  const parsed = JSON.parse(readFileSync(NATIVE_LAND_CACHE_PATH, "utf8")) as NativeLandCache
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {}
+  return parsed
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 main().catch((error) => {
