@@ -4,8 +4,16 @@ import { useState, useRef, useEffect } from "react"
 import { audioMarkers } from "@/data/audio-markers"
 import { LibraryChapter } from "@/components/audio/library-chapter"
 import { SitePage } from "@/components/navigation/site-page"
-import { endingFadeVolume, rampVolume } from "@/lib/audio-crossfade"
+import {
+  endingFadeVolume,
+  rampVolume,
+  resolvePlaybackDuration,
+} from "@/lib/audio-crossfade"
 import { buildAudioLibraryFolders } from "@/lib/audio-library-folders"
+import {
+  createLibraryAudioOutput,
+  type LibraryAudioOutput,
+} from "@/lib/library-audio-output"
 import { resolveLibraryAudioUrl } from "@/lib/resolve-audio-url"
 
 const PLAYBACK_FADE_MS = 360
@@ -22,9 +30,11 @@ export default function LibraryPage() {
   progressRef.current = progress
   const [durations, setDurations] = useState<Record<string, number>>({})
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const outputRef = useRef<LibraryAudioOutput | null>(null)
   const fadingOutId = useRef<string | null>(null)
   const rampCancels = useRef(new Map<HTMLAudioElement, () => void>())
   const endFadeFrame = useRef(0)
+  const playbackClockRef = useRef<(() => void) | null>(null)
 
   const cancelEndFade = () => {
     if (!endFadeFrame.current) return
@@ -32,16 +42,17 @@ export default function LibraryPage() {
     endFadeFrame.current = 0
   }
 
-  const ramp = (audio: HTMLAudioElement, to: number, onDone?: () => void) => {
+  const ramp = (output: LibraryAudioOutput, to: number, onDone?: () => void) => {
+    const audio = output.element
     rampCancels.current.get(audio)?.()
-    const from = audio.volume
+    const from = output.getVolume()
     const started = performance.now()
     let frame = 0
     let cancelled = false
     const step = (now: number) => {
       if (cancelled) return
       const progress = Math.min(1, (now - started) / PLAYBACK_FADE_MS)
-      audio.volume = rampVolume(progress, from, to)
+      output.setVolume(rampVolume(progress, from, to))
       if (progress < 1) {
         frame = requestAnimationFrame(step)
         return
@@ -63,7 +74,8 @@ export default function LibraryPage() {
     return () => {
       if (endFadeFrame.current) cancelAnimationFrame(endFadeFrame.current)
       for (const cancel of cancels.values()) cancel()
-      audioRef.current?.pause()
+      outputRef.current?.dispose()
+      outputRef.current = null
       audioRef.current = null
     }
   }, [])
@@ -73,63 +85,47 @@ export default function LibraryPage() {
     audioUrl: string,
     format: "opus" | "mp3",
   ) => {
-    const audio = new Audio(resolveLibraryAudioUrl(audioUrl, format))
-    audio.volume = 0
+    const knownDuration =
+      audioMarkers.find((marker) => marker.id === markerId)?.durationSeconds ?? 0
+    const output = createLibraryAudioOutput(resolveLibraryAudioUrl(audioUrl, format))
+    const audio = output.element
+    output.arm()
+    outputRef.current = output
     audioRef.current = audio
 
+    const playbackDuration = () => resolvePlaybackDuration(audio.duration, knownDuration)
+
     audio.addEventListener("loadedmetadata", () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) {
-        setDurations((prev) => ({ ...prev, [markerId]: audio.duration }))
+      const duration = playbackDuration()
+      if (duration > 0) {
+        setDurations((prev) => ({ ...prev, [markerId]: duration }))
       }
       const resumeAt = progressRef.current[markerId] ?? 0
-      if (resumeAt > 0 && resumeAt < 100 && audio.duration) {
-        audio.currentTime = (resumeAt / 100) * audio.duration
+      if (resumeAt > 0 && resumeAt < 100 && duration > 0) {
+        audio.currentTime = (resumeAt / 100) * duration
       }
     })
 
-    let fadingTail = false
-
-    const syncEndFade = () => {
+    const syncPlayback = () => {
       endFadeFrame.current = 0
-      if (audioRef.current !== audio || audio.paused || !audio.duration) return
-      if (fadingOutId.current === markerId || rampCancels.current.has(audio)) return
+      if (audioRef.current !== audio || audio.paused) return
 
-      const tail = endingFadeVolume(audio.currentTime, audio.duration, END_FADE_MS)
-      if (tail === null) {
-        if (fadingTail) audio.volume = 1
-        fadingTail = false
-        return
-      }
-
-      fadingTail = true
-      audio.volume = tail
-      if (audio.duration - audio.currentTime > 0.016) {
-        endFadeFrame.current = requestAnimationFrame(syncEndFade)
-      }
-    }
-
-    const scheduleEndFade = () => {
-      if (audioRef.current !== audio || !audio.duration) return
-      if (fadingOutId.current === markerId || rampCancels.current.has(audio)) return
-      if (endingFadeVolume(audio.currentTime, audio.duration, END_FADE_MS) === null) {
-        if (fadingTail && !audio.paused) audio.volume = 1
-        fadingTail = false
-        return
-      }
-      if (!endFadeFrame.current) endFadeFrame.current = requestAnimationFrame(syncEndFade)
-    }
-
-    audio.addEventListener("timeupdate", () => {
-      if (audio.duration) {
+      const duration = playbackDuration()
+      if (duration > 0) {
         setProgress((prev) => ({
           ...prev,
-          [markerId]: (audio.currentTime / audio.duration) * 100,
+          [markerId]: (audio.currentTime / duration) * 100,
         }))
-      }
-      scheduleEndFade()
-    })
 
-    audio.addEventListener("seeked", scheduleEndFade)
+        if (fadingOutId.current !== markerId && !rampCancels.current.has(audio)) {
+          const tail = endingFadeVolume(audio.currentTime, duration, END_FADE_MS)
+          if (tail !== null) output.setVolume(tail)
+        }
+      }
+
+      endFadeFrame.current = requestAnimationFrame(syncPlayback)
+    }
+    playbackClockRef.current = syncPlayback
 
     audio.addEventListener("ended", () => {
       cancelEndFade()
@@ -140,6 +136,7 @@ export default function LibraryPage() {
     const fallbackOrFail = () => {
       if (audioRef.current !== audio) return
       if (format === "opus") {
+        output.dispose()
         attachLibraryAudio(markerId, audioUrl, "mp3")
         return
       }
@@ -152,25 +149,30 @@ export default function LibraryPage() {
       .play()
       .then(() => {
         if (audioRef.current !== audio || fadingOutId.current === markerId) return
-        ramp(audio, 1)
+        ramp(output, 1)
+        if (!endFadeFrame.current) endFadeFrame.current = requestAnimationFrame(syncPlayback)
       })
       .catch(fallbackOrFail)
   }
 
   const handlePlayPause = (markerId: string, audioUrl: string) => {
+    if (!audioUrl) return
     const current = audioRef.current
+    const currentOutput = outputRef.current
 
-    if (playingId === markerId && current) {
+    if (playingId === markerId && current && currentOutput) {
       if (fadingOutId.current === markerId) {
         fadingOutId.current = null
-        void current.play()
-        ramp(current, 1)
+        void current.play().then(() => {
+          if (!endFadeFrame.current) playbackClockRef.current?.()
+        })
+        ramp(currentOutput, 1)
         return
       }
 
       fadingOutId.current = markerId
       cancelEndFade()
-      ramp(current, 0, () => {
+      ramp(currentOutput, 0, () => {
         current.pause()
         if (audioRef.current === current && fadingOutId.current === markerId) {
           fadingOutId.current = null
@@ -182,10 +184,12 @@ export default function LibraryPage() {
 
     cancelEndFade()
     fadingOutId.current = null
-    if (current) {
+    if (current && currentOutput) {
       const outgoing = current
-      ramp(outgoing, 0, () => {
+      const outgoingOutput = currentOutput
+      ramp(outgoingOutput, 0, () => {
         outgoing.pause()
+        if (outputRef.current !== outgoingOutput) outgoingOutput.dispose()
       })
     }
 
@@ -196,17 +200,21 @@ export default function LibraryPage() {
   const handleSeek = (markerId: string, percent: number) => {
     setProgress((prev) => ({ ...prev, [markerId]: percent }))
 
-    // Seek live only if this is the recording currently playing.
     const audio = audioRef.current
-    if (playingId === markerId && audio?.duration) {
-      audio.currentTime = (percent / 100) * audio.duration
+    const knownDuration =
+      durations[markerId] ||
+      audioMarkers.find((marker) => marker.id === markerId)?.durationSeconds ||
+      0
+    const duration = audio ? resolvePlaybackDuration(audio.duration, knownDuration) : 0
+    if (playingId === markerId && audio && duration > 0) {
+      audio.currentTime = (percent / 100) * duration
     }
   }
 
   return (
     <SitePage current="library">
-        <main className="pct-stagger mx-auto max-w-4xl px-6 py-12 md:py-20">
-          <section className="mb-12 text-center md:mb-16">
+        <main className="pct-stagger mx-auto max-w-4xl py-12 md:px-6 md:py-20">
+          <section className="mb-12 px-6 text-center md:mb-16 md:px-0">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
               Audio <span className="pct-wordmark font-wordmark uppercase text-[#ed5a43]">Library</span>
             </h1>
@@ -216,7 +224,7 @@ export default function LibraryPage() {
           </section>
 
           {/* Audio listings by chapter */}
-          <div className="space-y-8">
+          <div className="space-y-8 px-3 md:px-0">
             {libraryFolders.map(({ id, title, markers }) => (
               <LibraryChapter
                 key={id}

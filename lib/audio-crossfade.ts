@@ -37,6 +37,16 @@ export function endingFadeVolume(
   return fadeOutVolume(progress, 1)
 }
 
+/** Prefer a finite element duration; iOS often reports Infinity until the file ends. */
+export function resolvePlaybackDuration(
+  elementDuration: number,
+  knownSeconds = 0,
+): number {
+  if (Number.isFinite(elementDuration) && elementDuration > 0) return elementDuration
+  if (Number.isFinite(knownSeconds) && knownSeconds > 0) return knownSeconds
+  return 0
+}
+
 export function isPlayAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError"
 }
