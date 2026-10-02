@@ -306,13 +306,21 @@ export function createTrailLoopEngine(options: {
 
       const outgoing = active
       const outgoingStart = outgoing?.gain.gain.value ?? 0
-      const incoming = startLoop(sources.clipId, buffer, outgoing ? 0 : targetVolume)
+      // Always start silent so a first pin click fades in the same way hops crossfade.
+      const incoming = startLoop(sources.clipId, buffer, 0)
       active = incoming
+      emit({ type: "playing", id: sources.clipId })
 
-      if (outgoing) {
-        await fadeGains(token, incoming.gain, outgoing.gain, targetVolume, outgoingStart, fadeMs, "crossfade")
-        if (token === generation) disconnectDeck(outgoing)
-      }
+      await fadeGains(
+        token,
+        incoming.gain,
+        outgoing?.gain ?? null,
+        targetVolume,
+        outgoingStart,
+        fadeMs,
+        "crossfade",
+      )
+      if (outgoing && token === generation) disconnectDeck(outgoing)
 
       if (token !== generation) {
         disconnectDeck(incoming)
@@ -320,7 +328,6 @@ export function createTrailLoopEngine(options: {
       }
 
       incoming.gain.gain.setValueAtTime(targetVolume, context!.currentTime)
-      emit({ type: "playing", id: sources.clipId })
     } catch {
       if (token !== generation) return
       const outgoing = active
