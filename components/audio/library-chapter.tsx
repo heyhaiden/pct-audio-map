@@ -26,12 +26,12 @@ export function LibraryChapter({
 
   return (
     <section>
-      <div className="px-2 py-1">
+      <div className="py-1 md:px-2">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-white/[0.035] md:py-3.5"
+          className="flex w-full items-center gap-3 rounded-md px-5 py-3 text-left transition-colors hover:bg-white/[0.035] md:px-3 md:py-3.5"
         >
           <Mountain className="h-5 w-5 flex-shrink-0 text-[#ed5a43]" />
           <h2 className="pct-display min-w-0 flex-1 text-lg font-medium text-[#ede8dc] md:text-xl">
@@ -49,7 +49,7 @@ export function LibraryChapter({
 
       <div ref={panelRef} aria-hidden={!open} className={slidePanelClass}>
         <div className={slideContentClass(open)}>
-          <div className="space-y-3 pt-1">
+          <div className="space-y-3 pt-2 md:space-y-4">
             {markers.map((marker) => (
               <LibraryRecordingCard
                 key={marker.id}
