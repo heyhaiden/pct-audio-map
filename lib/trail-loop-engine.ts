@@ -7,7 +7,11 @@ import {
   type LoopManifest,
   type NormalizedClip,
 } from "@/lib/audio-loop-manifest"
-import { resolveLoopSources, type LoopSources } from "@/lib/audio-loop-sources"
+import { resolveLoopSources } from "@/lib/audio-loop-sources"
+import {
+  armMediaPlaybackSession,
+  shouldLockPlaybackWithHtmlAudio,
+} from "@/lib/media-playback-session"
 import { orphanedDecks } from "@/lib/trail-loop-decks"
 
 type TrailLoopEvent =
@@ -19,6 +23,8 @@ type TrailLoopEvent =
 export interface TrailLoopEngine {
   unlock: () => Promise<void>
   resume: () => Promise<void>
+  /** Same-turn as the pin tap: start HTMLAudio so iOS keeps the media session. */
+  prime: (audioUrl: string) => void
   play: (audioUrl: string, options?: { fadeMs?: number; volume?: number }) => Promise<void>
   prefetch: (audioUrls: string[]) => void
   stop: (fadeMs?: number) => void
@@ -49,6 +55,10 @@ export function createTrailLoopEngine(options: {
 
   let context: AudioContext | null = null
   let master: GainNode | null = null
+  let graphOnPlaybackSession = false
+  let lockElement: HTMLAudioElement | null = null
+  let lockSource: MediaElementAudioSourceNode | null = null
+  let lockGain: GainNode | null = null
   let format: LoopFormat | null = null
   let manifest: LoopManifest | null = null
   let manifestPromise: Promise<LoopManifest> | null = null
@@ -77,9 +87,22 @@ export function createTrailLoopEngine(options: {
   }
 
   const ensureGraph = () => {
+    const sessionType = armMediaPlaybackSession()
+    const onPlayback = sessionType === "playback"
+
+    if (context && master && onPlayback && !graphOnPlaybackSession) {
+      for (const deck of [...liveDecks]) disconnectDeck(deck)
+      decoded.clear()
+      decodedOrder.length = 0
+      void context.close()
+      context = null
+      master = null
+    }
+
     if (context && master) return
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext
-    context = context ?? new AudioContextCtor()
+    context = new AudioContextCtor()
+    graphOnPlaybackSession = onPlayback
     master = context.createGain()
     master.connect(context.destination)
     applyMasterGain()
@@ -93,11 +116,13 @@ export function createTrailLoopEngine(options: {
   }
 
   const resume = async () => {
+    if (lockElement) void lockElement.play().catch(() => {})
     if (!context) return
     if (context.state === "suspended") await context.resume()
   }
 
   const suspend = async () => {
+    lockElement?.pause()
     if (!context) return
     if (context.state === "running") await context.suspend()
   }
@@ -291,6 +316,70 @@ export function createTrailLoopEngine(options: {
     })
   }
 
+  const tapLockIntoGraph = () => {
+    if (!context || !lockElement || lockSource) return
+    try {
+      lockGain = context.createGain()
+      lockGain.gain.value = 0
+      lockSource = context.createMediaElementSource(lockElement)
+      lockSource.connect(lockGain)
+      lockGain.connect(context.destination)
+    } catch {
+      lockSource = null
+      lockGain = null
+    }
+  }
+
+  const releaseLock = () => {
+    lockElement?.pause()
+    lockSource?.disconnect()
+    lockGain?.disconnect()
+    lockSource = null
+    lockGain = null
+    if (lockElement) {
+      lockElement.removeAttribute("src")
+      lockElement.load()
+    }
+    lockElement = null
+  }
+
+  /** Must run in the pin-tap turn. HTMLAudio holds Playback; Web Audio is what you hear. */
+  const prime = (audioUrl: string) => {
+    armMediaPlaybackSession()
+    ensureGraph()
+    if (context?.state === "suspended") void context.resume()
+    if (!shouldLockPlaybackWithHtmlAudio()) return
+
+    const sources = resolveLoopSources(audioUrl, { blobBase })
+    if (!sources) return
+
+    if (!lockElement) {
+      const audio = new Audio()
+      audio.crossOrigin = "anonymous"
+      audio.loop = true
+      audio.playsInline = true
+      audio.preload = "auto"
+      audio.setAttribute("playsinline", "true")
+      lockElement = audio
+    }
+
+    if (!lockElement.src) {
+      lockElement.src = sources.opusUrl
+      const play = lockElement.play()
+      if (play) {
+        void play.catch(() => {
+          if (!lockElement) return
+          lockElement.src = sources.mp3Url
+          void lockElement.play().catch(() => {})
+        })
+      }
+    } else {
+      void lockElement.play().catch(() => {})
+    }
+
+    tapLockIntoGraph()
+  }
+
   const play = async (audioUrl: string, playOptions?: { fadeMs?: number; volume?: number }) => {
     const token = ++generation
     const fadeMs = playOptions?.fadeMs ?? DEFAULT_FADE_MS
@@ -310,6 +399,7 @@ export function createTrailLoopEngine(options: {
     try {
       await unlock()
       if (token !== generation) return
+      tapLockIntoGraph()
 
       await loadManifest()
       if (token !== generation) return
@@ -403,6 +493,7 @@ export function createTrailLoopEngine(options: {
     const outgoing = active
     disconnectOrphans([outgoing])
     if (!outgoing) {
+      releaseLock()
       emit({ type: "stopped" })
       return
     }
@@ -411,6 +502,7 @@ export function createTrailLoopEngine(options: {
       () => {
         if (token !== generation) return
         disconnectDeck(outgoing)
+        releaseLock()
         emit({ type: "stopped" })
       },
     )
@@ -419,6 +511,7 @@ export function createTrailLoopEngine(options: {
   return {
     unlock,
     resume,
+    prime,
     play,
     prefetch,
     stop,
