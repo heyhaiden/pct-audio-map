@@ -1,28 +1,28 @@
 export const PCT_TOTAL_MILES = 2650
 export const CAMERA_PATH_POINTS = 500
-export const OPENING_TRANSITION_MILES = 80
+const OPENING_TRANSITION_MILES = 80
 export const END_TRANSITION_MILES = 14
 export const CRUISING_ALTITUDE_METERS = 26000
 /** Higher cruise on mobile so more trail is visible in portrait. */
-export const CRUISING_ALTITUDE_METERS_MOBILE = 42000
-export const INTRO_ALTITUDE_METERS = 50000
-export const INTRO_ALTITUDE_METERS_MOBILE = 65000
+const CRUISING_ALTITUDE_METERS_MOBILE = 42000
+const INTRO_ALTITUDE_METERS = 50000
+const INTRO_ALTITUDE_METERS_MOBILE = 65000
 export const PEAK_PITCH = 60
 /** Punch-in lowers altitude to this fraction of the railing altitude. */
-export const PUNCH_IN_ALTITUDE_FACTOR = 0.68
+const PUNCH_IN_ALTITUDE_FACTOR = 0.68
 /** Pitch at or below this counts as the end-of-trail top-down framing. */
-export const TOP_DOWN_PITCH_DEG = 5
+const TOP_DOWN_PITCH_DEG = 5
 
 /** Exponential follow time constants (seconds). Higher = smoother, laggier. */
-export const CAMERA_FOLLOW_POSITION_TAU = 0.16
-export const CAMERA_FOLLOW_BEARING_TAU = 0.28
-export const CAMERA_FOLLOW_POSITION_TAU_MOBILE = 0.28
-export const CAMERA_FOLLOW_BEARING_TAU_MOBILE = 0.48
+const CAMERA_FOLLOW_POSITION_TAU = 0.16
+const CAMERA_FOLLOW_BEARING_TAU = 0.28
+const CAMERA_FOLLOW_POSITION_TAU_MOBILE = 0.28
+const CAMERA_FOLLOW_BEARING_TAU_MOBILE = 0.48
 /** Release / hold: shorter tau so the camera snaps to rest instead of trailing. */
-export const CAMERA_FOLLOW_POSITION_TAU_SETTLE = 0.08
-export const CAMERA_FOLLOW_BEARING_TAU_SETTLE = 0.14
-export const CAMERA_FOLLOW_POSITION_TAU_MOBILE_SETTLE = 0.12
-export const CAMERA_FOLLOW_BEARING_TAU_MOBILE_SETTLE = 0.18
+const CAMERA_FOLLOW_POSITION_TAU_SETTLE = 0.08
+const CAMERA_FOLLOW_BEARING_TAU_SETTLE = 0.14
+const CAMERA_FOLLOW_POSITION_TAU_MOBILE_SETTLE = 0.12
+const CAMERA_FOLLOW_BEARING_TAU_MOBILE_SETTLE = 0.18
 
 let activeCruisingAltitude = CRUISING_ALTITUDE_METERS
 let activeIntroAltitude = INTRO_ALTITUDE_METERS

@@ -47,10 +47,6 @@ export function resolvePlaybackDuration(
   return 0
 }
 
-export function isPlayAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError"
-}
-
 /** Deck that should duck during a crossfade — whichever is audible right now. */
 export function resolveOutgoingDeck(
   decks: readonly [HTMLAudioElement | null, HTMLAudioElement | null],

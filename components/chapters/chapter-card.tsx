@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
 import type { PCTChapter } from "@/types/map"
 
 interface ChapterCardProps {
   chapter: PCTChapter
   chapterIndex: number
-  /** 0–1 visibility from useChapterIntro (locked chapter, both scroll directions). */
+  /** 0–1 visibility from miles-into-chapter fade (locked chapter, both directions). */
   opacity: number
   onDismiss: () => void
 }
@@ -19,11 +18,6 @@ export function ChapterCard({
 }: ChapterCardProps) {
   const isVisible = opacity > 0.01
   const romanNumerals = ["I", "II", "III", "IV", "V"]
-
-  // Scroll locking is owned solely by app/page.tsx (isOverlayBlockingScroll).
-  // This component used to lock body overflow too, and its snapshot captured
-  // the page lock's own "hidden", then restored it after the page had released
-  // — stranding the document unscrollable.
 
   if (!isVisible) return null
 

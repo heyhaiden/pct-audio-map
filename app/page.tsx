@@ -27,7 +27,7 @@ import {
   cancelFreeCameraAnimation,
   readFreeCameraPose,
 } from "@/lib/node-camera"
-import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
+import { introOpacity } from "@/hooks/use-chapter-intro"
 import { useViewportLayout } from "@/hooks/use-viewport-layout"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { useInvertedWheelScroll } from "@/hooks/use-inverted-wheel-scroll"
@@ -40,6 +40,7 @@ import {
 } from "@/lib/chapter-timeline-visibility"
 import { areOpeningMapPinsLocked, resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
 import { shouldRearmWipNotice } from "@/lib/wip-notice"
+import { chapterIndexForMiles } from "@/lib/chapter-scroll-gate"
 import {
   clearMapSession,
   clearNavigatedFromMap,
@@ -97,18 +98,12 @@ type ScrollControls = {
   getProgressFromCoordinates: (coordinates: [number, number]) => number
 }
 
-function chapterIndexForMiles(miles: number): number {
-  const index = CHAPTER_MILE_RANGES.findIndex(
-    ({ start, end }) => miles >= start && miles < end,
-  )
-  return index >= 0 ? index : CHAPTER_MILE_RANGES.length - 1
-}
-
 export default function Home() {
   const { useDesktopChapterOverlay } = useViewportLayout()
 
   const {
     transitionToTrack,
+    primeLoop,
     isPlaying: isAudioPlaying,
     error: audioError,
     isMuted,
@@ -210,23 +205,19 @@ export default function Home() {
     }
   }, [navMode, resumeSession])
 
-  const currentChapter = useMemo(() => {
-    return chapterIndexForMiles(currentMiles)
-  }, [currentMiles])
-
-  const chapterIntro = useChapterIntro(currentMiles, introComplete && journeyStarted)
-
-  const introChapterIndex = chapterIntro?.index ?? currentChapter
-  const introChapter = pctSegments[introChapterIndex] ?? pctSegments[0]
+  const currentChapter = chapterIndexForMiles(currentMiles)
+  const milesIn = currentMiles - CHAPTER_MILE_RANGES[currentChapter].start
+  const introLive = introComplete && journeyStarted
+  const introChapter = pctSegments[currentChapter] ?? pctSegments[0]
   const desktopIntroOpacity = resolveChapterOverlayOpacity(
-    chapterIntro ? introOpacity(chapterIntro.milesIn, DESKTOP_INTRO_HOLD, DESKTOP_INTRO_FADE) : 0,
+    introLive ? introOpacity(milesIn, DESKTOP_INTRO_HOLD, DESKTOP_INTRO_FADE) : 0,
     overlayDismissedChapter,
-    introChapterIndex,
+    currentChapter,
   )
   const mobileIntroOpacity = resolveChapterOverlayOpacity(
-    chapterIntro ? introOpacity(chapterIntro.milesIn, MOBILE_INTRO_HOLD, MOBILE_INTRO_FADE) : 0,
+    introLive ? introOpacity(milesIn, MOBILE_INTRO_HOLD, MOBILE_INTRO_FADE) : 0,
     overlayDismissedChapter,
-    introChapterIndex,
+    currentChapter,
   )
   const isMobileChapterOverlayVisible = mobileIntroOpacity > 0.01
   // Only the overlay actually rendered counts. Tailwind `md:` is width-only, so
@@ -235,11 +226,11 @@ export default function Home() {
   const isChapterOverlayVisible = useDesktopChapterOverlay
     ? desktopIntroOpacity > 0.01
     : isMobileChapterOverlayVisible
-  visibleChapterOverlayRef.current = isChapterOverlayVisible ? introChapterIndex : null
+  visibleChapterOverlayRef.current = isChapterOverlayVisible ? currentChapter : null
   const mapPinsLocked = areOpeningMapPinsLocked({
     isResuming,
     introComplete,
-    isSoCalOverlayVisible: introChapterIndex === 0 && isChapterOverlayVisible,
+    isSoCalOverlayVisible: currentChapter === 0 && isChapterOverlayVisible,
   })
   /** Any overlay that must be clicked away rather than scrolled past. */
   const isOverlayBlockingScroll = isChapterOverlayVisible || showWip || showCompletion
@@ -259,10 +250,10 @@ export default function Home() {
   // Reset the manual overlay dismissal when we move to a different chapter.
   useEffect(() => {
     if (navMode === "boot") return
-    if (resumeChapterRef.current === introChapterIndex) return
+    if (resumeChapterRef.current === currentChapter) return
     resumeChapterRef.current = null
     setOverlayDismissedChapter(null)
-  }, [introChapterIndex, navMode])
+  }, [currentChapter, navMode])
 
   // Timeline nodes: the five chapters. No trailing "End" tab.
   const timelineNodes = useMemo(
@@ -672,6 +663,7 @@ export default function Home() {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
       markDirectNavigation()
+      if (marker.audioUrl) primeLoop(marker.audioUrl)
       void unlockAudio()
       const fadeMs = audioFadeMs ?? cameraDurationMs
       // Match the crossfade to the camera move on first open; arrow hops can
@@ -698,7 +690,7 @@ export default function Home() {
 
       setSelectedAudioMarker(marker)
     },
-    [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack, unlockAudio],
+    [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, primeLoop, transitionToTrack, unlockAudio],
   )
 
   const handleCloseAudio = async () => {
@@ -773,7 +765,7 @@ export default function Home() {
     return () => document.removeEventListener("visibilitychange", onVis)
   }, [resumeAudio, suspendAudio])
 
-  const openingChapterTabsLocked = introChapterIndex === 0 && isChapterOverlayVisible
+  const openingChapterTabsLocked = currentChapter === 0 && isChapterOverlayVisible
   const autoHideChapterTimeline = shouldHideChapterTimeline(
     Boolean(selectedAudioMarker),
     isNodeCameraBusy,
@@ -905,6 +897,9 @@ export default function Home() {
           <AudioMarkers
             map={map}
             onMarkerClick={handleAudioMarkerClick}
+            onMarkerPrime={(marker) => {
+              if (marker.audioUrl) primeLoop(marker.audioUrl)
+            }}
             activeMarkerId={selectedAudioMarker?.id}
             enabled={!mapPinsLocked}
           />
@@ -933,18 +928,18 @@ export default function Home() {
       {introComplete && journeyStarted && (
         <MobileChapterOverlay
           chapter={introChapter}
-          chapterIndex={introChapterIndex}
+          chapterIndex={currentChapter}
           opacity={mobileIntroOpacity}
-          onDismiss={() => setOverlayDismissedChapter(introChapterIndex)}
+          onDismiss={() => setOverlayDismissedChapter(currentChapter)}
         />
       )}
 
       <div className={`transition-opacity duration-300 ease-out ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
         <ChapterCard
           chapter={introChapter}
-          chapterIndex={introChapterIndex}
+          chapterIndex={currentChapter}
           opacity={desktopIntroOpacity}
-          onDismiss={() => setOverlayDismissedChapter(introChapterIndex)}
+          onDismiss={() => setOverlayDismissedChapter(currentChapter)}
         />
       </div>
 
