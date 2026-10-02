@@ -60,7 +60,7 @@ function createPinImage(size = 64): { width: number; height: number; data: Uint8
 }
 
 /** Pins along the whole trail. Washington stays empty until that chapter has recordings. */
-export function chapterCollection(_chapter?: string) {
+export function chapterCollection() {
   const features = audioMarkers
     .filter((marker) => !HIDDEN_CHAPTERS.has(marker.chapter) && marker.coordinates?.length === 2)
     .map((marker) => ({
@@ -91,7 +91,7 @@ export function chapterCollection(_chapter?: string) {
  * Idempotent, so it can be replayed on `style.load` (a style reload drops every
  * image, source and layer we added).
  */
-export function installAudioMarkerLayer(map: any, initialChapter = "southern-california"): void {
+export function installAudioMarkerLayer(map: any): void {
   if (!map || map._removed) return
 
   if (!map.hasImage?.(AUDIO_MARKER_IMAGE_ID)) {
@@ -99,12 +99,11 @@ export function installAudioMarkerLayer(map: any, initialChapter = "southern-cal
   }
 
   if (!map.getSource(AUDIO_MARKER_SOURCE_ID)) {
-    // Seeded with the opening chapter rather than empty, so the trailhead warm
-    // has real pins to place before the splash lifts. AudioMarkers swaps in the
-    // live chapter as soon as it mounts.
+    // Seeded with every playable pin rather than empty, so trailhead warm can
+    // place Campo before the splash lifts. AudioMarkers keeps the same set.
     map.addSource(AUDIO_MARKER_SOURCE_ID, {
       type: "geojson",
-      data: chapterCollection(initialChapter),
+      data: chapterCollection(),
       // Deliberately left at the default maxzoom. Capping it low (tried 4) makes
       // symbols place against a coarse tile with no usable DEM under it, so
       // their terrain elevation resolves to ~0: the pins sink to sea level,

@@ -21,11 +21,6 @@ export function MobileChapterOverlay({
   const isVisible = opacity > 0.01
   const romanNumerals = ["I", "II", "III", "IV", "V"]
 
-  // Scroll locking is owned solely by app/page.tsx (isOverlayBlockingScroll).
-  // This component used to set body overflow AND touch-action itself; both are
-  // what useInvertedTouchScroll's isLocked() reads, and its snapshot/restore
-  // raced the page lock and left them stuck on.
-
   if (!isVisible) return null
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
