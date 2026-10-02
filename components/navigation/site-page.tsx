@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, type ReactNode } from "react"
 import { SiteHeader, type SiteNavPage } from "@/components/navigation/site-header"
+import { useViewportLayout } from "@/hooks/use-viewport-layout"
 import {
   exitDocumentFullscreen,
   resetWindowScroll,
@@ -14,7 +15,8 @@ const SITE_PATTERN =
 /**
  * Shell for About / Library / Resources.
  *
- * Header scrolls with the page. Only page content fades on entry. Clears map scroll locks
+ * Header stays pinned on phones and scrolls with the page on desktop. Only page
+ * content fades on entry. Clears map scroll locks
  * and forces scrollTop=0 so a mid-trail map exit can't leave the page frozen.
  */
 export function SitePage({
@@ -24,6 +26,8 @@ export function SitePage({
   current: Exclude<SiteNavPage, "map">
   children: ReactNode
 }) {
+  useViewportLayout()
+
   useLayoutEffect(() => {
     const html = document.documentElement
     html.classList.add("site-page")
@@ -67,7 +71,7 @@ export function SitePage({
         }}
       />
       <div className="relative z-10">
-        <SiteHeader current={current} />
+        <SiteHeader current={current} pinned />
         <div className="animate-in fade-in duration-500">
           {children}
         </div>

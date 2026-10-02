@@ -120,7 +120,7 @@ export default function AboutPage() {
             </FieldNotesCard>
           </section>
 
-          <section className="mb-16 md:mb-24">
+          <section className="mt-8 mb-16 md:mt-10 md:mb-24">
             <SectionHeading
               info="On trail, many hikers had their Why’s, or reminders of why they were out there doing a thru hike at all. The Why’s served as their North Star, lighting the path when the going got rough and reminding them not to give up. Below are this project’s Why’s."
             >
@@ -142,7 +142,7 @@ export default function AboutPage() {
                   className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8"
                 >
                   <div
-                    className="aspect-[4/5] w-full max-w-[280px] shrink-0 rounded-sm bg-[#2a261f] ring-1 ring-[#ed5a43]/15 md:w-[240px]"
+                    className="aspect-[4/5] w-full max-w-[280px] shrink-0 rounded-sm bg-[#2a261f] md:w-[240px]"
                     role="img"
                     aria-label={member.photoAlt}
                   />

@@ -38,6 +38,15 @@ test("endingFadeVolume stays out of the way until the tail", () => {
   assert.ok(mid > 0.5 && mid < 1)
 })
 
+test("resolvePlaybackDuration prefers a finite element duration", async () => {
+  const { resolvePlaybackDuration } = await import("../lib/audio-crossfade.ts")
+  assert.equal(resolvePlaybackDuration(14.2, 14), 14.2)
+  assert.equal(resolvePlaybackDuration(Number.POSITIVE_INFINITY, 14), 14)
+  assert.equal(resolvePlaybackDuration(Number.NaN, 14), 14)
+  assert.equal(resolvePlaybackDuration(0, 14), 14)
+  assert.equal(resolvePlaybackDuration(Number.POSITIVE_INFINITY, 0), 0)
+})
+
 test("rampVolume holds the start and lands on the target", () => {
   assert.equal(rampVolume(0, 0.2, 1), 0.2)
   assert.ok(Math.abs(rampVolume(1, 0.2, 1) - 1) < 0.001)

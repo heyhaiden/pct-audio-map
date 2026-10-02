@@ -49,6 +49,7 @@ export const pctSegments: PCTChapter[] = [
       "marker-70",
       "marker-71",
       "marker-72",
+      "marker-73",
     ],
   },
   {

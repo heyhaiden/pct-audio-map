@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { AudioMarkerCardBody, audioMarkerStatusClass } from "@/components/audio/audio-marker-card"
 import { shouldDismissAudioCard } from "@/lib/audio-player-dismiss"
@@ -9,7 +9,6 @@ import type { AudioMarker } from "@/types/map"
 interface AudioPlayerProps {
   marker: AudioMarker | null
   onClose: () => void
-  isLoading: boolean
   isPlaying: boolean
   error: string | null
   hasPrevious: boolean
@@ -23,6 +22,8 @@ interface AudioPlayerProps {
  * withdraws with one cadence instead of popping.
  */
 const CARD_TRANSITION_MS = 520
+/** Track the arrow-hop camera (2800ms) / audio fade (1100ms), not the open pop. */
+const CARD_HEIGHT_MS = 1200
 
 // Bare caret — no button chrome, so the arrows read as navigation, not controls.
 const arrowClass =
@@ -31,7 +32,6 @@ const arrowClass =
 export function AudioPlayer({
   marker,
   onClose,
-  isLoading,
   isPlaying,
   error,
   hasPrevious,
@@ -40,6 +40,8 @@ export function AudioPlayer({
   onNext,
 }: AudioPlayerProps) {
   const cardRef = useRef<HTMLDivElement>(null)
+  const measureRef = useRef<HTMLDivElement>(null)
+  const shownIdRef = useRef<string | null>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
@@ -47,6 +49,9 @@ export function AudioPlayer({
   // than vanish the instant the selection clears.
   const [shown, setShown] = useState<AudioMarker | null>(marker)
   const [visible, setVisible] = useState(false)
+  const [cardHeight, setCardHeight] = useState<number | null>(null)
+  const [easeHeight, setEaseHeight] = useState(false)
+  const [swapCopy, setSwapCopy] = useState(false)
 
   useEffect(() => {
     if (marker) {
@@ -75,23 +80,49 @@ export function AudioPlayer({
     return () => document.removeEventListener("pointerdown", onPointerDown, true)
   }, [marker])
 
+  useLayoutEffect(() => {
+    if (!shown) {
+      shownIdRef.current = null
+      setSwapCopy(false)
+      setEaseHeight(false)
+      setCardHeight(null)
+      return
+    }
+
+    const previousId = shownIdRef.current
+    shownIdRef.current = shown.id
+    setSwapCopy(previousId != null && previousId !== shown.id)
+
+    const node = measureRef.current
+    if (!node) return
+
+    const apply = () => {
+      const next = Math.round(node.getBoundingClientRect().height)
+      setCardHeight((prev) => (prev === next ? prev : next))
+    }
+
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [shown])
+
+  useEffect(() => {
+    if (!shown) return
+    const raf = requestAnimationFrame(() => setEaseHeight(true))
+    return () => cancelAnimationFrame(raf)
+  }, [shown])
+
   if (!shown) return null
 
 
-  // Error and loading live in the footer so the body copy never reflows.
+  // Failure stays in the footer so a missing file does not reflow the body.
   let status: ReactNode
   if (error) {
     status = (
       <span className={`${audioMarkerStatusClass} text-red-300`}>
         <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
         Audio unavailable
-      </span>
-    )
-  } else if (isLoading) {
-    status = (
-      <span className={`${audioMarkerStatusClass} text-[#9b8e7a]`}>
-        <span className="pct-pulse-dot h-1.5 w-1.5 rounded-full bg-[#ed5a43]" />
-        Loading soundscape
       </span>
     )
   } else if (isPlaying) {
@@ -102,7 +133,7 @@ export function AudioPlayer({
       </span>
     )
   } else if (!shown.audioUrl) {
-    status = <span className={`${audioMarkerStatusClass} text-[#8b8271]`}>Sample not ready</span>
+    status = <span className={`${audioMarkerStatusClass} text-[#8b8271]`}>Waiting on audio</span>
   } else {
     status = <span className={`${audioMarkerStatusClass} text-[#8b8271]`}>Recording</span>
   }
@@ -110,17 +141,34 @@ export function AudioPlayer({
   return (
     <div
       style={{ transitionDuration: `${CARD_TRANSITION_MS}ms` }}
-      className={`fixed bottom-4 left-3.5 right-3.5 z-40 transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:bottom-[34px] md:left-28 md:right-auto md:w-[520px] ${
+      className={`pct-map-audio-card fixed bottom-4 left-3.5 right-3.5 z-40 transition-[opacity,translate,left,right,width,bottom,max-width] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:bottom-[34px] md:left-28 md:right-auto md:w-[520px] ${
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
       }`}
     >
       <div
         ref={cardRef}
-        className="pct-glass-panel relative flex min-h-[292px] flex-col p-[15px_16px] md:min-h-[268px] md:p-[18px]"
+        style={
+          {
+            "--audio-card-h": cardHeight != null ? `${cardHeight}px` : undefined,
+            transitionDuration: easeHeight ? `${CARD_HEIGHT_MS}ms` : undefined,
+          } as CSSProperties
+        }
+        className={`pct-glass-panel relative overflow-hidden md:min-h-[268px] md:overflow-visible ${
+          easeHeight
+            ? "transition-[height] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+            : ""
+        } max-md:h-[var(--audio-card-h,auto)]`}
       >
-        <div className="min-w-0 flex-1 text-left">
-          <AudioMarkerCardBody marker={shown} variant="map" />
-        </div>
+        <div
+          ref={measureRef}
+          className="flex min-h-0 flex-col p-[15px_16px] md:min-h-[268px] md:p-[18px]"
+        >
+          <div
+            key={shown.id}
+            className={`min-w-0 flex-1 text-left ${swapCopy ? "pct-audio-card-copy" : ""}`}
+          >
+            <AudioMarkerCardBody marker={shown} variant="map" />
+          </div>
 
         <div className="mt-4 grid grid-cols-[2rem_1fr_2rem] items-center border-t border-white/15 pt-1">
           <button
@@ -146,6 +194,7 @@ export function AudioPlayer({
           >
             <ChevronRight className="h-6 w-6" strokeWidth={1.75} />
           </button>
+        </div>
         </div>
       </div>
     </div>

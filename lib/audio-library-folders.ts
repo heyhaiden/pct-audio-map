@@ -17,7 +17,6 @@ export function buildAudioLibraryFolders(): AudioLibraryFolder[] {
     if (!range) return []
 
     const markers = audioMarkers.filter((marker) => {
-      if (!marker.audioUrl) return false
       const mile = getMarkerMile(marker.id)
       if (mile == null) return marker.chapter === chapter.id
       return mile >= range.start && mile < range.end

@@ -177,9 +177,15 @@ export function SplashScreen({
     const previousBodyOverflow = body.style.overflow
     html.style.overflow = "hidden"
     body.style.overflow = "hidden"
+    const blockScroll = (event: Event) => event.preventDefault()
+    const opts = { passive: false, capture: true } as const
+    window.addEventListener("wheel", blockScroll, opts)
+    window.addEventListener("touchmove", blockScroll, opts)
     return () => {
       html.style.overflow = previousHtmlOverflow
       body.style.overflow = previousBodyOverflow
+      window.removeEventListener("wheel", blockScroll, opts)
+      window.removeEventListener("touchmove", blockScroll, opts)
     }
   }, [isVisible])
 
@@ -203,7 +209,7 @@ export function SplashScreen({
 
   return (
     <div
-      className={`pct-glass-scrim ${SPLASH_SCROLL_LOCK_CLASS} fixed inset-0 z-[100] flex flex-col transition-opacity duration-700 ease-out ${
+      className={`pct-glass-scrim ${SPLASH_SCROLL_LOCK_CLASS} fixed inset-0 z-[100] flex flex-col overflow-hidden overscroll-none transition-opacity duration-700 ease-out ${
         isExiting ? "opacity-0" : "opacity-100"
       }`}
     >
@@ -215,7 +221,7 @@ export function SplashScreen({
 
       <SiteHeader current="home" />
 
-      <div className="pct-splash-body relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-11">
+      <div className="pct-splash-body relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-8 py-11">
         <div className="flex max-w-[30rem] flex-col items-center text-center">
           {/* Abstract trail icon */}
           <div className="pct-splash-icon mb-8">
@@ -227,7 +233,7 @@ export function SplashScreen({
                 negative right margin cancels the trailing letter-space so the
                 word stays optically centred against the subtitle. */}
             <span className="pct-wordmark font-wordmark block uppercase">Offbeat</span>
-            <span className="mt-3.5 block font-mono text-[15px] uppercase leading-[1.4] tracking-[0.26em] text-[#948a79] md:text-[17px]">
+            <span className="pct-splash-sub mt-3.5 block font-mono text-[15px] uppercase leading-[1.4] tracking-[0.26em] text-[#948a79] md:text-[17px]">
               Soundscapes of the PCT
             </span>
           </h1>
@@ -243,7 +249,7 @@ export function SplashScreen({
             </span>
           </p>
 
-          <div className="flex flex-col items-center">
+          <div className="pct-splash-cta flex flex-col items-center">
             <BeginJourneyButton
               ready={trailheadReady}
               progress={trailheadProgress}
@@ -253,7 +259,7 @@ export function SplashScreen({
           </div>
         </div>
 
-        <div className="pct-splash-headphones absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
+        <div className="pct-splash-headphones pointer-events-none absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
           <Headphones className="h-4 w-4 shrink-0" />
           Best with headphones
         </div>
