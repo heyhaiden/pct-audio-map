@@ -28,6 +28,7 @@ import {
   readFreeCameraPose,
 } from "@/lib/node-camera"
 import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
+import { useViewportLayout } from "@/hooks/use-viewport-layout"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { useInvertedWheelScroll } from "@/hooks/use-inverted-wheel-scroll"
 import { useAudioPlayer } from "@/hooks/use-audio-player"
@@ -104,9 +105,10 @@ function chapterIndexForMiles(miles: number): number {
 }
 
 export default function Home() {
+  const { useDesktopChapterOverlay } = useViewportLayout()
+
   const {
     transitionToTrack,
-    isLoading: isAudioLoading,
     isPlaying: isAudioPlaying,
     error: audioError,
     isMuted,
@@ -142,8 +144,6 @@ export default function Home() {
   // Chapter index whose held-breath overlay the user manually dismissed.
   const [overlayDismissedChapter, setOverlayDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
-  /** Matches Tailwind's `md` breakpoint, so JS agrees with which card is shown. */
-  const [isDesktopViewport, setIsDesktopViewport] = useState(false)
   /** Controls arrive via a ref, so state is needed to re-run the block effect. */
   const [scrollControlsReady, setScrollControlsReady] = useState(false)
   /** User peeked the chapter rail open while audio owns the view. */
@@ -229,11 +229,10 @@ export default function Home() {
     introChapterIndex,
   )
   const isMobileChapterOverlayVisible = mobileIntroOpacity > 0.01
-  // Only the overlay actually rendered at this width counts. The two cards are
-  // swapped by Tailwind (`hidden md:block` / `md:hidden`) but both opacities are
-  // always computed, and the desktop card holds far longer (60mi vs 14mi). ORing
-  // them locked scrolling on phones against a card that isn't on screen to tap.
-  const isChapterOverlayVisible = isDesktopViewport
+  // Only the overlay actually rendered counts. Tailwind `md:` is width-only, so
+  // landscape phones would show the desktop card and hold 60mi. Overlay choice
+  // follows layout (rail vs landscape phone), not min-width 768.
+  const isChapterOverlayVisible = useDesktopChapterOverlay
     ? desktopIntroOpacity > 0.01
     : isMobileChapterOverlayVisible
   visibleChapterOverlayRef.current = isChapterOverlayVisible ? introChapterIndex : null
@@ -244,14 +243,6 @@ export default function Home() {
   })
   /** Any overlay that must be clicked away rather than scrolled past. */
   const isOverlayBlockingScroll = isChapterOverlayVisible || showWip || showCompletion
-
-  useEffect(() => {
-    const query = window.matchMedia("(min-width: 768px)")
-    const sync = () => setIsDesktopViewport(query.matches)
-    sync()
-    query.addEventListener("change", sync)
-    return () => query.removeEventListener("change", sync)
-  }, [])
 
   // Single owner for the scroll-camera block, derived rather than toggled.
   // Several paths used to set it imperatively (overlays, marker punch-in, the
@@ -957,7 +948,7 @@ export default function Home() {
         />
       </div>
 
-      <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
+      <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         <AboutSocial soundEnabled={!isMuted} onSoundToggle={() => setMuted(!isMuted)} />
       </div>
 
@@ -965,7 +956,6 @@ export default function Home() {
       <AudioPlayer
         marker={selectedAudioMarker}
         onClose={handleCloseAudio}
-        isLoading={isAudioLoading}
         isPlaying={isAudioPlaying}
         error={audioError}
         hasPrevious={hasPreviousMarker}

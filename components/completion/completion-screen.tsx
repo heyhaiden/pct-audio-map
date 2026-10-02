@@ -41,7 +41,7 @@ export function CompletionScreen({
         </>
       }
     >
-      <p className="pct-display mt-6 max-w-[22rem] text-lede font-light leading-[1.6] text-[#c0b7a6]">
+      <p className="pct-overlay-lede pct-display mt-6 max-w-[22rem] text-lede font-light leading-[1.6] text-[#c0b7a6]">
         2,650 miles from Mexico to Canada. Thank you for pausing to listen.
       </p>
     </OverlayShell>

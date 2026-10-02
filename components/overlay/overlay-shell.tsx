@@ -37,7 +37,7 @@ const closeButtonClass =
 /** Glass medallion used above overlay titles. */
 export function OverlayIcon({ children }: { children: ReactNode }) {
   return (
-    <div className="pct-glass-control flex h-20 w-20 items-center justify-center rounded-full">
+    <div className="pct-overlay-icon pct-glass-control flex h-20 w-20 items-center justify-center rounded-full">
       {children}
     </div>
   )
@@ -155,19 +155,19 @@ export function OverlayShell({
     >
       {close}
 
-      <div className="flex min-h-full items-center justify-center px-8 py-12 md:px-12 md:py-16">
+      <div className="pct-overlay-shell-frame flex min-h-full items-center justify-center px-8 py-12 md:px-12 md:py-16">
         <div
           onClick={(event) => event.stopPropagation()}
-          className={`flex w-full max-w-[22rem] flex-col items-center text-center transition-all md:max-w-[28rem] ${
+          className={`pct-overlay-shell-card flex w-full max-w-[22rem] flex-col items-center text-center transition-all md:max-w-[28rem] ${
             appearDelayMs <= 0 ? "duration-500" : "duration-1000"
           } ${
             showContent ? "translate-y-0 opacity-100" : "translate-y-5 opacity-0"
           }`}
         >
-          {icon ? <div className="mb-8">{icon}</div> : null}
+          {icon ? <div className="pct-overlay-icon-wrap mb-8">{icon}</div> : null}
 
           {kicker ? (
-            <p className="mb-5 font-mono text-label uppercase tracking-[0.24em] text-[#8b8271]">
+            <p className="pct-overlay-kicker mb-5 font-mono text-label uppercase tracking-[0.24em] text-[#8b8271]">
               {kicker}
             </p>
           ) : null}
@@ -175,7 +175,7 @@ export function OverlayShell({
           {title ? (
             <h1
               id={titleId}
-              className="pct-display text-[36px] font-normal leading-[1.15] text-[#f6f1e4] md:text-[48px]"
+              className="pct-overlay-title pct-display text-[36px] font-normal leading-[1.15] text-[#f6f1e4] md:text-[48px]"
             >
               {title}
             </h1>
@@ -185,7 +185,7 @@ export function OverlayShell({
 
           {actions ? (
             <div
-              className={`w-full text-left ${
+              className={`pct-overlay-actions w-full text-left ${
                 icon || kicker || title || children ? "mt-10" : ""
               }`}
             >
