@@ -8,7 +8,7 @@ import { cameFromActiveMap, goHomeToSplash, setResumeIntent } from "@/lib/map-se
 
 export type SiteNavPage = "map" | "home" | "library" | "about" | "resources"
 
-export const NAV_LINKS: { id: SiteNavPage; href: string; label: string }[] = [
+const NAV_LINKS: { id: SiteNavPage; href: string; label: string }[] = [
   // Only rendered once you've left home — see the nav below.
   { id: "home", href: "/", label: "Home" },
   { id: "library", href: "/library", label: "Audio library" },

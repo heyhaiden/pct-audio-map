@@ -22,10 +22,3 @@ export function resolveLoopSources(
     mp3Url: blobBase ? `${blobBase}${mp3Path}` : mp3Path,
   }
 }
-
-export function loopSourcesFromMarker(
-  audioUrl: string,
-  blobBase = process.env.NEXT_PUBLIC_AUDIO_CDN_URL,
-): LoopSources | null {
-  return resolveLoopSources(audioUrl, { blobBase })
-}

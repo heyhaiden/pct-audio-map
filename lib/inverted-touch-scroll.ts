@@ -28,7 +28,7 @@ export function applyTouchDelta(sample: TouchScrollSample): {
 }
 
 /** Finger planted without moving this long counts as a hold, not a flick. */
-export const HOLD_STILL_MS = 80
+const HOLD_STILL_MS = 80
 
 let pointerDown = false
 let lastMoveAt = 0

@@ -5,7 +5,7 @@ const HIDDEN_CHAPTERS = new Set(["washington-cascades"])
 
 export const AUDIO_MARKER_SOURCE_ID = "pct-audio-markers"
 export const AUDIO_MARKER_LAYER_ID = "pct-audio-markers-pin"
-export const AUDIO_MARKER_IMAGE_ID = "pct-audio-pin"
+const AUDIO_MARKER_IMAGE_ID = "pct-audio-pin"
 
 export function markerIconSize(activeMarkerId: string | null) {
   if (!activeMarkerId) return 0.9
@@ -13,7 +13,7 @@ export function markerIconSize(activeMarkerId: string | null) {
 }
 
 /** Classic Mapbox-style teardrop pin as an ImageData for symbol layers. */
-export function createPinImage(size = 64): { width: number; height: number; data: Uint8Array } {
+function createPinImage(size = 64): { width: number; height: number; data: Uint8Array } {
   const canvas = document.createElement("canvas")
   canvas.width = size
   canvas.height = size

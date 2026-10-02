@@ -2,8 +2,8 @@ import { spawnSync } from "node:child_process"
 import { basename, extname } from "node:path"
 
 /** Fallback MP3 for older browsers. Primary loops are Opus in public/audio/opus/. */
-export const DELIVERY_EXT = ".mp3"
-export const DELIVERY_BITRATE = "128k"
+const DELIVERY_EXT = ".mp3"
+const DELIVERY_BITRATE = "128k"
 
 const TRANSCODE_EXTS = new Set([".wav", ".aiff", ".aif", ".flac"])
 

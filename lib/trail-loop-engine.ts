@@ -10,7 +10,7 @@ import {
 import { resolveLoopSources, type LoopSources } from "@/lib/audio-loop-sources"
 import { orphanedDecks } from "@/lib/trail-loop-decks"
 
-export type TrailLoopEvent =
+type TrailLoopEvent =
   | { type: "loading"; id: string }
   | { type: "playing"; id: string }
   | { type: "stopped" }
