@@ -6,7 +6,7 @@ import { LibraryChapter } from "@/components/audio/library-chapter"
 import { SitePage } from "@/components/navigation/site-page"
 import { endingFadeVolume, rampVolume } from "@/lib/audio-crossfade"
 import { buildAudioLibraryFolders } from "@/lib/audio-library-folders"
-import { resolveAudioUrl } from "@/lib/resolve-audio-url"
+import { resolveLibraryAudioUrl } from "@/lib/resolve-audio-url"
 
 const PLAYBACK_FADE_MS = 360
 const END_FADE_MS = 2000
@@ -68,39 +68,12 @@ export default function LibraryPage() {
     }
   }, [])
 
-  const handlePlayPause = (markerId: string, audioUrl: string) => {
-    const current = audioRef.current
-
-    if (playingId === markerId && current) {
-      if (fadingOutId.current === markerId) {
-        fadingOutId.current = null
-        void current.play()
-        ramp(current, 1)
-        return
-      }
-
-      fadingOutId.current = markerId
-      cancelEndFade()
-      ramp(current, 0, () => {
-        current.pause()
-        if (audioRef.current === current && fadingOutId.current === markerId) {
-          fadingOutId.current = null
-          setPlayingId(null)
-        }
-      })
-      return
-    }
-
-    cancelEndFade()
-    fadingOutId.current = null
-    if (current) {
-      const outgoing = current
-      ramp(outgoing, 0, () => {
-        outgoing.pause()
-      })
-    }
-
-    const audio = new Audio(resolveAudioUrl(audioUrl))
+  const attachLibraryAudio = (
+    markerId: string,
+    audioUrl: string,
+    format: "opus" | "mp3",
+  ) => {
+    const audio = new Audio(resolveLibraryAudioUrl(audioUrl, format))
     audio.volume = 0
     audioRef.current = audio
 
@@ -164,12 +137,59 @@ export default function LibraryPage() {
       setProgress((prev) => ({ ...prev, [markerId]: 0 }))
     })
 
-    audio.play().then(() => {
-      if (audioRef.current !== audio || fadingOutId.current === markerId) return
-      ramp(audio, 1)
-    }).catch(() => {
+    const fallbackOrFail = () => {
+      if (audioRef.current !== audio) return
+      if (format === "opus") {
+        attachLibraryAudio(markerId, audioUrl, "mp3")
+        return
+      }
       setPlayingId(null)
-    })
+    }
+
+    audio.addEventListener("error", fallbackOrFail, { once: true })
+
+    audio
+      .play()
+      .then(() => {
+        if (audioRef.current !== audio || fadingOutId.current === markerId) return
+        ramp(audio, 1)
+      })
+      .catch(fallbackOrFail)
+  }
+
+  const handlePlayPause = (markerId: string, audioUrl: string) => {
+    const current = audioRef.current
+
+    if (playingId === markerId && current) {
+      if (fadingOutId.current === markerId) {
+        fadingOutId.current = null
+        void current.play()
+        ramp(current, 1)
+        return
+      }
+
+      fadingOutId.current = markerId
+      cancelEndFade()
+      ramp(current, 0, () => {
+        current.pause()
+        if (audioRef.current === current && fadingOutId.current === markerId) {
+          fadingOutId.current = null
+          setPlayingId(null)
+        }
+      })
+      return
+    }
+
+    cancelEndFade()
+    fadingOutId.current = null
+    if (current) {
+      const outgoing = current
+      ramp(outgoing, 0, () => {
+        outgoing.pause()
+      })
+    }
+
+    attachLibraryAudio(markerId, audioUrl, "opus")
     setPlayingId(markerId)
   }
 
