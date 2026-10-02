@@ -8,6 +8,7 @@ import {
   type NormalizedClip,
 } from "@/lib/audio-loop-manifest"
 import { resolveLoopSources, type LoopSources } from "@/lib/audio-loop-sources"
+import { orphanedDecks } from "@/lib/trail-loop-decks"
 
 export type TrailLoopEvent =
   | { type: "loading"; id: string }
@@ -53,9 +54,11 @@ export function createTrailLoopEngine(options: {
   let manifestPromise: Promise<LoopManifest> | null = null
   let generation = 0
   let fadeRaf = 0
+  let fadeResolve: (() => void) | null = null
   let muted = false
   let volume = 0.7
   let active: Deck | null = null
+  const liveDecks = new Set<Deck>()
   const listeners = new Set<(event: TrailLoopEvent) => void>()
   const decoded = new Map<string, AudioBuffer>()
   const decodedOrder: string[] = []
@@ -100,13 +103,19 @@ export function createTrailLoopEngine(options: {
   }
 
   const cancelFade = () => {
-    if (!fadeRaf) return
-    cancelAnimationFrame(fadeRaf)
-    fadeRaf = 0
+    if (fadeRaf) {
+      cancelAnimationFrame(fadeRaf)
+      fadeRaf = 0
+    }
+    const resolve = fadeResolve
+    fadeResolve = null
+    resolve?.()
   }
 
   const disconnectDeck = (deck: Deck | null) => {
     if (!deck) return
+    liveDecks.delete(deck)
+    if (active === deck) active = null
     try {
       deck.source.stop()
     } catch {
@@ -114,6 +123,12 @@ export function createTrailLoopEngine(options: {
     }
     deck.source.disconnect()
     deck.gain.disconnect()
+  }
+
+  const disconnectOrphans = (keep: Array<Deck | null>) => {
+    for (const deck of orphanedDecks([...liveDecks], keep)) {
+      disconnectDeck(deck)
+    }
   }
 
   const loadManifest = async () => {
@@ -219,7 +234,9 @@ export function createTrailLoopEngine(options: {
     source.connect(gain)
     source.start()
 
-    return { source, gain, clipId }
+    const deck = { source, gain, clipId }
+    liveDecks.add(deck)
+    return deck
   }
 
   const fadeGains = (
@@ -230,13 +247,21 @@ export function createTrailLoopEngine(options: {
     outgoingStart: number,
     fadeMs: number,
     mode: "crossfade" | "fade-out",
-  ) =>
-    new Promise<void>((resolve) => {
+  ) => {
+    cancelFade()
+    return new Promise<void>((resolve) => {
+      fadeResolve = resolve
+      const finish = () => {
+        if (fadeResolve !== resolve) return
+        fadeResolve = null
+        fadeRaf = 0
+        resolve()
+      }
       const startedAt = performance.now()
 
       const tick = (now: number) => {
         if (token !== generation) {
-          resolve()
+          finish()
           return
         }
 
@@ -255,8 +280,7 @@ export function createTrailLoopEngine(options: {
         }
 
         if (progress >= 1) {
-          fadeRaf = 0
-          resolve()
+          finish()
           return
         }
 
@@ -265,6 +289,7 @@ export function createTrailLoopEngine(options: {
 
       fadeRaf = requestAnimationFrame(tick)
     })
+  }
 
   const play = async (audioUrl: string, playOptions?: { fadeMs?: number; volume?: number }) => {
     const token = ++generation
@@ -308,6 +333,12 @@ export function createTrailLoopEngine(options: {
       const outgoingStart = outgoing?.gain.gain.value ?? 0
       // Always start silent so a first pin click fades in the same way hops crossfade.
       const incoming = startLoop(sources.clipId, buffer, 0)
+      if (token !== generation) {
+        disconnectDeck(incoming)
+        return
+      }
+
+      disconnectOrphans([outgoing, incoming])
       active = incoming
       emit({ type: "playing", id: sources.clipId })
 
@@ -323,7 +354,7 @@ export function createTrailLoopEngine(options: {
       if (outgoing && token === generation) disconnectDeck(outgoing)
 
       if (token !== generation) {
-        disconnectDeck(incoming)
+        if (active !== incoming) disconnectDeck(incoming)
         return
       }
 
@@ -370,6 +401,7 @@ export function createTrailLoopEngine(options: {
     const token = ++generation
     cancelFade()
     const outgoing = active
+    disconnectOrphans([outgoing])
     if (!outgoing) {
       emit({ type: "stopped" })
       return
@@ -379,7 +411,6 @@ export function createTrailLoopEngine(options: {
       () => {
         if (token !== generation) return
         disconnectDeck(outgoing)
-        active = null
         emit({ type: "stopped" })
       },
     )
