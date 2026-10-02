@@ -8,6 +8,7 @@ test("chapterCollection places every spreadsheet marker, not only Campo", () => 
   const ids = collection.features.map((feature) => feature.properties.id)
 
   assert.ok(ids.includes("marker-1"), "Campo stays on the map")
+  assert.ok(ids.includes("marker-73"), "Owens Peak waiting pin is present")
   assert.ok(ids.includes("marker-77"), "South Sierra pin is present")
   assert.ok(ids.includes("marker-111"), "Hat Creek Rim pin is present")
   assert.ok(ids.includes("marker-130"), "Sky Lakes pin is present")
