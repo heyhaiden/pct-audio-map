@@ -222,19 +222,25 @@ export function SplashScreen({
             <AbstractTrailIcon className="h-[88px] w-[50px]" />
           </div>
 
-          <h1 className="pct-splash-title pct-display mb-8 text-[45px] font-normal leading-none text-[#f6f1e4] md:text-[55px]">
+          <h1 className="pct-splash-title pct-display mb-5 text-[54px] font-normal leading-none text-[#f6f1e4] md:text-[68px]">
             {/* Caps carry wide tracking; lowercase serif just reads loose. The
                 negative right margin cancels the trailing letter-space so the
                 word stays optically centred against the subtitle. */}
             <span className="pct-wordmark font-wordmark block uppercase">Offbeat</span>
-            <span className="mt-3.5 block font-mono text-label uppercase leading-[1.4] tracking-[0.26em] text-[#948a79]">
+            <span className="mt-3.5 block font-mono text-[15px] uppercase leading-[1.4] tracking-[0.26em] text-[#948a79] md:text-[17px]">
               Soundscapes of the PCT
             </span>
           </h1>
 
-          <p className="pct-splash-lede pct-display mb-10 max-w-[325px] text-lede font-light leading-[1.65] text-[#c7beac] md:max-w-[420px]">
-            An audio journey along the Pacific Crest Trail. Scroll to explore. Stop at waypoints to
-            listen. Stay as long as you like.
+          <p className="pct-splash-lede pct-display mb-6 w-full max-w-[23rem] text-lede font-light leading-[1.45] text-[#c7beac]">
+            An audio journey along the Pacific Crest Trail.
+            <br />
+            <span>
+              Scroll to explore.
+              <br className="md:hidden" /> Stop at waypoints to listen.
+              <br />
+              Stay as long as you like.
+            </span>
           </p>
 
           <div className="flex flex-col items-center">
@@ -247,7 +253,7 @@ export function SplashScreen({
           </div>
         </div>
 
-        <div className="pct-splash-headphones absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex w-auto items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
+        <div className="pct-splash-headphones absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
           <Headphones className="h-4 w-4 shrink-0" />
           Best with headphones
         </div>

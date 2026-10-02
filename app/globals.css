@@ -19,6 +19,21 @@
   --text-lede: 18px; /* intro paragraphs */
 }
 
+/* About, Library, and Resources. Two pixels above the map ladder.
+   Type utilities inline their size, so the class override is what actually applies. */
+.site-page-root {
+  --text-micro: 12px;
+  --text-label: 14px;
+  --text-copy: 16px;
+  --text-prose: 17px;
+  --text-lede: 20px;
+}
+.site-page-root :is(.text-micro, .md\:text-micro) { font-size: var(--text-micro); }
+.site-page-root :is(.text-label, .md\:text-label) { font-size: var(--text-label); }
+.site-page-root :is(.text-copy, .md\:text-copy) { font-size: var(--text-copy); }
+.site-page-root :is(.text-prose, .md\:text-prose) { font-size: var(--text-prose); }
+.site-page-root :is(.text-lede, .md\:text-lede) { font-size: var(--text-lede); }
+
 :root {
   --pct-night: #151310;
   --pct-night-2: #1e1b17;
@@ -551,7 +566,6 @@
   }
 
   .pct-splash-title {
-    font-size: 38px;
     margin-bottom: 1.25rem;
   }
 
@@ -579,10 +593,20 @@
 
   .pct-splash-title {
     margin-bottom: 1.125rem;
+    font-size: 46px;
   }
 
   .pct-splash-lede {
     margin-bottom: 1.5rem;
+    font-size: 14px;
+  }
+}
+
+/* Desktop: the header sits above a centered stack, so the body reads low.
+   Nudge the group up toward the middle of the screen.  */
+@media (min-width: 769px) {
+  .pct-splash-body > :first-child {
+    transform: translateY(-1.5rem);
   }
 }
 
