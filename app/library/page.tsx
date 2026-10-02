@@ -196,7 +196,7 @@ export default function LibraryPage() {
           </section>
 
           {/* Audio listings by chapter */}
-          <div className="space-y-4">
+          <div className="space-y-8">
             {libraryFolders.map(({ id, title, markers }) => (
               <LibraryChapter
                 key={id}

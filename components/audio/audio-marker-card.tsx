@@ -83,11 +83,11 @@ export function AudioMarkerCardBody({
     <>
       {/* Date sits above the rule, its right edge flush with the rule's end. */}
       <div className="flex items-start justify-between gap-3">
-        <h3 className="pct-display min-w-0 text-[21px] font-medium leading-[1.14] text-[#ede8dc] md:text-[26px]">
+        <h3 className={`pct-display min-w-0 font-medium leading-[1.14] text-[#ede8dc] ${variant === "map" ? "text-[21px] md:text-[26px]" : "text-lg md:text-[26px]"}`}>
           {marker.name}
         </h3>
         {variant !== "map" && dateLabel ? (
-          <span className="mt-1 flex shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">
+          <span className="mt-1 hidden shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a] md:flex">
             <CalendarDays className="h-3 w-3" />
             {dateLabel}
           </span>
@@ -115,7 +115,7 @@ export function AudioMarkerCardBody({
             </span>
           ) : null}
           {variant !== "map" && marker.elevation ? (
-            <span className="flex items-center gap-1.5">
+            <span className="hidden items-center gap-1.5 md:flex">
               <MapPin className="h-3 w-3" />
               {marker.elevation.toLocaleString("en-US")} ft
             </span>
@@ -125,13 +125,13 @@ export function AudioMarkerCardBody({
       </div>
 
       {marker.description ? (
-        <p className="pct-display mt-3 text-copy font-light leading-[1.6] text-[#ada396] md:text-prose">
+        <p className={`pct-display mt-3 text-copy font-light leading-[1.6] text-[#ada396] md:text-prose ${variant !== "map" ? "hidden md:block" : ""}`}>
           {marker.description}
         </p>
       ) : null}
 
       {variant !== "map" && marker.lands && marker.lands.length > 0 ? (
-        <p className="mt-3">
+        <p className="mt-3 hidden md:block">
           <span className="inline-block max-w-full rounded-full border border-[#ede8dc]/15 bg-[#ede8dc]/10 px-3 py-1 font-mono text-label leading-snug text-[#d4cbb8]">
             {marker.lands.map((land) => land.name).join(" · ")}
           </span>

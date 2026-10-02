@@ -25,17 +25,17 @@ export function LibraryChapter({
   const { open, toggle, panelRef } = useSlidePanel()
 
   return (
-    <section className="pct-glass-panel overflow-hidden">
+    <section>
       <button
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-white/[0.035]"
+        className="flex w-full items-center gap-3 rounded-md px-1 py-3 text-left transition-colors hover:bg-white/[0.035] md:py-4"
       >
         <Mountain className="h-5 w-5 flex-shrink-0 text-[#ed5a43]" />
-        <h2 className="pct-display min-w-0 flex-1 text-xl font-medium text-[#ede8dc]">
+        <h2 className="pct-display min-w-0 flex-1 text-lg font-medium text-[#ede8dc] md:text-xl">
           {title}
-          <span className="ml-2 text-sm font-normal text-stone-500">({markers.length} recordings)</span>
+          <span className="ml-2 hidden text-sm font-normal text-stone-500 md:inline">({markers.length} recordings)</span>
         </h2>
         <ChevronDown
           className={`h-5 w-5 flex-shrink-0 text-[#8b8271] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
@@ -46,7 +46,7 @@ export function LibraryChapter({
 
       <div ref={panelRef} aria-hidden={!open} className={slidePanelClass}>
         <div className={slideContentClass(open)}>
-          <div className="divide-y divide-white/10 px-4">
+          <div className="space-y-3 pt-1">
             {markers.map((marker) => (
               <LibraryRecordingCard
                 key={marker.id}

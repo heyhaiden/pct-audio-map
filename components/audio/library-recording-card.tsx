@@ -16,8 +16,8 @@ interface LibraryRecordingCardProps {
 }
 
 /**
- * One recording row inside a chapter panel. The chapter is the frame, so this
- * row has no border, shadow, or radius of its own.
+ * One recording card. The chapter above it is only a heading, so this card is
+ * the single frame.
  */
 export function LibraryRecordingCard({
   marker,
@@ -33,14 +33,14 @@ export function LibraryRecordingCard({
     knownDuration > 0 ? (Math.max(0, Math.min(100, progress)) / 100) * knownDuration : 0
 
   return (
-    <article className="py-4">
-      <div className="flex items-start gap-4">
+    <article className="pct-glass-panel p-3.5 md:p-[18px_18px]">
+      <div className="flex items-start gap-3 md:gap-4">
         <button
           type="button"
           onClick={onPlayPause}
           aria-pressed={isPlaying}
           aria-label={isPlaying ? `Pause ${marker.name}` : `Play ${marker.name}`}
-          className={`mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full border transition-[color,background-color,border-color,transform] duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] active:scale-95 motion-reduce:transition-none ${
+          className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full border transition-[color,background-color,border-color,transform] duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] active:scale-95 motion-reduce:transition-none md:h-11 md:w-11 ${
             isPlaying
               ? "border-[#ed5a43] bg-[#ed5a43] text-white"
               : "border-white/20 bg-[rgba(12,11,9,0.62)] text-[#ada396] hover:border-[#ed5a43]/45 hover:text-[#ed5a43]"
