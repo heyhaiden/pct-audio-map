@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from "react"
 import type { PCTChapter } from "@/types/map"
 
 interface ChapterCardProps {

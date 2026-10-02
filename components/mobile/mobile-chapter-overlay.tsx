@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, type PointerEvent } from "react"
+import { useRef, type PointerEvent } from "react"
 import { shouldDismissChapterOverlay } from "@/lib/mobile-chapter-overlay-gesture"
 import type { PCTChapter } from "@/types/map"
 
