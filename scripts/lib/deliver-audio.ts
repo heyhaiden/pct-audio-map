@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { basename, extname } from "node:path"
 
-/** Delivery format for field recordings served from Vercel Blob. */
+/** Fallback MP3 for older browsers. Primary loops are Opus in public/audio/opus/. */
 export const DELIVERY_EXT = ".mp3"
 export const DELIVERY_BITRATE = "128k"
 

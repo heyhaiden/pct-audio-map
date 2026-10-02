@@ -83,6 +83,7 @@ Options:
   --dry-run           Validate without uploads or file writes
 
 Uncompressed sources (.wav/.aiff/.flac) are transcoded to 128k MP3 before upload.
+Blob MP3s are fallback-only. Prefer --skip-upload unless an older-browser MP3 is missing.
 `)
       process.exit(0)
     }
@@ -134,6 +135,12 @@ async function main() {
     rows.some((row) => cachedLands(landsCache, row.id, row.lng, row.lat) == null)
   if (needsLandLookup && !nativeLandKey) {
     throw new Error("NATIVE_LAND_API_KEY is required for territory lookup (or pass --skip-lands)")
+  }
+
+  if (!options.skipUpload && !options.dryRun) {
+    console.warn(
+      "Blob upload is fallback-only. Map playback serves Opus from public/audio/opus/. Prefer --skip-upload unless an MP3 fallback is missing.",
+    )
   }
 
   if (!options.skipUpload && !options.dryRun && !blobToken) {
