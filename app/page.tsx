@@ -49,8 +49,6 @@ import {
   type MapSessionState,
 } from "@/lib/map-session"
 import { adjacentPlayable, hasMarkerAudio } from "@/lib/marker-navigation"
-import { prefetchAudio } from "@/lib/prefetch-audio"
-import { resolveAudioUrl } from "@/lib/resolve-audio-url"
 import type { AudioMarker } from "@/types/map"
 
 /**
@@ -114,6 +112,10 @@ export default function Home() {
     isMuted,
     setMuted,
     fadeOutAndStop,
+    unlockAudio,
+    resumeAudio,
+    suspendAudio,
+    prefetchLoop,
   } = useAudioPlayer()
 
   // 'boot' avoids SSR/client mismatch while we read resume intent from sessionStorage.
@@ -311,6 +313,7 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    void unlockAudio()
     clearMapSession()
 
     // Don't call requestFullscreen here — on Android it collapses browser chrome
@@ -329,7 +332,7 @@ export default function Home() {
 
     // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
-  }, [])
+  }, [unlockAudio])
 
   const handleOverviewReady = useCallback(() => {
     // Overview camera + tiles settled — fade splash while it stays mounted
@@ -678,6 +681,7 @@ export default function Home() {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
       markDirectNavigation()
+      void unlockAudio()
       const fadeMs = audioFadeMs ?? cameraDurationMs
       // Match the crossfade to the camera move on first open; arrow hops can
       // crossfade audio faster than the camera finishes repositioning.
@@ -685,9 +689,8 @@ export default function Home() {
         void transitionToTrack(
           {
             id: marker.id,
-            url: resolveAudioUrl(marker.audioUrl),
+            url: marker.audioUrl,
             volume: 0.7,
-            loop: true,
           },
           fadeMs,
         )
@@ -704,7 +707,7 @@ export default function Home() {
 
       setSelectedAudioMarker(marker)
     },
-    [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack],
+    [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack, unlockAudio],
   )
 
   const handleCloseAudio = async () => {
@@ -767,9 +770,17 @@ export default function Home() {
 
   // Warm next/prev recordings only while a pin is open — not the full catalog.
   useEffect(() => {
-    if (previousPlayable) prefetchAudio(previousPlayable.audioUrl)
-    if (nextPlayable) prefetchAudio(nextPlayable.audioUrl)
-  }, [previousPlayable, nextPlayable])
+    prefetchLoop(previousPlayable?.audioUrl, nextPlayable?.audioUrl)
+  }, [nextPlayable, prefetchLoop, previousPlayable])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) void suspendAudio()
+      else void resumeAudio()
+    }
+    document.addEventListener("visibilitychange", onVis)
+    return () => document.removeEventListener("visibilitychange", onVis)
+  }, [resumeAudio, suspendAudio])
 
   const openingChapterTabsLocked = introChapterIndex === 0 && isChapterOverlayVisible
   const autoHideChapterTimeline = shouldHideChapterTimeline(
