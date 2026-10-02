@@ -2,7 +2,9 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import {
   crossfadeVolumes,
+  endingFadeVolume,
   fadeOutVolume,
+  rampVolume,
   resolveOutgoingDeck,
 } from "../lib/audio-crossfade.ts"
 
@@ -26,6 +28,20 @@ test("crossfadeVolumes ends at full incoming and silent outgoing", () => {
 test("fadeOutVolume eases to silence at the end", () => {
   assert.ok(Math.abs(fadeOutVolume(1, 0.7)) < 0.001)
   assert.ok(fadeOutVolume(0, 0.7) === 0.7)
+})
+
+test("endingFadeVolume stays out of the way until the tail", () => {
+  assert.equal(endingFadeVolume(10, 60, 2000), null)
+  assert.equal(endingFadeVolume(58, 60, 2000), 1)
+  assert.ok(Math.abs(endingFadeVolume(60, 60, 2000) ?? 1) < 0.001)
+  const mid = endingFadeVolume(59, 60, 2000) ?? 0
+  assert.ok(mid > 0.5 && mid < 1)
+})
+
+test("rampVolume holds the start and lands on the target", () => {
+  assert.equal(rampVolume(0, 0.2, 1), 0.2)
+  assert.ok(Math.abs(rampVolume(1, 0.2, 1) - 1) < 0.001)
+  assert.ok(rampVolume(0.5, 0, 1) > 0.5)
 })
 
 test("resolveOutgoingDeck prefers whichever deck is currently audible", () => {
