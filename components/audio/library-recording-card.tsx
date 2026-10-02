@@ -16,10 +16,8 @@ interface LibraryRecordingCardProps {
 }
 
 /**
- * One recording in the library: play control on the left, details on the right,
- * scrubber underneath. The scrub track is the card's only horizontal rule — the
- * meta divider and footer border are both off, since the play button already
- * separates the control from the content.
+ * One recording row inside a chapter panel. The chapter is the frame, so this
+ * row has no border, shadow, or radius of its own.
  */
 export function LibraryRecordingCard({
   marker,
@@ -35,11 +33,7 @@ export function LibraryRecordingCard({
     knownDuration > 0 ? (Math.max(0, Math.min(100, progress)) / 100) * knownDuration : 0
 
   return (
-    <article
-      className={`pct-glass-panel p-[15px_16px] transition-shadow md:p-[18px_18px] ${
-        isPlaying ? "ring-1 ring-[#ed5a43]/35" : ""
-      }`}
-    >
+    <article className="py-4">
       <div className="flex items-start gap-4">
         <button
           type="button"

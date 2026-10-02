@@ -54,14 +54,11 @@ const TIME_OF_DAY_ICON = {
   night: Moon,
 } satisfies Record<TimeOfDay, typeof SunMedium | typeof TwilightIcon>
 
-/** Map playback cards hide the recording date. Set true to show it again. */
-const SHOW_MAP_RECORDING_DATE = false
-
 interface AudioMarkerCardBodyProps {
   marker: AudioMarker
   /** Draw the rule the date aligns to. Off where the card is already busy. */
   showMetaRule?: boolean
-  /** Map cards show time of day instead of elevation, and dates without a year. */
+  /** Map cards show mile, date, and time of day. Library cards show the date beside the title, plus time of day in the meta row. */
   variant?: "map" | "library"
 }
 
@@ -75,12 +72,11 @@ export function AudioMarkerCardBody({
   variant = "library",
 }: AudioMarkerCardBodyProps) {
   const mile = getMarkerMile(marker.id)
-  const dateLabel =
-    variant === "map" && !SHOW_MAP_RECORDING_DATE
-      ? null
-      : marker.recordingDate && variant === "map"
-        ? formatMonthDay(marker.recordingDate)
-        : marker.recordingDate
+  const dateLabel = marker.recordingDate
+    ? variant === "map"
+      ? formatMonthDay(marker.recordingDate)
+      : marker.recordingDate
+    : null
   const TimeIcon = marker.timeOfDay ? TIME_OF_DAY_ICON[marker.timeOfDay] : null
 
   return (
@@ -90,7 +86,7 @@ export function AudioMarkerCardBody({
         <h3 className="pct-display min-w-0 text-[21px] font-medium leading-[1.14] text-[#ede8dc] md:text-[26px]">
           {marker.name}
         </h3>
-        {dateLabel ? (
+        {variant !== "map" && dateLabel ? (
           <span className="mt-1 flex shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">
             <CalendarDays className="h-3 w-3" />
             {dateLabel}
@@ -99,14 +95,20 @@ export function AudioMarkerCardBody({
       </div>
 
       <div className="mt-2.5 flex items-center gap-2.5">
-        <div className="flex shrink-0 items-center gap-3 font-mono text-micro uppercase tracking-[0.18em] text-[#9b8e7a]">
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-micro uppercase tracking-[0.18em] text-[#9b8e7a]">
           {mile !== null ? (
             <span className="flex items-center gap-1.5">
               <Milestone className="h-3 w-3" />
               MI {mile.toLocaleString("en-US")}
             </span>
           ) : null}
-          {variant === "map" && marker.timeOfDay && TimeIcon ? (
+          {variant === "map" && dateLabel ? (
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="h-3 w-3" />
+              {dateLabel}
+            </span>
+          ) : null}
+          {marker.timeOfDay && TimeIcon ? (
             <span className="flex items-center gap-1.5">
               <TimeIcon className="h-3 w-3" />
               {TIME_OF_DAY_LABEL[marker.timeOfDay]}
@@ -128,9 +130,9 @@ export function AudioMarkerCardBody({
         </p>
       ) : null}
 
-      {marker.lands && marker.lands.length > 0 ? (
+      {variant !== "map" && marker.lands && marker.lands.length > 0 ? (
         <p className="mt-3">
-          <span className="inline-block max-w-full rounded-full bg-[#ed5a43]/20 px-3 py-1 font-mono text-[11px] leading-snug text-[#ed5a43]">
+          <span className="inline-block max-w-full rounded-full border border-[#ede8dc]/15 bg-[#ede8dc]/10 px-3 py-1 font-mono text-label leading-snug text-[#d4cbb8]">
             {marker.lands.map((land) => land.name).join(" · ")}
           </span>
         </p>
