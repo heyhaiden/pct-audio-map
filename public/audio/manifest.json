@@ -1,0 +1,451 @@
+{
+  "sampleRate": 48000,
+  "aacPriming": 1024,
+  "note": "samples = exact length of the original WAV. Opus decodes to exactly this length. AAC may carry 1024 priming samples at the start and up to ~1000 padding samples at the end; trim with loopStart/loopEnd.",
+  "clips": {
+    "1-1": {
+      "samples": 689408,
+      "seconds": 14.362667,
+      "opus": "opus/1-1.opus",
+      "aac": "aac/1-1.m4a"
+    },
+    "1-2": {
+      "samples": 3120384,
+      "seconds": 65.008,
+      "opus": "opus/1-2.opus",
+      "aac": "aac/1-2.m4a"
+    },
+    "1-3": {
+      "samples": 2320768,
+      "seconds": 48.349333,
+      "opus": "opus/1-3.opus",
+      "aac": "aac/1-3.m4a"
+    },
+    "1-4": {
+      "samples": 1277953,
+      "seconds": 26.624021,
+      "opus": "opus/1-4.opus",
+      "aac": "aac/1-4.m4a",
+      "gainDb": -1
+    },
+    "1-5": {
+      "samples": 2626048,
+      "seconds": 54.709333,
+      "opus": "opus/1-5.opus",
+      "aac": "aac/1-5.m4a"
+    },
+    "1-6": {
+      "samples": 2615808,
+      "seconds": 54.496,
+      "opus": "opus/1-6.opus",
+      "aac": "aac/1-6.m4a"
+    },
+    "1-7": {
+      "samples": 1561856,
+      "seconds": 32.538667,
+      "opus": "opus/1-7.opus",
+      "aac": "aac/1-7.m4a"
+    },
+    "1-8": {
+      "samples": 6053888,
+      "seconds": 126.122667,
+      "opus": "opus/1-8.opus",
+      "aac": "aac/1-8.m4a"
+    },
+    "1-9": {
+      "samples": 2395136,
+      "seconds": 49.898667,
+      "opus": "opus/1-9.opus",
+      "aac": "aac/1-9.m4a"
+    },
+    "1-10": {
+      "samples": 2155200,
+      "seconds": 44.9,
+      "opus": "opus/1-10.opus",
+      "aac": "aac/1-10.m4a"
+    },
+    "1-11": {
+      "samples": 2339200,
+      "seconds": 48.733333,
+      "opus": "opus/1-11.opus",
+      "aac": "aac/1-11.m4a"
+    },
+    "1-12": {
+      "samples": 2660000,
+      "seconds": 55.416667,
+      "opus": "opus/1-12.opus",
+      "aac": "aac/1-12.m4a"
+    },
+    "1-13": {
+      "samples": 1033600,
+      "seconds": 21.533333,
+      "opus": "opus/1-13.opus",
+      "aac": "aac/1-13.m4a"
+    },
+    "1-14": {
+      "samples": 1335200,
+      "seconds": 27.816667,
+      "opus": "opus/1-14.opus",
+      "aac": "aac/1-14.m4a"
+    },
+    "1-15": {
+      "samples": 3155200,
+      "seconds": 65.733333,
+      "opus": "opus/1-15.opus",
+      "aac": "aac/1-15.m4a"
+    },
+    "1-16": {
+      "samples": 3137600,
+      "seconds": 65.366667,
+      "opus": "opus/1-16.opus",
+      "aac": "aac/1-16.m4a"
+    },
+    "1-17": {
+      "samples": 1608800,
+      "seconds": 33.516667,
+      "opus": "opus/1-17.opus",
+      "aac": "aac/1-17.m4a"
+    },
+    "1-18": {
+      "samples": 7395200,
+      "seconds": 154.066667,
+      "opus": "opus/1-18.opus",
+      "aac": "aac/1-18.m4a"
+    },
+    "1-19": {
+      "samples": 1770000,
+      "seconds": 36.875,
+      "opus": "opus/1-19.opus",
+      "aac": "aac/1-19.m4a"
+    },
+    "1-20": {
+      "samples": 2574400,
+      "seconds": 53.633333,
+      "opus": "opus/1-20.opus",
+      "aac": "aac/1-20.m4a"
+    },
+    "1-21": {
+      "samples": 2140800,
+      "seconds": 44.6,
+      "opus": "opus/1-21.opus",
+      "aac": "aac/1-21.m4a"
+    },
+    "1-22": {
+      "samples": 1249600,
+      "seconds": 26.033333,
+      "opus": "opus/1-22.opus",
+      "aac": "aac/1-22.m4a"
+    },
+    "1-23": {
+      "samples": 3125248,
+      "seconds": 65.109333,
+      "opus": "opus/1-23.opus",
+      "aac": "aac/1-23.m4a"
+    },
+    "1-24": {
+      "samples": 3579392,
+      "seconds": 74.570667,
+      "opus": "opus/1-24.opus",
+      "aac": "aac/1-24.m4a"
+    },
+    "1-25": {
+      "samples": 2775040,
+      "seconds": 57.813333,
+      "opus": "opus/1-25.opus",
+      "aac": "aac/1-25.m4a"
+    },
+    "1-26": {
+      "samples": 4833280,
+      "seconds": 100.693333,
+      "opus": "opus/1-26.opus",
+      "aac": "aac/1-26.m4a"
+    },
+    "1-27": {
+      "samples": 3889152,
+      "seconds": 81.024,
+      "opus": "opus/1-27.opus",
+      "aac": "aac/1-27.m4a"
+    },
+    "1-28": {
+      "samples": 2775040,
+      "seconds": 57.813333,
+      "opus": "opus/1-28.opus",
+      "aac": "aac/1-28.m4a"
+    },
+    "1-29": {
+      "samples": 2316288,
+      "seconds": 48.256,
+      "opus": "opus/1-29.opus",
+      "aac": "aac/1-29.m4a"
+    },
+    "1-30": {
+      "samples": 3026944,
+      "seconds": 63.061333,
+      "opus": "opus/1-30.opus",
+      "aac": "aac/1-30.m4a"
+    },
+    "1-31": {
+      "samples": 1987328,
+      "seconds": 41.402667,
+      "opus": "opus/1-31.opus",
+      "aac": "aac/1-31.m4a"
+    },
+    "1-32": {
+      "samples": 3858432,
+      "seconds": 80.384,
+      "opus": "opus/1-32.opus",
+      "aac": "aac/1-32.m4a"
+    },
+    "2-1": {
+      "samples": 4616897,
+      "seconds": 96.185354,
+      "opus": "opus/2-1.opus",
+      "aac": "aac/2-1.m4a"
+    },
+    "2-2": {
+      "samples": 4617216,
+      "seconds": 96.192,
+      "opus": "opus/2-2.opus",
+      "aac": "aac/2-2.m4a",
+      "gainDb": -1
+    },
+    "2-3": {
+      "samples": 2498560,
+      "seconds": 52.053333,
+      "opus": "opus/2-3.opus",
+      "aac": "aac/2-3.m4a"
+    },
+    "2-4": {
+      "samples": 2574336,
+      "seconds": 53.632,
+      "opus": "opus/2-4.opus",
+      "aac": "aac/2-4.m4a"
+    },
+    "2-5": {
+      "samples": 3025408,
+      "seconds": 63.029333,
+      "opus": "opus/2-5.opus",
+      "aac": "aac/2-5.m4a"
+    },
+    "2-6": {
+      "samples": 2952576,
+      "seconds": 61.512,
+      "opus": "opus/2-6.opus",
+      "aac": "aac/2-6.m4a"
+    },
+    "2-7": {
+      "samples": 3020800,
+      "seconds": 62.933333,
+      "opus": "opus/2-7.opus",
+      "aac": "aac/2-7.m4a"
+    },
+    "2-8": {
+      "samples": 2550784,
+      "seconds": 53.141333,
+      "opus": "opus/2-8.opus",
+      "aac": "aac/2-8.m4a"
+    },
+    "2-9": {
+      "samples": 8048640,
+      "seconds": 167.68,
+      "opus": "opus/2-9.opus",
+      "aac": "aac/2-9.m4a"
+    },
+    "2-10": {
+      "samples": 3443200,
+      "seconds": 71.733333,
+      "opus": "opus/2-10.opus",
+      "aac": "aac/2-10.m4a"
+    },
+    "2-11": {
+      "samples": 2879488,
+      "seconds": 59.989333,
+      "opus": "opus/2-11.opus",
+      "aac": "aac/2-11.m4a"
+    },
+    "2-12": {
+      "samples": 1069056,
+      "seconds": 22.272,
+      "opus": "opus/2-12.opus",
+      "aac": "aac/2-12.m4a"
+    },
+    "2-13": {
+      "samples": 3205120,
+      "seconds": 66.773333,
+      "opus": "opus/2-13.opus",
+      "aac": "aac/2-13.m4a"
+    },
+    "2-14": {
+      "samples": 4679680,
+      "seconds": 97.493333,
+      "opus": "opus/2-14.opus",
+      "aac": "aac/2-14.m4a"
+    },
+    "2-15": {
+      "samples": 3313664,
+      "seconds": 69.034667,
+      "opus": "opus/2-15.opus",
+      "aac": "aac/2-15.m4a"
+    },
+    "2-16": {
+      "samples": 8286208,
+      "seconds": 172.629333,
+      "opus": "opus/2-16.opus",
+      "aac": "aac/2-16.m4a"
+    },
+    "2-17": {
+      "samples": 2007040,
+      "seconds": 41.813333,
+      "opus": "opus/2-17.opus",
+      "aac": "aac/2-17.m4a"
+    },
+    "2-18": {
+      "samples": 2964480,
+      "seconds": 61.76,
+      "opus": "opus/2-18.opus",
+      "aac": "aac/2-18.m4a"
+    },
+    "2-19": {
+      "samples": 3203072,
+      "seconds": 66.730667,
+      "opus": "opus/2-19.opus",
+      "aac": "aac/2-19.m4a"
+    },
+    "2-20": {
+      "samples": 1915904,
+      "seconds": 39.914667,
+      "opus": "opus/2-20.opus",
+      "aac": "aac/2-20.m4a"
+    },
+    "2-21": {
+      "samples": 4145152,
+      "seconds": 86.357333,
+      "opus": "opus/2-21.opus",
+      "aac": "aac/2-21.m4a"
+    },
+    "2-22": {
+      "samples": 1565952,
+      "seconds": 32.624,
+      "opus": "opus/2-22.opus",
+      "aac": "aac/2-22.m4a"
+    },
+    "2-23": {
+      "samples": 2299904,
+      "seconds": 47.914667,
+      "opus": "opus/2-23.opus",
+      "aac": "aac/2-23.m4a"
+    },
+    "2-24": {
+      "samples": 2420736,
+      "seconds": 50.432,
+      "opus": "opus/2-24.opus",
+      "aac": "aac/2-24.m4a"
+    },
+    "2-25": {
+      "samples": 4050944,
+      "seconds": 84.394667,
+      "opus": "opus/2-25.opus",
+      "aac": "aac/2-25.m4a"
+    },
+    "2-26": {
+      "samples": 3488768,
+      "seconds": 72.682667,
+      "opus": "opus/2-26.opus",
+      "aac": "aac/2-26.m4a"
+    },
+    "3-1": {
+      "samples": 3433948,
+      "seconds": 71.540583,
+      "opus": "opus/3-1.opus",
+      "aac": "aac/3-1.m4a",
+      "gainDb": -1
+    },
+    "3-2": {
+      "samples": 2779136,
+      "seconds": 57.898667,
+      "opus": "opus/3-2.opus",
+      "aac": "aac/3-2.m4a"
+    },
+    "3-3": {
+      "samples": 1410816,
+      "seconds": 29.392,
+      "opus": "opus/3-3.opus",
+      "aac": "aac/3-3.m4a"
+    },
+    "3-4": {
+      "samples": 720896,
+      "seconds": 15.018667,
+      "opus": "opus/3-4.opus",
+      "aac": "aac/3-4.m4a"
+    },
+    "3-5": {
+      "samples": 3795968,
+      "seconds": 79.082667,
+      "opus": "opus/3-5.opus",
+      "aac": "aac/3-5.m4a"
+    },
+    "3-6": {
+      "samples": 3247872,
+      "seconds": 67.664,
+      "opus": "opus/3-6.opus",
+      "aac": "aac/3-6.m4a"
+    },
+    "3-7": {
+      "samples": 3203072,
+      "seconds": 66.730667,
+      "opus": "opus/3-7.opus",
+      "aac": "aac/3-7.m4a"
+    },
+    "3-8": {
+      "samples": 1997056,
+      "seconds": 41.605333,
+      "opus": "opus/3-8.opus",
+      "aac": "aac/3-8.m4a",
+      "gainDb": -1
+    },
+    "3-9": {
+      "samples": 2077056,
+      "seconds": 43.272,
+      "opus": "opus/3-9.opus",
+      "aac": "aac/3-9.m4a",
+      "gainDb": -1
+    },
+    "4-1": {
+      "samples": 1662848,
+      "seconds": 34.642667,
+      "opus": "opus/4-1.opus",
+      "aac": "aac/4-1.m4a"
+    },
+    "4-2": {
+      "samples": 1280640,
+      "seconds": 26.68,
+      "opus": "opus/4-2.opus",
+      "aac": "aac/4-2.m4a"
+    },
+    "4-3": {
+      "samples": 3311552,
+      "seconds": 68.990667,
+      "opus": "opus/4-3.opus",
+      "aac": "aac/4-3.m4a"
+    },
+    "4-4": {
+      "samples": 3474176,
+      "seconds": 72.378667,
+      "opus": "opus/4-4.opus",
+      "aac": "aac/4-4.m4a",
+      "gainDb": -1
+    },
+    "4-5": {
+      "samples": 4049152,
+      "seconds": 84.357333,
+      "opus": "opus/4-5.opus",
+      "aac": "aac/4-5.m4a"
+    },
+    "4-6": {
+      "samples": 3506688,
+      "seconds": 73.056,
+      "opus": "opus/4-6.opus",
+      "aac": "aac/4-6.m4a"
+    }
+  }
+}
