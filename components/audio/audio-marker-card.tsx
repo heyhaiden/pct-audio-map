@@ -133,7 +133,10 @@ export function AudioMarkerCardBody({
       {variant !== "map" && marker.lands && marker.lands.length > 0 ? (
         <p className="mt-3 hidden md:block">
           <span className="inline-block max-w-full rounded-full border border-[#ede8dc]/15 bg-[#ede8dc]/10 px-3 py-1 font-mono text-label leading-snug text-[#d4cbb8]">
-            {marker.lands.map((land) => land.name).join(" · ")}
+            {marker.lands
+              .slice(0, 3)
+              .map((land) => land.name)
+              .join(" · ")}
           </span>
         </p>
       ) : null}
