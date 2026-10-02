@@ -114,11 +114,31 @@ export default function ResourcesPage() {
               <span className="h-px w-8 shrink-0 bg-[#ed5a43]/60" />
               Land Acknowledgement
             </h2>
-            <p className="pct-display max-w-xl text-prose font-light leading-[1.65] text-[#b4aa9b]">
-              I spent four and a half months walking the Pacific Crest Trail: listening, living with the land and waters, and crossing through the homelands of dozens of Indigenous nations, many of whom still live alongside it today. I’m still learning the name of every nation whose land I walked through; if you’d like to learn whose land you’re listening to,{" "}
-              <a href="https://native-land.ca/" target="_blank" rel="noopener noreferrer" className="text-[#ed5a43] hover:text-[#f06b57]">native-land.ca</a>{" "}
-is a good place to start. My commitment to this land is to continue to uphold Leave No Trace principles, vote for leaders who will protect these lands and waters, and, through this project, return something to the place that held me.
-            </p>
+            <div className="max-w-2xl space-y-4 text-prose font-light leading-[1.7] text-[#b4aa9b]">
+              <p className="pct-display">
+                I spent four and a half months walking the Pacific Crest Trail: listening, living with
+                the land and waters, and crossing through the homelands of dozens of Indigenous nations,
+                many of whom still live alongside it today.
+              </p>
+              <p className="pct-display">
+                I’m still learning the name of every nation whose land I walked through. If you’d like
+                to learn whose land you’re listening to,{" "}
+                <a
+                  href="https://native-land.ca/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#ed5a43] hover:text-[#f06b57]"
+                >
+                  native-land.ca
+                </a>{" "}
+                is a good place to start.
+              </p>
+              <p className="pct-display">
+                My commitment to this land is to continue to uphold Leave No Trace principles, vote for
+                leaders who will protect these lands and waters, and, through this project, return
+                something to the place that held me.
+              </p>
+            </div>
           </section>
         </main>
 
