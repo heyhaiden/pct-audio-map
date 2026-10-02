@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
+import { chapterIndexForMiles } from "@/lib/chapter-scroll-gate"
 
 /**
  * The chapter intro card is tied to scroll *position*, not a timer. The hook
@@ -13,14 +14,6 @@ import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 export type ChapterIntroState = {
   index: number
   milesIn: number
-}
-
-function chapterIndexForMiles(miles: number): number {
-  for (let i = 0; i < CHAPTER_MILE_RANGES.length; i++) {
-    const r = CHAPTER_MILE_RANGES[i]
-    if (miles >= r.start && miles < r.end) return i
-  }
-  return CHAPTER_MILE_RANGES.length - 1
 }
 
 /** Opacity from distance-into-chapter: full for `hold` miles, then fade over `fade`. */

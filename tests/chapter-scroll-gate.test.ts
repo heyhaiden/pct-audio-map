@@ -3,9 +3,21 @@ import test from "node:test"
 import { PCT_TOTAL_MILES } from "../lib/railing-camera.ts"
 import {
   CHAPTER_GATE_LANDING_MILES,
+  chapterIndexForMiles,
   clampMilesAtChapterGate,
   scrollTopForMiles,
 } from "../lib/chapter-scroll-gate.ts"
+
+test("chapterIndexForMiles maps mile boundaries to the same chapters as the overlays", () => {
+  assert.equal(chapterIndexForMiles(0), 0)
+  assert.equal(chapterIndexForMiles(702.9), 0)
+  assert.equal(chapterIndexForMiles(703), 1)
+  assert.equal(chapterIndexForMiles(1158), 2)
+  assert.equal(chapterIndexForMiles(1693), 3)
+  assert.equal(chapterIndexForMiles(2150), 4)
+  assert.equal(chapterIndexForMiles(2650), 4)
+  assert.equal(chapterIndexForMiles(3000), 4)
+})
 
 test("a northbound jump stops just inside the next chapter", () => {
   const result = clampMilesAtChapterGate(700, 740)

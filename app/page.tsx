@@ -40,6 +40,7 @@ import {
 } from "@/lib/chapter-timeline-visibility"
 import { areOpeningMapPinsLocked, resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
 import { shouldRearmWipNotice } from "@/lib/wip-notice"
+import { chapterIndexForMiles } from "@/lib/chapter-scroll-gate"
 import {
   clearMapSession,
   clearNavigatedFromMap,
@@ -95,13 +96,6 @@ type ScrollControls = {
   getCameraPath: () => CameraPathPoint[] | null
   getRailingPoseAtCoordinates: (coordinates: [number, number]) => FreeCameraPose | null
   getProgressFromCoordinates: (coordinates: [number, number]) => number
-}
-
-function chapterIndexForMiles(miles: number): number {
-  const index = CHAPTER_MILE_RANGES.findIndex(
-    ({ start, end }) => miles >= start && miles < end,
-  )
-  return index >= 0 ? index : CHAPTER_MILE_RANGES.length - 1
 }
 
 export default function Home() {
