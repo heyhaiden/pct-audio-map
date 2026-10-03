@@ -21,7 +21,7 @@ export function WhyDrawer({ index, title, body }: { index: number; title: string
         />
         <span className="w-5 shrink-0 font-mono text-micro text-[#9b8e7a]">{String(index + 1).padStart(2, "0")}</span>
         <span
-          className={`pct-display text-lede font-medium transition-colors group-hover:text-[#ed5a43] group-focus-visible:text-[#ed5a43] ${
+          className={`pct-display text-lg font-medium transition-colors group-hover:text-[#ed5a43] group-focus-visible:text-[#ed5a43] md:text-xl ${
             open ? "text-[#f6f1e4]" : "text-[#ede8dc]"
           }`}
         >

@@ -80,8 +80,8 @@
     ]
   },
   "marker-31": {
-    "lng": -116.598839,
-    "lat": 33.244756,
+    "lng": -116.599329,
+    "lat": 33.228695,
     "lands": [
       {
         "name": "Cupeño",
@@ -128,8 +128,8 @@
     ]
   },
   "marker-40": {
-    "lng": -116.67543,
-    "lat": 33.808449,
+    "lng": -116.676043,
+    "lat": 33.78661,
     "lands": [
       {
         "name": "Ɂívil̃uwenetem Meytémak (Cahuilla)",
@@ -335,6 +335,16 @@
       }
     ]
   },
+  "marker-73": {
+    "lng": -118.012957,
+    "lat": 35.78079,
+    "lands": [
+      {
+        "name": "Kawaiisu",
+        "slug": "kawaiisu"
+      }
+    ]
+  },
   "marker-77": {
     "lng": -118.156603,
     "lat": 36.400765,
@@ -408,8 +418,8 @@
     ]
   },
   "marker-87": {
-    "lng": -118.407167,
-    "lat": 36.759261,
+    "lng": -118.396287,
+    "lat": 36.753731,
     "lands": [
       {
         "name": "Nyyhmy (Western Mono/Monache)",
@@ -448,8 +458,8 @@
     ]
   },
   "marker-91": {
-    "lng": -118.428956,
-    "lat": 36.884828,
+    "lng": -118.434845,
+    "lat": 36.877865,
     "lands": [
       {
         "name": "Nyyhmy (Western Mono/Monache)",
@@ -458,8 +468,8 @@
     ]
   },
   "marker-92": {
-    "lng": -118.427034,
-    "lat": 36.88539,
+    "lng": -118.414573,
+    "lat": 36.897352,
     "lands": [
       {
         "name": "Nyyhmy (Western Mono/Monache)",
@@ -468,8 +478,8 @@
     ]
   },
   "marker-93": {
-    "lng": -118.547011,
-    "lat": 37.05236,
+    "lng": -118.538031,
+    "lat": 37.053327,
     "lands": [
       {
         "name": "Nüümü (Northern Paiute)",
@@ -580,8 +590,8 @@
     ]
   },
   "marker-102": {
-    "lng": -119.7939,
-    "lat": 38.5428,
+    "lng": -119.787696,
+    "lat": 38.537884,
     "lands": [
       {
         "name": "Wašišiw Ɂítdeʔ (Washoe)",
@@ -590,8 +600,8 @@
     ]
   },
   "marker-103": {
-    "lng": -119.795887,
-    "lat": 38.542699,
+    "lng": -119.807861,
+    "lat": 38.545148,
     "lands": [
       {
         "name": "Wašišiw Ɂítdeʔ (Washoe)",
@@ -736,8 +746,8 @@
     ]
   },
   "marker-115": {
-    "lng": -121.992408,
-    "lat": 41.126022,
+    "lng": -121.985686,
+    "lat": 41.135763,
     "lands": [
       {
         "name": "Cayuse, Umatilla and Walla Walla",
@@ -788,8 +798,8 @@
     ]
   },
   "marker-117": {
-    "lng": -122.038248,
-    "lat": 41.115594,
+    "lng": -122.042604,
+    "lat": 41.113695,
     "lands": [
       {
         "name": "Cayuse, Umatilla and Walla Walla",
@@ -862,8 +872,8 @@
     ]
   },
   "marker-124": {
-    "lng": -122.868728,
-    "lat": 42.033992,
+    "lng": -122.886741,
+    "lat": 42.019228,
     "lands": [
       {
         "name": "Cayuse, Umatilla and Walla Walla",

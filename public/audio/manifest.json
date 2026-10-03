@@ -196,6 +196,12 @@
       "opus": "opus/1-32.opus",
       "aac": "aac/1-32.m4a"
     },
+    "1-33": {
+      "samples": 1678848,
+      "seconds": 34.976,
+      "opus": "opus/1-33.opus",
+      "aac": "aac/1-33.m4a"
+    },
     "2-1": {
       "samples": 4616897,
       "seconds": 96.185354,
@@ -327,7 +333,8 @@
       "samples": 1565952,
       "seconds": 32.624,
       "opus": "opus/2-22.opus",
-      "aac": "aac/2-22.m4a"
+      "aac": "aac/2-22.m4a",
+      "source": "2-22A.wav"
     },
     "2-23": {
       "samples": 2299904,
@@ -364,13 +371,15 @@
       "samples": 2779136,
       "seconds": 57.898667,
       "opus": "opus/3-2.opus",
-      "aac": "aac/3-2.m4a"
+      "aac": "aac/3-2.m4a",
+      "source": "3-2A.wav"
     },
     "3-3": {
       "samples": 1410816,
       "seconds": 29.392,
       "opus": "opus/3-3.opus",
-      "aac": "aac/3-3.m4a"
+      "aac": "aac/3-3.m4a",
+      "source": "3-3A.wav"
     },
     "3-4": {
       "samples": 720896,
@@ -401,7 +410,7 @@
       "seconds": 41.605333,
       "opus": "opus/3-8.opus",
       "aac": "aac/3-8.m4a",
-      "gainDb": -1
+      "source": "3-8A.wav"
     },
     "3-9": {
       "samples": 2077056,

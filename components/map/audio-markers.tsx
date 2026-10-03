@@ -5,8 +5,13 @@ import { audioMarkers } from "@/data/audio-markers"
 import {
   AUDIO_MARKER_LAYER_ID,
   AUDIO_MARKER_SOURCE_ID,
+  MARKER_ICON_ACTIVE_SIZE,
+  MARKER_ICON_REST_SIZE,
+  MARKER_ICON_SIZE_MS,
   chapterCollection,
+  easeMarkerSize,
   markerIconSize,
+  markerIconSizeSwap,
 } from "@/lib/audio-marker-layer"
 import type { AudioMarker } from "@/types/map"
 
@@ -41,6 +46,8 @@ export function AudioMarkers({
   onMarkerPrimeRef.current = onMarkerPrime
   const enabledRef = useRef(enabled)
   enabledRef.current = enabled
+  const activeMarkerIdRef = useRef(activeMarkerId)
+  const previousActiveRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!map || map._removed) return
@@ -51,7 +58,7 @@ export function AudioMarkers({
         map.setLayoutProperty?.(
           AUDIO_MARKER_LAYER_ID,
           "icon-size",
-          markerIconSize(activeMarkerId),
+          markerIconSize(activeMarkerIdRef.current),
         )
       } catch {
         /* map may already be gone */
@@ -62,6 +69,46 @@ export function AudioMarkers({
     // A style reload rebuilds the layer empty; refill it once that lands.
     map.on("style.load", applyMarkerData)
     return () => map.off?.("style.load", applyMarkerData)
+  }, [map])
+
+  useEffect(() => {
+    if (!map || map._removed) return
+
+    const fromId = previousActiveRef.current
+    const toId = activeMarkerId ?? null
+    previousActiveRef.current = toId
+    activeMarkerIdRef.current = toId
+
+    const applySize = (value: unknown) => {
+      try {
+        map.setLayoutProperty?.(AUDIO_MARKER_LAYER_ID, "icon-size", value)
+      } catch {
+        /* map may already be gone */
+      }
+    }
+
+    if (fromId === toId) {
+      applySize(markerIconSize(toId))
+      return
+    }
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduce) {
+      applySize(markerIconSize(toId))
+      return
+    }
+
+    const started = performance.now()
+    let frame = 0
+    const tick = (now: number) => {
+      const t = easeMarkerSize((now - started) / MARKER_ICON_SIZE_MS)
+      const growing = MARKER_ICON_REST_SIZE + (MARKER_ICON_ACTIVE_SIZE - MARKER_ICON_REST_SIZE) * t
+      const shrinking = MARKER_ICON_ACTIVE_SIZE - (MARKER_ICON_ACTIVE_SIZE - MARKER_ICON_REST_SIZE) * t
+      applySize(markerIconSizeSwap(toId, growing, fromId, shrinking))
+      if (t < 1) frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
   }, [map, activeMarkerId])
 
   useEffect(() => {

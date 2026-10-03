@@ -6,7 +6,7 @@ import type { AudioMarker } from "@/types/map"
 export const audioMarkerStatusClass =
   "flex items-center gap-2 font-mono text-micro uppercase tracking-[0.18em]"
 
-/** Horizon sun (Material wb_twilight). Dawn and evening share it; evening has no cloud. */
+/** Horizon sun (Material wb_twilight). Dawn and dusk share it. */
 function TwilightIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -49,8 +49,8 @@ const TIME_OF_DAY_ICON = {
   morning: CloudSun,
   midday: SunMedium,
   afternoon: BrightnessIcon,
-  evening: TwilightIcon,
-  dusk: CloudMoon,
+  evening: CloudMoon,
+  dusk: TwilightIcon,
   night: Moon,
 } satisfies Record<TimeOfDay, typeof SunMedium | typeof TwilightIcon>
 
@@ -60,6 +60,8 @@ interface AudioMarkerCardBodyProps {
   showMetaRule?: boolean
   /** Map cards linger. Library cards keep the note, with quieter type. */
   variant?: "map" | "library"
+  /** Library cards render the note in a desktop block / mobile expand instead. */
+  showDescription?: boolean
 }
 
 /**
@@ -69,6 +71,7 @@ export function AudioMarkerCardBody({
   marker,
   showMetaRule = true,
   variant = "library",
+  showDescription = true,
 }: AudioMarkerCardBodyProps) {
   const mile = getMarkerMile(marker.id)
   const dateLabel = marker.recordingDate ? formatMonthDay(marker.recordingDate) : null
@@ -80,11 +83,17 @@ export function AudioMarkerCardBody({
       <div className="flex items-start justify-between gap-3">
         <h3
           className={`pct-display min-w-0 font-medium leading-[1.2] text-[#ede8dc] ${
-            isLibrary ? "text-[20px] md:text-[22px]" : "text-[21px] md:text-[26px]"
+            isLibrary ? "text-[18px] md:text-[22px]" : "text-[21px] md:text-[26px]"
           }`}
         >
           {marker.name}
         </h3>
+        {isLibrary && dateLabel ? (
+          <span className="mt-1 hidden shrink-0 items-center gap-1.5 font-mono text-micro uppercase tracking-[0.08em] text-[#9b8e7a] md:inline-flex">
+            <CalendarDays className="h-3 w-3" />
+            {dateLabel}
+          </span>
+        ) : null}
       </div>
 
       <div className={`${isLibrary ? "mt-1.5" : "mt-2.5"} flex items-center gap-2.5`}>
@@ -100,7 +109,7 @@ export function AudioMarkerCardBody({
             </span>
           ) : null}
           {dateLabel ? (
-            <span className="flex items-center gap-1.5">
+            <span className={`items-center gap-1.5 ${isLibrary ? "inline-flex md:hidden" : "flex"}`}>
               <CalendarDays className="h-3 w-3" />
               {dateLabel}
             </span>
@@ -115,10 +124,10 @@ export function AudioMarkerCardBody({
         {showMetaRule ? <div className="h-px flex-1 bg-white/15" /> : null}
       </div>
 
-      {marker.description ? (
+      {showDescription && marker.description ? (
         <p
           className={`pct-display mt-3 font-light leading-[1.6] text-[#ada396] ${
-            isLibrary ? "pct-library-note hidden md:block text-copy" : "text-copy md:text-prose"
+            isLibrary ? "text-copy" : "text-copy md:text-prose"
           }`}
         >
           {marker.description}

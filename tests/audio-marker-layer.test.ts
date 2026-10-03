@@ -8,7 +8,7 @@ test("chapterCollection places every spreadsheet marker, not only Campo", () => 
   const ids = collection.features.map((feature) => feature.properties.id)
 
   assert.ok(ids.includes("marker-1"), "Campo stays on the map")
-  assert.ok(ids.includes("marker-73"), "Owens Peak waiting pin is present")
+  assert.ok(ids.includes("marker-73"), "Owens Peak pin is present")
   assert.ok(ids.includes("marker-77"), "South Sierra pin is present")
   assert.ok(ids.includes("marker-111"), "Hat Creek Rim pin is present")
   assert.ok(ids.includes("marker-130"), "Sky Lakes pin is present")
@@ -30,7 +30,24 @@ test("the selected audio pin renders larger than the resting pins", () => {
   assert.deepEqual(iconSize("marker-77"), [
     "case",
     ["==", ["get", "id"], "marker-77"],
+    1.7,
+    0.9,
+  ])
+})
+
+test("markerIconSizeSwap grows the next pin while the last pin shrinks", () => {
+  assert.deepEqual(markerLayer.markerIconSizeSwap("marker-2", 1.3, "marker-1", 1.2), [
+    "case",
+    ["==", ["get", "id"], "marker-2"],
+    1.3,
+    ["==", ["get", "id"], "marker-1"],
     1.2,
     0.9,
   ])
+})
+
+test("easeMarkerSize eases out from rest to full", () => {
+  assert.equal(markerLayer.easeMarkerSize(0), 0)
+  assert.equal(markerLayer.easeMarkerSize(1), 1)
+  assert.ok(markerLayer.easeMarkerSize(0.5) > 0.5)
 })

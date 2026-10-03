@@ -46,7 +46,7 @@ export interface TrailScrollReturn {
   pauseScrollAnimation: () => void
   resumeScrollAnimation: () => void
   syncScrollToPosition: (coordinates: [number, number]) => void
-  setPendingSyncCoordinates: (coordinates: [number, number]) => void
+  setPendingSyncCoordinates: (coordinates: [number, number] | null) => void
   setBlocked: (blocked: boolean) => void
   getCameraPath: () => CameraPathPoint[] | null
   getRailingPoseAtCoordinates: (coordinates: [number, number]) => FreeCameraPose | null
@@ -193,7 +193,7 @@ export function useTrailScroll({
     setIsScrollPaused(false)
   }, [syncScrollToPosition])
 
-  const setPendingSyncCoordinates = useCallback((coordinates: [number, number]) => {
+  const setPendingSyncCoordinates = useCallback((coordinates: [number, number] | null) => {
     pendingSyncRef.current = coordinates
   }, [])
 

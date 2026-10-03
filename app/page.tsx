@@ -17,6 +17,7 @@ import { audioMarkers } from "@/data/audio-markers"
 import { CHAPTER_MILE_RANGES } from "@/data/chapter-ranges"
 import {
   computePunchInPose,
+  computeRailingPose,
   shouldShowNorthernTerminus,
   type CameraPathPoint,
   type FreeCameraPose,
@@ -40,7 +41,7 @@ import {
 } from "@/lib/chapter-timeline-visibility"
 import { areOpeningMapPinsLocked, resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
 import { shouldRearmWipNotice } from "@/lib/wip-notice"
-import { chapterIndexForMiles } from "@/lib/chapter-scroll-gate"
+import { chapterIndexForMiles, scrollTopForMiles } from "@/lib/chapter-scroll-gate"
 import {
   clearMapSession,
   clearNavigatedFromMap,
@@ -50,7 +51,7 @@ import {
   saveMapSession,
   type MapSessionState,
 } from "@/lib/map-session"
-import { adjacentPlayable, hasMarkerAudio } from "@/lib/marker-navigation"
+import { adjacentPlayable, canAdvanceToWip, chapterGateAfterMarker, hasMarkerAudio } from "@/lib/marker-navigation"
 import type { AudioMarker } from "@/types/map"
 
 /**
@@ -91,7 +92,7 @@ type ScrollControls = {
   pauseScrollAnimation: () => void
   resumeScrollAnimation: () => void
   syncScrollToPosition: (coordinates: [number, number]) => void
-  setPendingSyncCoordinates: (coordinates: [number, number]) => void
+  setPendingSyncCoordinates: (coordinates: [number, number] | null) => void
   setBlocked: (blocked: boolean) => void
   getCameraPath: () => CameraPathPoint[] | null
   getRailingPoseAtCoordinates: (coordinates: [number, number]) => FreeCameraPose | null
@@ -152,6 +153,8 @@ export default function Home() {
   const navInitializedRef = useRef(false)
   const resumeChapterRef = useRef<number | null>(null)
   const visibleChapterOverlayRef = useRef<number | null>(null)
+  /** Next pin waiting behind a chapter overlay that card-Next just gated onto. */
+  const pendingNodeAfterOverlayRef = useRef<AudioMarker | null>(null)
   /** True while the current position came from a chapter-tab jump, not scrolling. */
   const arrivedByJumpRef = useRef(false)
   const currentMilesRef = useRef(currentMiles)
@@ -329,6 +332,7 @@ export default function Home() {
   }, [])
 
   const handleRestart = useCallback(() => {
+    pendingNodeAfterOverlayRef.current = null
     setShowWip(false)
     setWipDismissed(false)
     setShowCompletion(false)
@@ -608,6 +612,7 @@ export default function Home() {
   }, [introComplete, isResuming])
 
   const handleChapterClick = (chapterIndex: number) => {
+    pendingNodeAfterOverlayRef.current = null
     markDirectNavigation()
     // Flying over the content edge via a tab shouldn't trip the WIP notice.
     arrivedByJumpRef.current = true
@@ -693,6 +698,13 @@ export default function Home() {
     [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, primeLoop, transitionToTrack, unlockAudio],
   )
 
+  const handleChapterOverlayDismiss = () => {
+    setOverlayDismissedChapter(currentChapter)
+    const pending = pendingNodeAfterOverlayRef.current
+    pendingNodeAfterOverlayRef.current = null
+    if (pending) activateNode(pending, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+  }
+
   const handleCloseAudio = async () => {
     const marker = selectedAudioMarker
     if (!marker) return
@@ -739,16 +751,76 @@ export default function Home() {
     ? adjacentPlayable(audioMarkers, ACTIVE_CHAPTERS, selectedAudioMarker.id)
     : { previous: null, next: null }
   const hasPreviousMarker = Boolean(previousPlayable)
-  const hasNextMarker = Boolean(nextPlayable)
+  const chapterGateMiles = selectedAudioMarker
+    ? chapterGateAfterMarker(audioMarkers, ACTIVE_CHAPTERS, selectedAudioMarker.id)
+    : null
+  const advanceToWip = selectedAudioMarker
+    ? canAdvanceToWip(audioMarkers, ACTIVE_CHAPTERS, selectedAudioMarker.id)
+    : false
+  const hasNextMarker = Boolean(nextPlayable) || advanceToWip
 
   const handlePreviousMarker = () => {
     if (!previousPlayable) return
     activateNode(previousPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
   }
 
+  const advanceToChapterGate = async (gateMiles: number, nextMarker: AudioMarker | null) => {
+    pendingNodeAfterOverlayRef.current = nextMarker
+    markDirectNavigation()
+    fadeOutAndStop(NODE_ARROW_AUDIO_FADE_MS)
+    cancelFreeCameraAnimation()
+    const controls = scrollControlRef.current
+    controls?.setPendingSyncCoordinates(null)
+    setSelectedAudioMarker(null)
+    setOverlayDismissedChapter(null)
+    setCurrentMiles(gateMiles)
+
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+    window.scrollTo(0, scrollTopForMiles(gateMiles, maxScroll, { atGate: true }))
+
+    const path = controls?.getCameraPath()
+    if (map && path?.length) {
+      const to = computeRailingPose(path, Math.min(1, gateMiles / totalMiles))
+      const from = readFreeCameraPose(map)
+      if (from) {
+        setIsNodeCameraBusy(true)
+        const token = ++cameraAnimRef.current
+        await animateFreeCamera(map, from, to, NODE_ARROW_CAMERA_MS)
+        if (token !== cameraAnimRef.current) {
+          setIsNodeCameraBusy(false)
+          return
+        }
+        setIsNodeCameraBusy(false)
+      }
+    }
+
+    controls?.resumeScrollAnimation()
+  }
+
   const handleNextMarker = () => {
-    if (!nextPlayable) return
-    activateNode(nextPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+    if (chapterGateMiles != null) {
+      void advanceToChapterGate(chapterGateMiles, nextPlayable)
+      return
+    }
+    if (nextPlayable) {
+      activateNode(nextPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+      return
+    }
+    if (!advanceToWip) return
+
+    markDirectNavigation()
+    fadeOutAndStop(NODE_ARROW_AUDIO_FADE_MS)
+    cancelFreeCameraAnimation()
+    const controls = scrollControlRef.current
+    controls?.setPendingSyncCoordinates(null)
+    setSelectedAudioMarker(null)
+    setWipDismissed(false)
+    setCurrentMiles(WIP_MILE)
+
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+    window.scrollTo(0, scrollTopForMiles(WIP_MILE, maxScroll))
+    controls?.resumeScrollAnimation()
+    setShowWip(true)
   }
 
   // Warm next/prev recordings only while a pin is open — not the full catalog.
@@ -930,7 +1002,7 @@ export default function Home() {
           chapter={introChapter}
           chapterIndex={currentChapter}
           opacity={mobileIntroOpacity}
-          onDismiss={() => setOverlayDismissedChapter(currentChapter)}
+          onDismiss={handleChapterOverlayDismiss}
         />
       )}
 
@@ -939,7 +1011,7 @@ export default function Home() {
           chapter={introChapter}
           chapterIndex={currentChapter}
           opacity={desktopIntroOpacity}
-          onDismiss={() => setOverlayDismissedChapter(currentChapter)}
+          onDismiss={handleChapterOverlayDismiss}
         />
       </div>
 

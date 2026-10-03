@@ -141,7 +141,7 @@ export const audioMarkers: AudioMarker[] = [
   {
     id: "marker-31",
     name: "Leaving Barrel Springs",
-    coordinates: [-116.599851, 33.238409],
+    coordinates: [-116.599329, 33.228695],
     elevation: 3381,
     audioUrl: "/audio/1-9.mp3",
     durationSeconds: 50,
@@ -211,7 +211,7 @@ export const audioMarkers: AudioMarker[] = [
   {
     id: "marker-40",
     name: "Mount San Jacinto State Park",
-    coordinates: [-116.674454, 33.807048],
+    coordinates: [-116.676043, 33.78661],
     elevation: 9988,
     audioUrl: "/audio/1-13.mp3",
     durationSeconds: 22,
@@ -228,7 +228,7 @@ export const audioMarkers: AudioMarker[] = [
   {
     id: "marker-41",
     name: "Ascent to San Jacinto Peak",
-    coordinates: [-116.679099, 33.813716],
+    coordinates: [-116.678123, 33.812315],
     elevation: 10534,
     audioUrl: "/audio/1-14.mp3",
     durationSeconds: 28,
@@ -553,13 +553,16 @@ export const audioMarkers: AudioMarker[] = [
   {
     id: "marker-73",
     name: "Owens Peak Wilderness",
-    coordinates: [-118.01274, 35.735697],
+    coordinates: [-118.012957, 35.78079],
     elevation: 7200,
-    audioUrl: "",
+    audioUrl: "/audio/1-33.mp3",
+    durationSeconds: 35,
     chapter: "southern-california",
     featured: false,
     description:
-      "Waiting on audio.",
+      "Chickadees sing before an unexpected rain shower. Tomorrow, I'll be in Kennedy Meadows, marking the official end of the desert.",
+    recordingDate: "June 3, 2025",
+    timeOfDay: "midday",
     lands: [
       { name: "Kawaiisu", slug: "kawaiisu" },
     ],
@@ -567,7 +570,7 @@ export const audioMarkers: AudioMarker[] = [
   // The Sierra
   {
     id: "marker-77",
-    name: "South Sierra",
+    name: "Golden Trout Wilderness",
     coordinates: [-118.156603, 36.400765],
     elevation: 9963,
     audioUrl: "/audio/2-1.mp3",
@@ -621,7 +624,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-81",
-    name: "South Sierra; SEKI National Park",
+    name: "Ascent from Rock Creek - Sequoia National Park",
     coordinates: [-118.344929, 36.499722],
     elevation: 10109,
     audioUrl: "/audio/2-4.mp3",
@@ -663,7 +666,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "Beginning the ascent to Forester Pass before sunrise, the world is frozen. Puddles thaw and crunch underfoot as the sun peeks over the horizon.",
+      "Beginning the ascent to Forester Pass before sunrise, the world is frozen -- it's the highest point on trail. Thawing puddles crunch underfoot as the sun peeks over the horizon.",
     recordingDate: "June 14, 2025",
     timeOfDay: "dawn",
     lands: [
@@ -673,7 +676,7 @@ export const audioMarkers: AudioMarker[] = [
   {
     id: "marker-87",
     name: "Bubbs Creek",
-    coordinates: [-118.402241, 36.75655],
+    coordinates: [-118.396287, 36.753731],
     elevation: 9534,
     audioUrl: "/audio/2-7.mp3",
     durationSeconds: 63,
@@ -689,8 +692,8 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-88",
-    name: "South of Kearsarge Pass",
-    coordinates: [-118.410026, 36.765953],
+    name: "Lower Vidette Meadow",
+    coordinates: [-118.409502, 36.76231],
     elevation: 9803,
     audioUrl: "/audio/2-8.mp3",
     durationSeconds: 53,
@@ -740,15 +743,15 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-91",
-    name: "Woods Creek, Kings Canyon National Park",
-    coordinates: [-118.428956, 36.884828],
+    name: "Woods Creek",
+    coordinates: [-118.434845, 36.877865],
     elevation: 9053,
     audioUrl: "/audio/2-11.mp3",
     durationSeconds: 60,
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "Another beautiful, cloudless day in the Sierra. A river runs through the canyon below.",
+      "Another beautiful, cloudless day in the Sierra. A narrow suspension bridge gives me passage over the river rushing through the canyon below.",
     recordingDate: "June 20, 2025",
     timeOfDay: "afternoon",
     lands: [
@@ -758,7 +761,7 @@ export const audioMarkers: AudioMarker[] = [
   {
     id: "marker-92",
     name: "Kings Canyon National Park",
-    coordinates: [-118.430058, 36.883817],
+    coordinates: [-118.414573, 36.897352],
     elevation: 9078,
     audioUrl: "/audio/2-12.mp3",
     durationSeconds: 22,
@@ -774,15 +777,15 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-93",
-    name: "Kings Canyon National Park",
-    coordinates: [-118.551548, 37.051752],
+    name: "Deer Meadow - Sequoia Kings Canyon Wilderness",
+    coordinates: [-118.538031, 37.053327],
     elevation: 8564,
     audioUrl: "/audio/2-13.mp3",
     durationSeconds: 67,
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "Branches sway, leaves flutter -- poplar trees dance in the wind.",
+      "Yesterday was a blur, crossing over both Pinchot Pass and Mather Pass in one day. Today, I have time to rest and watch the poplar branches sway, their leaves fluttering in the wind.",
     recordingDate: "June 22, 2025",
     timeOfDay: "afternoon",
     lands: [
@@ -792,7 +795,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-94",
-    name: "John Muir Wilderness - Ascent to Selden Pass",
+    name: "Ascent to Selden Pass",
     coordinates: [-118.869514, 37.239625],
     elevation: 8302,
     audioUrl: "/audio/2-14.mp3",
@@ -800,7 +803,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "Groves of trees amidst rocky outcroppings, I make my way up toward Selden Pass. An entire valley comes into view as I ascend.",
+      "Through groves of trees amidst rocky outcroppings, I make my way up toward Selden Pass. An entire valley comes into view as I ascend -- no sign of the snowstorm that caught me over Muir Pass just yesterday.",
     recordingDate: "June 24, 2025",
     timeOfDay: "afternoon",
     lands: [
@@ -828,7 +831,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-96",
-    name: "Cicadas right before Mammoth",
+    name: "John Muir Wilderness",
     coordinates: [-119.024344, 37.551669],
     elevation: 9588,
     audioUrl: "/audio/2-16.mp3",
@@ -901,7 +904,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-101",
-    name: "Stanislaus National Forest",
+    name: "Carson-Iceberg Wilderness",
     coordinates: [-119.742259, 38.48113],
     elevation: 8388,
     audioUrl: "/audio/2-20.mp3",
@@ -909,7 +912,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "One of my favorite bird calls of the Sierra Nevada.",
+      "One of my favorite bird calls of the Sierras, though I can feel the terrain changing -- steep climbs and rocky trails have been replaced by rolling hills, meadows, and long, exposed stretches.",
     recordingDate: "July 12, 2025",
     timeOfDay: "morning",
     lands: [
@@ -918,8 +921,8 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-102",
-    name: "Ascent to Ebbetts Pass",
-    coordinates: [-119.7939, 38.5428],
+    name: "Humboldt-Toiyabe National Forest",
+    coordinates: [-119.787696, 38.537884],
     elevation: 8822,
     audioUrl: "/audio/2-21.mp3",
     durationSeconds: 86,
@@ -935,15 +938,15 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-103",
-    name: "Humboldt-Toiyabe National Forest",
-    coordinates: [-119.809966, 38.547722],
+    name: "Ebbetts Pass",
+    coordinates: [-119.807861, 38.545148],
     elevation: 8762,
     audioUrl: "/audio/2-22.mp3",
     durationSeconds: 33,
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "After waiting out the worst of the storm, I crest the pass and continue on in the rain. Spirits are low until I stumble upon a bike race, and I'm welcomed over to their basecamp with hot ramen -- the best possible trail magic for a cold, wet day.",
+      "After waiting out the worst of the storm, I continue on in the rain. Spirits are low until I stumble upon a bike race, and I'm welcomed over to their basecamp with hot ramen -- the best possible trail magic for a cold, wet day.",
     recordingDate: "July 12, 2025",
     timeOfDay: "afternoon",
     lands: [
@@ -997,7 +1000,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "Steady wind rustles poplar leaves.",
+      "Steady wind rustles tree leaves. Mule Ears blanket the ground, glowing in the setting sun",
     recordingDate: "July 19, 2025",
     timeOfDay: "evening",
     lands: [
@@ -1016,7 +1019,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "The winds pick up at night, but my campsite is protected. Ski lifts sway in the distance.",
+      "The winds pick up at night, but my campsite is protected by large boulders. Ski lifts sway in the distance.",
     recordingDate: "July 20, 2025",
     timeOfDay: "night",
     lands: [
@@ -1065,7 +1068,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-113",
-    name: "Ridge overlooking Mt. Shasta",
+    name: "Lassen National Forest",
     coordinates: [-121.775466, 41.055683],
     elevation: 4930,
     audioUrl: "/audio/3-3.mp3",
@@ -1073,7 +1076,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "northern-california",
     featured: false,
     description:
-      "Tree trunks here are drooping with moss. Tonight's campsite is a ridge overlooking Mt. Shasta, but I have to hack my way through the undergrowth first.",
+      "Tree trunks here are drooping with moss, and the trail is overgrown -- I have to hack my way through the undergrowth. Tonight's campsite is a ridge overlooking Mt. Shasta.",
     recordingDate: "July 27, 2025",
     timeOfDay: "dusk",
     lands: [
@@ -1084,7 +1087,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-114",
-    name: "High voltage power lines overhead",
+    name: "Shasta-Trinity National Forest",
     coordinates: [-121.801511, 41.07563],
     elevation: 5197,
     audioUrl: "/audio/3-4.mp3",
@@ -1092,7 +1095,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "northern-california",
     featured: false,
     description:
-      "I exit the dense forest for just a moment to pass under high voltage power lines.",
+      "I pass in and out of dense forests and clear cut sections: logging operations, or, in this case, high voltage power lines.",
     recordingDate: "July 27, 2025",
     timeOfDay: "dusk",
     lands: [
@@ -1103,8 +1106,8 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-115",
-    name: "South of Mt. Shasta",
-    coordinates: [-121.986984, 41.127563],
+    name: "Deer Creek Spring",
+    coordinates: [-121.985686, 41.135763],
     elevation: 4565,
     audioUrl: "/audio/3-5.mp3",
     durationSeconds: 79,
@@ -1124,7 +1127,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-116",
-    name: "Deer Creek - Shasta-Trinity National Forest",
+    name: "Deer Creek",
     coordinates: [-122.001109, 41.127899],
     elevation: 4296,
     audioUrl: "/audio/3-6.mp3",
@@ -1145,8 +1148,8 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-117",
-    name: "Centipede Gulch Trail - Shasta-Trinity National Forest",
-    coordinates: [-122.038248, 41.115594],
+    name: "Doodlebug Gulch",
+    coordinates: [-122.042604, 41.113695],
     elevation: 3109,
     audioUrl: "/audio/3-7.mp3",
     durationSeconds: 67,
@@ -1165,7 +1168,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-120",
-    name: "Shasta-Trinity National Forest",
+    name: "Trinity Mountains",
     coordinates: [-122.499886, 41.300819],
     elevation: 7407,
     audioUrl: "/audio/3-8.mp3",
@@ -1173,7 +1176,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "northern-california",
     featured: false,
     description:
-      "I walk down an exposed ridge, the sun suprisingly hot today. Large bugs hide in the bushes and jump in front of me as I walk by.",
+      "I walk down an exposed ridge, the sun suprisingly hot today. Band-winged grasshoppers hide in the bushes and launch themselves across the trail as I walk by.",
     recordingDate: "August 3, 2025",
     timeOfDay: "morning",
     lands: [
@@ -1186,7 +1189,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-123",
-    name: "Before Hwy 3",
+    name: "Scott Mountains",
     coordinates: [-122.646493, 41.297271],
     elevation: 5962,
     audioUrl: "/audio/3-9.mp3",
@@ -1194,7 +1197,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "northern-california",
     featured: false,
     description:
-      "There must have been rain recently, though today's heat and blue skies show no indication that it ever happened. I quicken my pace -- town is near, and a home cooked meal from a kind trail angel awaits.",
+      "There must have been rain recently, though today's heat and blue skies show no indication of it. Thick wildfire smoke has blown in another direction today, so I quicken my pace -- town is near. To my surprise, a home cooked meal from a kind trail angel awaits.",
     recordingDate: "August 4, 2025",
     timeOfDay: "morning",
     lands: [
@@ -1208,8 +1211,8 @@ export const audioMarkers: AudioMarker[] = [
   // Oregon
   {
     id: "marker-124",
-    name: "Near the California-Oregon Border",
-    coordinates: [-122.868728, 42.033992],
+    name: "Observation Gap - Siskiyou Mountains",
+    coordinates: [-122.886741, 42.019228],
     elevation: 6765,
     audioUrl: "/audio/4-1.mp3",
     durationSeconds: 35,
@@ -1231,7 +1234,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-125",
-    name: "Trail Magic",
+    name: "Klamath National Forest",
     coordinates: [-122.855167, 42.044314],
     elevation: 6471,
     audioUrl: "/audio/4-2.mp3",
@@ -1254,7 +1257,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-126",
-    name: "Before Ashland",
+    name: "Klamath Mountains",
     coordinates: [-122.728048, 42.080106],
     elevation: 6635,
     audioUrl: "/audio/4-3.mp3",
@@ -1262,7 +1265,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "oregon-cascades",
     featured: false,
     description:
-      "Stopped in a grove of poplar trees. Multi-colored wildflowers grow tall alongside the trail.",
+      "Stopped in a grove of leafy trees. Multi-colored wildflowers grow tall alongside the trail.",
     recordingDate: "August 7, 2025",
     timeOfDay: "evening",
     lands: [
@@ -1277,7 +1280,7 @@ export const audioMarkers: AudioMarker[] = [
   },
   {
     id: "marker-128",
-    name: "Right before Hwy 140",
+    name: "Rogue River-Siskiyou National Forest",
     coordinates: [-122.2768, 42.3346],
     elevation: 5216,
     audioUrl: "/audio/4-4.mp3",
@@ -1285,7 +1288,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "oregon-cascades",
     featured: false,
     description:
-      "Huge rock slides create sections of volcanic scree which slows my travel. I roll into camp at exactly 30 miles for the day, hoping for soft dirt tomorrow.",
+      "Huge rock slides left sections of volcanic scree which slow my travel. I roll into camp at exactly 30 miles for the day, hoping for soft dirt tomorrow.",
     recordingDate: "August 11, 2025",
     timeOfDay: "evening",
     lands: [
@@ -1306,7 +1309,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "oregon-cascades",
     featured: false,
     description:
-      "The dirt is red and yellow, the air is crisp and cool. Birds chatter excitedly, and ripe huckleberries are everywhere. Little did I know that this would be my final day on trail.",
+      "The dirt here is red and yellow, the air is crisp and cool. Birds chatter excitedly, and ripe huckleberries grow all around. Little did I know that this would be my final day on trail.",
     recordingDate: "August 12, 2025",
     timeOfDay: "morning",
     lands: [
@@ -1328,7 +1331,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "oregon-cascades",
     featured: false,
     description:
-      "Only crickets keep me company tonight. Earlier this afternoon, my foot pain dramatically increased, and I made the difficult decision to hike 12 miles back to Hwy 140. This would be my final night on trail.",
+      "Only crickets keep me company tonight. Earlier this afternoon, I started feeling a sharp pain in my foot, and I made the difficult decision to hike 12 miles back to Hwy 140. This would be my final night on trail.",
     recordingDate: "August 12, 2025",
     timeOfDay: "night",
     lands: [
