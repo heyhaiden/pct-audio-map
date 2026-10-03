@@ -1,6 +1,7 @@
-import { Github, Linkedin, Mail } from "lucide-react"
+import { Mail } from "lucide-react"
 import { FieldNotesCard } from "@/components/about/field-notes-card"
 import { InfoTip } from "@/components/about/info-tip"
+import { TeamMember } from "@/components/about/team-member"
 import { WhyDrawer } from "@/components/about/why-drawer"
 import { SitePage } from "@/components/navigation/site-page"
 
@@ -42,9 +43,6 @@ const whys = [
   },
 ]
 
-const socialClass =
-  "pct-glass-control inline-flex h-8 w-8 items-center justify-center rounded-full text-[#ada396] transition-all hover:border-[#ed5a43]/35 hover:text-[#ed5a43]"
-
 const team = [
   {
     name: "Anna Wozniewicz",
@@ -80,11 +78,6 @@ const team = [
     ],
   },
 ]
-
-function SocialIcon({ icon }: { icon: "linkedin" | "github" }) {
-  if (icon === "github") return <Github className="h-4 w-4" />
-  return <Linkedin className="h-4 w-4" />
-}
 
 function SectionHeading({ children, info }: { children: string; info?: string }) {
   return (
@@ -137,39 +130,7 @@ export default function AboutPage() {
             <SectionHeading>Who we are</SectionHeading>
             <div className="space-y-10 md:space-y-14">
               {team.map((member) => (
-                <article
-                  key={member.name}
-                  className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8"
-                >
-                  <div
-                    className="aspect-[4/5] w-full max-w-[280px] shrink-0 rounded-sm bg-[#2a261f] md:w-[240px]"
-                    role="img"
-                    aria-label={member.photoAlt}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h3 className="pct-display text-xl font-medium text-[#ede8dc]">{member.name}</h3>
-                    <p className="mb-4 mt-1 font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">
-                      {member.role}
-                    </p>
-                    <p className="pct-display mb-4 text-copy font-light leading-[1.7] text-[#ada396]">
-                      {member.description}
-                    </p>
-                    <div className="mt-2 flex items-center gap-2">
-                      {member.links.map((link) => (
-                        <a
-                          key={link.href}
-                          href={link.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={socialClass}
-                          aria-label={link.label}
-                        >
-                          <SocialIcon icon={link.icon} />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                </article>
+                <TeamMember key={member.name} {...member} />
               ))}
             </div>
           </section>
