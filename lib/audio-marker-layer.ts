@@ -7,9 +7,42 @@ export const AUDIO_MARKER_SOURCE_ID = "pct-audio-markers"
 export const AUDIO_MARKER_LAYER_ID = "pct-audio-markers-pin"
 const AUDIO_MARKER_IMAGE_ID = "pct-audio-pin"
 
-export function markerIconSize(activeMarkerId: string | null) {
-  if (!activeMarkerId) return 0.9
-  return ["case", ["==", ["get", "id"], activeMarkerId], 1.2, 0.9]
+export const MARKER_ICON_REST_SIZE = 0.9
+export const MARKER_ICON_ACTIVE_SIZE = 1.7
+export const MARKER_ICON_SIZE_MS = 880
+
+export function easeMarkerSize(t: number) {
+  const x = Math.min(1, Math.max(0, t))
+  return 1 - (1 - x) ** 3
+}
+
+export function markerIconSize(
+  activeMarkerId: string | null,
+  activeSize = MARKER_ICON_ACTIVE_SIZE,
+  restSize = MARKER_ICON_REST_SIZE,
+) {
+  if (!activeMarkerId) return restSize
+  return ["case", ["==", ["get", "id"], activeMarkerId], activeSize, restSize]
+}
+
+/** Incoming pin grows while the outgoing pin shrinks. */
+export function markerIconSizeSwap(
+  growingId: string | null,
+  growingSize: number,
+  shrinkingId: string | null,
+  shrinkingSize: number,
+) {
+  if (!growingId && !shrinkingId) return MARKER_ICON_REST_SIZE
+  if (!shrinkingId || shrinkingId === growingId) return markerIconSize(growingId, growingSize)
+  if (!growingId) return markerIconSize(shrinkingId, shrinkingSize)
+  return [
+    "case",
+    ["==", ["get", "id"], growingId],
+    growingSize,
+    ["==", ["get", "id"], shrinkingId],
+    shrinkingSize,
+    MARKER_ICON_REST_SIZE,
+  ]
 }
 
 /** Classic Mapbox-style teardrop pin as an ImageData for symbol layers. */
@@ -128,6 +161,8 @@ export function installAudioMarkerLayer(map: any): void {
       },
       paint: {
         "icon-opacity": 1,
+        // Draw through ridges so canyon-floor pins stay findable.
+        "icon-occlusion-opacity": 1,
         // Self-lit, so scene lighting can't dim the pins as the camera moves.
         "icon-emissive-strength": 1,
       },
