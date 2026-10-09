@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   cssFontFamily,
   drawFieldNotesCard,
@@ -33,7 +33,7 @@ const FLOAT_POSE: Pose = {
   rx: -0.12,
   ry: 0.07,
   rz: -0.02,
-  y: 0.18,
+  y: 0.36,
   z: 0,
 }
 
@@ -66,8 +66,24 @@ function applyPose(node: { rotation: { x: number; y: number; z: number }; positi
   node.position.z = pose.z
 }
 
-export function FieldNotesCard({ definitions }: { definitions: readonly string[] }) {
+const EMERGE_PX = 56
+
+function placeCopy(el: HTMLElement | null, progress: number) {
+  if (!el) return
+  const t = Math.min(1, Math.max(0, progress))
+  el.style.opacity = String(t)
+  el.style.transform = t >= 1 ? "none" : `translateY(${(1 - t) * -EMERGE_PX}px)`
+}
+
+export function FieldNotesCard({
+  definitions,
+  children,
+}: {
+  definitions: readonly string[]
+  children?: ReactNode
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const copyRef = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -75,6 +91,7 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
     if (!canvas) return
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduced) placeCopy(copyRef.current, 1)
     let disposed = false
     let engine: import("@babylonjs/core").Engine | undefined
 
@@ -244,8 +261,10 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
           shadow.scaling.x = lerp(1.02, 0.78, e)
           shadow.scaling.z = lerp(1.08, 0.72, e)
           shadowMat.alpha = lerp(0.22, 0.07, e)
+          placeCopy(copyRef.current, e)
           if (u >= 1) {
             settled = true
+            placeCopy(copyRef.current, 1)
             camera.lowerRadiusLimit = FLOAT_CAM.radius
             camera.upperRadiusLimit = FLOAT_CAM.radius
           }
@@ -286,6 +305,7 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
 
   if (failed) {
     return (
+      <>
       <article className="pct-field-card relative mx-auto w-full max-w-xl bg-[#efe4cc] pl-12 pr-8 pb-8 pt-6 text-left shadow-[0_18px_42px_rgba(0,0,0,0.42)]">
         <p className="mb-4 font-mono text-micro uppercase tracking-[0.18em] text-[#8a6f4e]">
           Field notes
@@ -310,11 +330,14 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
           ))}
         </ol>
       </article>
+      {children}
+    </>
     )
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-2xl">
+    <div>
+    <div className="relative z-10 left-1/2 w-[min(54.6rem,calc(100vw-3rem))] -translate-x-1/2">
       <div className="sr-only">
         <p>
           Offbeat (noun) {FIELD_NOTES_PRONUNCIATION}
@@ -327,9 +350,18 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
       </div>
       <canvas
         ref={canvasRef}
-        className="pointer-events-none mx-auto block h-[min(58vw,420px)] w-full"
+        className="pointer-events-none mx-auto block h-[min(75.4vw,546px)] w-full"
         aria-hidden
       />
+    </div>
+    {children ? (
+      <div
+        ref={copyRef}
+        className="pct-card-copy relative z-0 -mt-[calc(min(75.4vw,546px)*0.16-0.5rem)] -translate-y-14 opacity-0"
+      >
+        {children}
+      </div>
+    ) : null}
     </div>
   )
 }
