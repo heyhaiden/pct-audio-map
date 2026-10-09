@@ -5,6 +5,7 @@ import {
   CHAPTER_GATE_LANDING_MILES,
   chapterIndexForMiles,
   clampMilesAtChapterGate,
+  nextChapterGateMiles,
   scrollTopForMiles,
 } from "../lib/chapter-scroll-gate.ts"
 
@@ -23,6 +24,11 @@ test("a northbound jump stops just inside the next chapter", () => {
   const result = clampMilesAtChapterGate(700, 740)
   assert.equal(result.hitGate, true)
   assert.equal(result.miles, 703 + CHAPTER_GATE_LANDING_MILES)
+})
+
+test("nextChapterGateMiles is null when the hop stays inside the chapter", () => {
+  assert.equal(nextChapterGateMiles(710, 800), null)
+  assert.equal(nextChapterGateMiles(700, 740), 703 + CHAPTER_GATE_LANDING_MILES)
 })
 
 test("motion inside a chapter is not gated", () => {

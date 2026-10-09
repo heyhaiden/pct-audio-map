@@ -1,10 +1,12 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useState } from "react"
+import { useEffect, useLayoutEffect, useState, type MouseEvent } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, Mountain } from "lucide-react"
 import { MobileNavigationMenu } from "@/components/navigation/mobile-navigation-menu"
-import { cameFromActiveMap, goHomeToSplash, setResumeIntent } from "@/lib/map-session"
+import { handleHomeNavClick } from "@/lib/home-exit"
+import { cameFromActiveMap, setResumeIntent } from "@/lib/map-session"
 
 export type SiteNavPage = "map" | "home" | "library" | "about" | "resources"
 
@@ -42,6 +44,10 @@ interface SiteHeaderProps {
  * marked, not removed.
  */
 export function SiteHeader({ current, pinned = false }: SiteHeaderProps) {
+  const router = useRouter()
+  const goHome = (event: MouseEvent<HTMLAnchorElement>) => {
+    handleHomeNavClick(event, () => router.push("/"))
+  }
   const [showBackToMap, setShowBackToMap] = useState(false)
   const showHomeLink = current !== "home"
   // Decided once per mount, before first paint, so the class is never applied
@@ -85,7 +91,7 @@ export function SiteHeader({ current, pinned = false }: SiteHeaderProps) {
           ) : (
             <Link
               href="/"
-              onClick={() => goHomeToSplash()}
+              onClick={goHome}
               aria-label="Back to home"
               className="inline-flex text-[#9b8e7a] transition-colors hover:text-[#ed5a43]"
             >
@@ -113,7 +119,7 @@ export function SiteHeader({ current, pinned = false }: SiteHeaderProps) {
                 key={link.id}
                 href={link.href}
                 prefetch={current !== "home"}
-                onClick={isHome ? () => goHomeToSplash() : undefined}
+                onClick={isHome ? goHome : undefined}
                 className={`${navItemClass} text-[#8b8271] hover:text-[#ede8dc] ${
                   isHome && animateHomeLink ? "pct-nav-in" : ""
                 }`}

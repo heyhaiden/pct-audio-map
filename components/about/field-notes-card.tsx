@@ -5,6 +5,7 @@ import {
   cssFontFamily,
   drawFieldNotesCard,
   FIELD_NOTES_PRONUNCIATION,
+  MOBILE_FIELD_NOTES_TYPE_SCALE,
 } from "@/lib/draw-field-notes-card"
 
 const TEXTURE_W = 2048
@@ -39,6 +40,8 @@ const FLOAT_POSE: Pose = {
 
 const TABLE_CAM = { beta: Math.PI / 2 - 0.04, radius: 3.7 }
 const FLOAT_CAM = { beta: Math.PI / 2 - 0.05, radius: 3.55 }
+/** Phone: start smaller so the table pose doesn't fill the viewport, then grow. */
+const TABLE_SCALE_MOBILE = 0.74
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t
@@ -168,7 +171,11 @@ export function FieldNotesCard({
         engine.dispose()
         return
       }
-      drawFieldNotesCard(ctx, TEXTURE_W, TEXTURE_H, definitions, fonts)
+      drawFieldNotesCard(ctx, TEXTURE_W, TEXTURE_H, definitions, fonts, {
+        typeScale: window.matchMedia("(max-width: 767px)").matches
+          ? MOBILE_FIELD_NOTES_TYPE_SCALE
+          : 1,
+      })
 
       const texture = new DynamicTexture("notes", paperCanvas, {
         scene,
@@ -221,7 +228,10 @@ export function FieldNotesCard({
       shadow.material = shadowMat
       shadow.position.y = -0.72
 
+      const mobile = window.matchMedia("(max-width: 767px)").matches
+      const startScale = !reduced && mobile ? TABLE_SCALE_MOBILE : 1
       applyPose(root, reduced ? FLOAT_POSE : TABLE_POSE)
+      root.scaling.setAll(startScale)
       if (reduced) shadowMat.alpha = 0.08
 
       let elapsed = 0
@@ -256,6 +266,7 @@ export function FieldNotesCard({
           const u = Math.min(1, Math.max(0, (elapsed - delay) / duration))
           const e = easeInOutCubic(u)
           applyPose(root, mix(TABLE_POSE, FLOAT_POSE, e))
+          root.scaling.setAll(lerp(startScale, 1, e))
           camera.beta = lerp(TABLE_CAM.beta, FLOAT_CAM.beta, e)
           camera.radius = lerp(TABLE_CAM.radius, FLOAT_CAM.radius, e)
           shadow.scaling.x = lerp(1.02, 0.78, e)
@@ -310,7 +321,7 @@ export function FieldNotesCard({
         <p className="mb-4 font-mono text-micro uppercase tracking-[0.18em] text-[#8a6f4e]">
           Field notes
         </p>
-        <p className="pct-display text-[22px] font-normal leading-snug text-[#2a241c] md:text-[26px]">
+        <p className="pct-display text-[24px] font-normal leading-snug text-[#2a241c] md:text-[26px]">
           Offbeat <span className="text-[#7a6a56]">(noun)</span>{" "}
           <span className="font-mono text-copy font-normal tracking-normal text-[#ed5a43]">
             {FIELD_NOTES_PRONUNCIATION}
@@ -320,7 +331,7 @@ export function FieldNotesCard({
           {definitions.map((definition, index) => (
             <li
               key={definition}
-              className="flex items-start gap-3 pct-display text-prose font-light leading-[1.65] text-[#4a4238]"
+              className="flex items-start gap-3 pct-display text-lede font-light leading-[1.65] text-[#4a4238] md:text-prose"
             >
               <span className="mt-0.5 w-4 shrink-0 font-mono text-micro text-[#9a7b5a]">
                 {index + 1}
@@ -337,7 +348,7 @@ export function FieldNotesCard({
 
   return (
     <div>
-    <div className="relative z-10 left-1/2 w-[min(54.6rem,calc(100vw-3rem))] -translate-x-1/2">
+    <div className="relative z-10 left-1/2 w-screen -translate-x-1/2 md:w-[min(54.6rem,calc(100vw-3rem))]">
       <div className="sr-only">
         <p>
           Offbeat (noun) {FIELD_NOTES_PRONUNCIATION}
@@ -357,7 +368,7 @@ export function FieldNotesCard({
     {children ? (
       <div
         ref={copyRef}
-        className="pct-card-copy relative z-0 -mt-[calc(min(75.4vw,546px)*0.16-0.5rem)] -translate-y-14 opacity-0"
+        className="pct-card-copy relative z-0 -mt-[calc(min(75.4vw,546px)*0.14-0.5rem)] -translate-y-11 opacity-0"
       >
         {children}
       </div>

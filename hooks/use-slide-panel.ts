@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 
 export const slidePanelClass =
   "h-0 overflow-hidden transition-[height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
@@ -11,9 +11,15 @@ export function slideContentClass(open: boolean) {
   }`
 }
 
-export function useSlidePanel() {
-  const [open, setOpen] = useState(false)
+export function useSlidePanel(defaultOpen = false) {
+  const [open, setOpen] = useState(defaultOpen)
   const panelRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (!defaultOpen || !panelRef.current) return
+    panelRef.current.style.height = "auto"
+  }, [defaultOpen])
+
   const onEndRef = useRef<((event: TransitionEvent) => void) | null>(null)
 
   const clearEnd = () => {

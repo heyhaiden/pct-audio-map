@@ -4,10 +4,11 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent } 
 import { createPortal } from "react-dom"
 import Link from "next/link"
 import { BookOpen, Info, Menu, Mountain, Music, X, type LucideIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { OverlayActionLabel, OverlayShell } from "@/components/overlay/overlay-shell"
+import { handleHomeNavClick } from "@/lib/home-exit"
 import {
   exitDocumentFullscreen,
-  goHomeToSplash,
   markNavigatedFromMap,
 } from "@/lib/map-session"
 import {
@@ -38,6 +39,7 @@ export function MobileNavigationMenu({
   current,
   triggerClassName = defaultControlClass,
 }: MobileNavigationMenuProps) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [hasMounted, setHasMounted] = useState(false)
   const [triggerBox, setTriggerBox] = useState<{
@@ -139,7 +141,7 @@ export function MobileNavigationMenu({
     exitDocumentFullscreen()
 
     if (page === "home") {
-      goHomeToSplash()
+      handleHomeNavClick(event, () => router.push("/"))
       if (source === "map") {
         event.preventDefault()
         window.location.reload()

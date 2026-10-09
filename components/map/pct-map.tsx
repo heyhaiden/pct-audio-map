@@ -34,7 +34,7 @@ interface PCTMapProps {
     pauseScrollAnimation: () => void
     resumeScrollAnimation: () => void
     syncScrollToPosition: (coordinates: [number, number]) => void
-    setPendingSyncCoordinates: (coordinates: [number, number]) => void
+    setPendingSyncCoordinates: (coordinates: [number, number] | null) => void
     setBlocked: (blocked: boolean) => void
     getCameraPath: () => import("@/lib/railing-camera").CameraPathPoint[] | null
     getRailingPoseAtCoordinates: (

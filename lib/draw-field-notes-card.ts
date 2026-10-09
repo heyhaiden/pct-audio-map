@@ -1,5 +1,8 @@
 export const FIELD_NOTES_PRONUNCIATION = "/ˈôfˌbēt/"
 
+/** Phone shows the card at ~half the design width, so type has to run larger. */
+export const MOBILE_FIELD_NOTES_TYPE_SCALE = 1.6
+
 const PAPER = "#efe4cc"
 const INK = "#2a241c"
 const MUTED = "#7a6a56"
@@ -52,14 +55,18 @@ export function drawFieldNotesCard(
   height: number,
   definitions: readonly string[],
   fonts: { serif: string; mono: string },
+  options: { typeScale?: number } = {},
 ) {
+  const typeScale = options.typeScale ?? 1
   const s = width / 576
+  const t = s * typeScale
   const padL = 48 * s
   const padR = 32 * s
-  const padT = 24 * s
+  const padT = (typeScale > 1 ? 16 : 24) * s
   const ruleEvery = 28 * s
   const marginX = 37.6 * s
   const contentW = width - padL - padR
+  const lineHeight = 15 * t * (typeScale > 1 ? 1.5 : 1.65)
 
   ctx.fillStyle = PAPER
   ctx.fillRect(0, 0, width, height)
@@ -90,11 +97,11 @@ export function drawFieldNotesCard(
   let y = padT
 
   ctx.fillStyle = KICKER
-  ctx.font = `400 ${10 * s}px ${fonts.mono}`
-  drawTracked(ctx, "FIELD NOTES", padL, y - 6 * s, 0.18 * 10 * s)
-  y += 28 * s
+  ctx.font = `400 ${10 * t}px ${fonts.mono}`
+  drawTracked(ctx, "FIELD NOTES", padL, y - 6 * s, 0.18 * 10 * t)
+  y += Math.max(28 * s, 16 * t)
 
-  ctx.font = `400 ${26 * s}px ${fonts.serif}`
+  ctx.font = `400 ${26 * t}px ${fonts.serif}`
   ctx.fillStyle = INK
   const head = "Offbeat "
   ctx.fillText(head, padL, y)
@@ -105,23 +112,21 @@ export function drawFieldNotesCard(
   ctx.fillText(noun, x, y)
   x += ctx.measureText(noun).width
 
-  ctx.font = `400 ${14 * s}px ${fonts.mono}`
+  ctx.font = `400 ${14 * t}px ${fonts.mono}`
   ctx.fillStyle = ACCENT
-  ctx.fillText(FIELD_NOTES_PRONUNCIATION, x, y + 6 * s)
-  y += 44 * s
+  ctx.fillText(FIELD_NOTES_PRONUNCIATION, x, y + 6 * t)
+  y += Math.max(44 * s, 26 * t + 12 * s)
 
-  ctx.font = `300 ${15 * s}px ${fonts.serif}`
-  const numberW = 16 * s
+  const numberW = 16 * t
   const gap = 12 * s
   const defW = contentW - numberW - gap
-  const lineHeight = 15 * s * 1.65
 
   definitions.forEach((definition, index) => {
-    ctx.font = `400 ${10 * s}px ${fonts.mono}`
+    ctx.font = `400 ${10 * t}px ${fonts.mono}`
     ctx.fillStyle = NUMBER
     ctx.fillText(String(index + 1), padL, y + 2 * s)
 
-    ctx.font = `300 ${15 * s}px ${fonts.serif}`
+    ctx.font = `300 ${15 * t}px ${fonts.serif}`
     ctx.fillStyle = BODY
     const lines = wrapText(ctx, definition, defW)
     for (const line of lines) {

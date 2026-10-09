@@ -10,7 +10,7 @@ import {
   normalizeManifest,
 } from "../lib/audio-loop-manifest.ts"
 
-const GAIN_BAKED = ["1-4", "2-2", "3-1", "3-8", "3-9", "4-4"] as const
+const GAIN_BAKED = ["1-4", "2-2", "3-1", "3-9", "4-4"] as const
 
 test("normalizeManifest reads sample counts and ignores gainDb", () => {
   const manifest = normalizeManifest({
@@ -56,7 +56,8 @@ test("the real Anna manifest covers every marker clip id", () => {
     return []
   })
   assert.deepEqual(missing, [])
-  assert.equal(Object.keys(manifest).length, 73)
+  assert.equal(Object.keys(manifest).length, 74)
+  assert.ok(manifest["1-33"])
 
   for (const id of GAIN_BAKED) {
     assert.equal(raw.clips[id]?.gainDb, -1)

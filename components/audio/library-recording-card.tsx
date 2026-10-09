@@ -1,10 +1,17 @@
 "use client"
 
+import { useId } from "react"
 import { Pause, Play } from "lucide-react"
 import { AudioMarkerCardBody } from "@/components/audio/audio-marker-card"
+import { NativeLandPills } from "@/components/audio/native-land-pills"
+import { RecordingNote, hasRecordingNote } from "@/components/audio/recording-note"
 import { ScrubBar } from "@/components/audio/scrub-bar"
+import { slideContentClass, slidePanelClass, useSlidePanel } from "@/hooks/use-slide-panel"
 import { formatTimecode } from "@/lib/format-timecode"
+import { collapsedLibraryNote, libraryNoteNeedsExpand } from "@/lib/preview-description"
 import type { AudioMarker } from "@/types/map"
+
+const noteCopyClass = "pct-display text-copy font-light leading-[1.6] text-[#ada396]"
 
 interface LibraryRecordingCardProps {
   marker: AudioMarker
@@ -32,11 +39,54 @@ export function LibraryRecordingCard({
   const currentSeconds =
     knownDuration > 0 ? (Math.max(0, Math.min(100, progress)) / 100) * knownDuration : 0
   const ready = Boolean(marker.audioUrl)
+  const hasDetails = hasRecordingNote(marker)
+  const needsExpand = libraryNoteNeedsExpand(marker)
+  const hasLands = Boolean(marker.lands?.length)
+  const { open, toggle, panelRef } = useSlidePanel()
+  const detailsId = useId()
+  const collapsedNote = marker.description
+    ? collapsedLibraryNote(marker.description, { revealMore: hasLands })
+    : ""
 
   return (
     <article className="pct-glass-panel p-4 md:p-5">
       <div className="text-left">
-        <AudioMarkerCardBody marker={marker} showMetaRule={false} />
+        <AudioMarkerCardBody marker={marker} showMetaRule={false} showDescription={false} />
+
+        {hasDetails ? (
+          <div className="md:hidden">
+            {marker.description ? (
+              needsExpand ? (
+                <button
+                  type="button"
+                  className={`mt-3 w-full text-left ${noteCopyClass} focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]`}
+                  aria-expanded={open}
+                  aria-controls={detailsId}
+                  onClick={toggle}
+                >
+                  {open ? marker.description : collapsedNote}
+                </button>
+              ) : (
+                <p className={`mt-3 ${noteCopyClass}`}>{marker.description}</p>
+              )
+            ) : null}
+            {needsExpand ? (
+              <div
+                ref={panelRef}
+                id={detailsId}
+                aria-hidden={!open}
+                inert={!open}
+                className={slidePanelClass}
+              >
+                {hasLands ? (
+                  <NativeLandPills lands={marker.lands} className={`pt-3 ${slideContentClass(open)}`} />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {hasDetails ? <RecordingNote marker={marker} className="mt-3 hidden md:block" /> : null}
+
         {ready ? (
           <div className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0 md:gap-x-4">
             <button
