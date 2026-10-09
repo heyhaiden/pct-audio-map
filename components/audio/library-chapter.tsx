@@ -1,11 +1,28 @@
 "use client"
 
-import { ChevronDown, Mountain } from "lucide-react"
+import {
+  ChevronDown,
+  CloudRain,
+  Droplets,
+  MountainSnow,
+  Sun,
+  TreePine,
+  type LucideIcon,
+} from "lucide-react"
 import { LibraryRecordingCard } from "@/components/audio/library-recording-card"
 import { slideContentClass, slidePanelClass, useSlidePanel } from "@/hooks/use-slide-panel"
 import type { AudioMarker } from "@/types/map"
 
+const chapterIcons: Record<string, LucideIcon> = {
+  "southern-california": Sun,
+  "sierra-nevada": MountainSnow,
+  "northern-california": TreePine,
+  "oregon-cascades": Droplets,
+  "washington-cascades": CloudRain,
+}
+
 export function LibraryChapter({
+  chapterId,
   title,
   markers,
   playingId,
@@ -14,6 +31,7 @@ export function LibraryChapter({
   onPlayPause,
   onSeek,
 }: {
+  chapterId: string
   title: string
   markers: AudioMarker[]
   playingId: string | null
@@ -23,6 +41,7 @@ export function LibraryChapter({
   onSeek: (markerId: string, percent: number) => void
 }) {
   const { open, toggle, panelRef } = useSlidePanel()
+  const ChapterIcon = chapterIcons[chapterId] ?? MountainSnow
 
   return (
     <section>
@@ -33,7 +52,7 @@ export function LibraryChapter({
           aria-expanded={open}
           className="flex w-full items-center gap-3 rounded-md px-5 py-3 text-left transition-colors hover:bg-white/[0.035] md:px-3 md:py-3.5"
         >
-          <Mountain className="h-5 w-5 flex-shrink-0 text-[#ed5a43]" />
+          <ChapterIcon aria-hidden className="h-5 w-5 flex-shrink-0 text-[#ed5a43]" />
           <h2 className="pct-display min-w-0 flex-1 text-lg font-medium text-[#ede8dc] md:text-xl">
             {title}
             <span className="ml-2 hidden text-sm font-normal text-stone-500 md:inline">({markers.length} recordings)</span>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useId } from "react"
+import { useId, type ReactNode } from "react"
 import { ChevronDown, Github, Linkedin } from "lucide-react"
 import { slideContentClass, slidePanelClass, useSlidePanel } from "@/hooks/use-slide-panel"
 
@@ -12,12 +12,18 @@ export function TeamMember({
   role,
   description,
   photoAlt,
+  photoSrc,
+  photoWidth,
+  photoHeight,
   links,
 }: {
   name: string
   role: string
-  description: string
+  description: ReactNode
   photoAlt: string
+  photoSrc: string
+  photoWidth: number
+  photoHeight: number
   links: Array<{ href: string; label: string; icon: "linkedin" | "github" }>
 }) {
   const { open, toggle, panelRef } = useSlidePanel()
@@ -41,14 +47,23 @@ export function TeamMember({
   )
 
   const bioClass = "pct-display text-copy font-light leading-[1.7] text-[#ada396]"
+  const portraitFrame = "w-full max-w-[17.5rem] shrink-0 rounded-sm md:w-[15rem]"
 
   return (
     <article className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
-      <div
-        className="aspect-[4/5] w-full max-w-[280px] shrink-0 rounded-sm bg-[#2a261f] md:w-[240px]"
-        role="img"
-        aria-label={photoAlt}
-      />
+      <div className={`${portraitFrame} relative aspect-[3/4] overflow-hidden`}>
+        <img
+          src={photoSrc}
+          alt={photoAlt}
+          width={photoWidth}
+          height={photoHeight}
+          className={
+            photoWidth > photoHeight
+              ? "absolute inset-0 h-full w-full object-cover object-[16%_center]"
+              : "absolute inset-0 h-full w-full origin-bottom-left scale-110 object-cover"
+          }
+        />
+      </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="relative">
           <div className="flex items-start justify-between gap-3">
