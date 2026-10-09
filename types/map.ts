@@ -37,11 +37,3 @@ export interface AudioMarker {
    */
   lands?: { name: string; slug: string }[]
 }
-
-export interface CameraPosition {
-  center: [number, number]
-  zoom: number
-  pitch: number
-  bearing: number
-  duration: number
-}

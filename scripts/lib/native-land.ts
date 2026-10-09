@@ -11,7 +11,7 @@ export interface NativeLand {
   slug: string
 }
 
-export interface NativeLandCacheEntry {
+interface NativeLandCacheEntry {
   lng: number
   lat: number
   lands: NativeLand[]

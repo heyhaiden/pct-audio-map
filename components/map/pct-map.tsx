@@ -6,6 +6,10 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
+import {
+  resolveIntroCameraKind,
+  shouldRetargetWaitingOverview,
+} from "@/lib/chapter-tab-layout"
 import { computeRailingPose, configureRailingCameraForViewport } from "@/lib/railing-camera"
 import { applyFreeCameraPose } from "@/lib/node-camera"
 import {
@@ -30,7 +34,7 @@ interface PCTMapProps {
     pauseScrollAnimation: () => void
     resumeScrollAnimation: () => void
     syncScrollToPosition: (coordinates: [number, number]) => void
-    setPendingSyncCoordinates: (coordinates: [number, number]) => void
+    setPendingSyncCoordinates: (coordinates: [number, number] | null) => void
     setBlocked: (blocked: boolean) => void
     getCameraPath: () => import("@/lib/railing-camera").CameraPathPoint[] | null
     getRailingPoseAtCoordinates: (
@@ -75,6 +79,14 @@ export const OVERVIEW_CAMERA_MOBILE = {
   bearing: 0,
 }
 
+/** Same crane as desktop, pulled back so a short landscape frame still shows the trail. */
+export const OVERVIEW_CAMERA_LANDSCAPE = {
+  center: [-118.4102, 38.6467] as [number, number],
+  zoom: 4.5,
+  pitch: 60,
+  bearing: 31,
+}
+
 /** Mexico border / trailhead — journey always begins here. */
 export const TRAILHEAD_CAMERA = {
   center: [-116.467, 32.5897] as [number, number],
@@ -87,6 +99,14 @@ export const TRAILHEAD_CAMERA = {
 export const TRAILHEAD_CAMERA_MOBILE = {
   center: [-116.467, 32.5897] as [number, number],
   zoom: 8.4,
+  pitch: 0,
+  bearing: -5,
+}
+
+/** Landscape trailhead: wider than desktop so the landing matches the pulled-back crane. */
+export const TRAILHEAD_CAMERA_LANDSCAPE = {
+  center: [-116.467, 32.5897] as [number, number],
+  zoom: 8.65,
   pitch: 0,
   bearing: -5,
 }
@@ -120,13 +140,24 @@ function preferReducedGpu(): boolean {
   return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches
 }
 
-/** Top-down full-trail overview on mobile; angled bird's-eye on desktop. */
+function introCameraForViewport() {
+  if (typeof window === "undefined") return "desktop" as const
+  return resolveIntroCameraKind(window.innerWidth, window.innerHeight)
+}
+
+/** Portrait: top-down trail fit. Landscape: desktop crane at a wider zoom. */
 function getOverviewCamera() {
-  return preferReducedGpu() ? OVERVIEW_CAMERA_MOBILE : OVERVIEW_CAMERA
+  const intro = introCameraForViewport()
+  if (intro === "portrait") return OVERVIEW_CAMERA_MOBILE
+  if (intro === "landscape") return OVERVIEW_CAMERA_LANDSCAPE
+  return OVERVIEW_CAMERA
 }
 
 function getTrailheadCamera() {
-  return preferReducedGpu() ? TRAILHEAD_CAMERA_MOBILE : TRAILHEAD_CAMERA
+  const intro = introCameraForViewport()
+  if (intro === "portrait") return TRAILHEAD_CAMERA_MOBILE
+  if (intro === "landscape") return TRAILHEAD_CAMERA_LANDSCAPE
+  return TRAILHEAD_CAMERA
 }
 
 export function PCTMap({
@@ -224,6 +255,64 @@ export function PCTMap({
       window.removeEventListener("orientationchange", onViewportChange)
     }
   }, [])
+
+  // Map is already painted behind the splash. If the phone rotates, switch to
+  // that orientation's crane/top-down before Begin Journey, so CTA doesn't
+  // reveal the wrong opening shot.
+  useEffect(() => {
+    if (!mapLoaded) return
+    let lastKind = introCameraForViewport()
+    let timer = 0
+
+    const syncWaitingOverview = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        if (!isMapAlive(map.current)) return
+        map.current.resize()
+        const nextKind = introCameraForViewport()
+        if (
+          !shouldRetargetWaitingOverview(
+            introPhaseRef.current,
+            skipIntroRef.current,
+            lastKind,
+            nextKind,
+          )
+        ) {
+          lastKind = nextKind
+          return
+        }
+        lastKind = nextKind
+        prefetchRef.current?.cancel()
+        const overview = getOverviewCamera()
+        const camera = {
+          center: overview.center,
+          zoom: overview.zoom,
+          pitch: overview.pitch,
+          bearing: overview.bearing,
+        }
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          map.current.jumpTo(camera)
+        } else {
+          map.current.easeTo({
+            ...camera,
+            duration: 680,
+            easing: (t: number) => 1 - (1 - t) ** 3,
+          })
+        }
+      }, 200)
+    }
+
+    window.addEventListener("resize", syncWaitingOverview)
+    window.addEventListener("orientationchange", syncWaitingOverview)
+    const orientation = window.screen?.orientation
+    orientation?.addEventListener("change", syncWaitingOverview)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener("resize", syncWaitingOverview)
+      window.removeEventListener("orientationchange", syncWaitingOverview)
+      orientation?.removeEventListener("change", syncWaitingOverview)
+    }
+  }, [mapLoaded])
 
   // Kick token fetch as early as possible (parallel with scripts / geojson)
   useEffect(() => {

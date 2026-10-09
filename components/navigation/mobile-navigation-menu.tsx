@@ -4,10 +4,11 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent } 
 import { createPortal } from "react-dom"
 import Link from "next/link"
 import { BookOpen, Info, Menu, Mountain, Music, X, type LucideIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { OverlayActionLabel, OverlayShell } from "@/components/overlay/overlay-shell"
+import { handleHomeNavClick } from "@/lib/home-exit"
 import {
   exitDocumentFullscreen,
-  goHomeToSplash,
   markNavigatedFromMap,
 } from "@/lib/map-session"
 import {
@@ -24,7 +25,7 @@ interface MobileNavigationMenuProps {
 }
 
 const defaultControlClass =
-  "pct-glass-control grid h-11 w-11 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
+  "pct-glass-control relative grid h-11 w-11 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
 
 const NAV_ICONS: Record<MobileNavigationPage, LucideIcon> = {
   home: Mountain,
@@ -38,6 +39,7 @@ export function MobileNavigationMenu({
   current,
   triggerClassName = defaultControlClass,
 }: MobileNavigationMenuProps) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [hasMounted, setHasMounted] = useState(false)
   const [triggerBox, setTriggerBox] = useState<{
@@ -139,7 +141,7 @@ export function MobileNavigationMenu({
     exitDocumentFullscreen()
 
     if (page === "home") {
-      goHomeToSplash()
+      handleHomeNavClick(event, () => router.push("/"))
       if (source === "map") {
         event.preventDefault()
         window.location.reload()

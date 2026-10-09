@@ -17,8 +17,34 @@ export function fadeOutVolume(progress: number, startVolume: number): number {
   return startVolume * Math.cos((clamped * Math.PI) / 2)
 }
 
-export function isPlayAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError"
+/** Ease-out ramp between two volumes. Used for play and pause fades. */
+export function rampVolume(progress: number, from: number, to: number): number {
+  const clamped = Math.max(0, Math.min(1, progress))
+  const curved = Math.sin((clamped * Math.PI) / 2)
+  return from + (to - from) * curved
+}
+
+/** Volume through the last `fadeMs` of a recording. Null until that window. */
+export function endingFadeVolume(
+  currentTime: number,
+  duration: number,
+  fadeMs: number,
+): number | null {
+  if (!(duration > 0) || !(fadeMs > 0)) return null
+  const remainingMs = (duration - currentTime) * 1000
+  if (remainingMs > fadeMs) return null
+  const progress = 1 - Math.max(0, remainingMs) / fadeMs
+  return fadeOutVolume(progress, 1)
+}
+
+/** Prefer a finite element duration; iOS often reports Infinity until the file ends. */
+export function resolvePlaybackDuration(
+  elementDuration: number,
+  knownSeconds = 0,
+): number {
+  if (Number.isFinite(elementDuration) && elementDuration > 0) return elementDuration
+  if (Number.isFinite(knownSeconds) && knownSeconds > 0) return knownSeconds
+  return 0
 }
 
 /** Deck that should duck during a crossfade — whichever is audible right now. */

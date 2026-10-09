@@ -1,12 +1,23 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Mountain, ChevronDown } from "lucide-react"
 import { audioMarkers } from "@/data/audio-markers"
-import { LibraryRecordingCard } from "@/components/audio/library-recording-card"
+import { LibraryChapter } from "@/components/audio/library-chapter"
 import { SitePage } from "@/components/navigation/site-page"
+import {
+  endingFadeVolume,
+  rampVolume,
+  resolvePlaybackDuration,
+} from "@/lib/audio-crossfade"
 import { buildAudioLibraryFolders } from "@/lib/audio-library-folders"
-import { resolveAudioUrl } from "@/lib/resolve-audio-url"
+import {
+  createLibraryAudioOutput,
+  type LibraryAudioOutput,
+} from "@/lib/library-audio-output"
+import { resolveLibraryAudioUrl } from "@/lib/resolve-audio-url"
+
+const PLAYBACK_FADE_MS = 360
+const END_FADE_MS = 2000
 
 const libraryFolders = buildAudioLibraryFolders()
 
@@ -18,87 +29,192 @@ export default function LibraryPage() {
   const progressRef = useRef(progress)
   progressRef.current = progress
   const [durations, setDurations] = useState<Record<string, number>>({})
-  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({})
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const outputRef = useRef<LibraryAudioOutput | null>(null)
+  const fadingOutId = useRef<string | null>(null)
+  const rampCancels = useRef(new Map<HTMLAudioElement, () => void>())
+  const endFadeFrame = useRef(0)
+  const playbackClockRef = useRef<(() => void) | null>(null)
 
-  const toggleChapter = (chapterKey: string) => {
-    setExpandedChapters((prev) => ({
-      ...prev,
-      [chapterKey]: !prev[chapterKey],
-    }))
+  const cancelEndFade = () => {
+    if (!endFadeFrame.current) return
+    cancelAnimationFrame(endFadeFrame.current)
+    endFadeFrame.current = 0
+  }
+
+  const ramp = (output: LibraryAudioOutput, to: number, onDone?: () => void) => {
+    const audio = output.element
+    rampCancels.current.get(audio)?.()
+    const from = output.getVolume()
+    const started = performance.now()
+    let frame = 0
+    let cancelled = false
+    const step = (now: number) => {
+      if (cancelled) return
+      const progress = Math.min(1, (now - started) / PLAYBACK_FADE_MS)
+      output.setVolume(rampVolume(progress, from, to))
+      if (progress < 1) {
+        frame = requestAnimationFrame(step)
+        return
+      }
+      rampCancels.current.delete(audio)
+      onDone?.()
+    }
+    frame = requestAnimationFrame(step)
+    const cancel = () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+      rampCancels.current.delete(audio)
+    }
+    rampCancels.current.set(audio, cancel)
   }
 
   useEffect(() => {
+    const cancels = rampCancels.current
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
+      if (endFadeFrame.current) cancelAnimationFrame(endFadeFrame.current)
+      for (const cancel of cancels.values()) cancel()
+      outputRef.current?.dispose()
+      outputRef.current = null
+      audioRef.current = null
     }
   }, [])
 
-  const handlePlayPause = (markerId: string, audioUrl: string) => {
-    if (playingId === markerId) {
-      // Pause current
-      audioRef.current?.pause()
-      setPlayingId(null)
-    } else {
-      // Stop previous
-      if (audioRef.current) {
-        audioRef.current.pause()
+  const attachLibraryAudio = (
+    markerId: string,
+    audioUrl: string,
+    format: "opus" | "mp3",
+  ) => {
+    const knownDuration =
+      audioMarkers.find((marker) => marker.id === markerId)?.durationSeconds ?? 0
+    const output = createLibraryAudioOutput(resolveLibraryAudioUrl(audioUrl, format))
+    const audio = output.element
+    output.arm()
+    outputRef.current = output
+    audioRef.current = audio
+
+    const playbackDuration = () => resolvePlaybackDuration(audio.duration, knownDuration)
+
+    audio.addEventListener("loadedmetadata", () => {
+      const duration = playbackDuration()
+      if (duration > 0) {
+        setDurations((prev) => ({ ...prev, [markerId]: duration }))
+      }
+      const resumeAt = progressRef.current[markerId] ?? 0
+      if (resumeAt > 0 && resumeAt < 100 && duration > 0) {
+        audio.currentTime = (resumeAt / 100) * duration
+      }
+    })
+
+    const syncPlayback = () => {
+      endFadeFrame.current = 0
+      if (audioRef.current !== audio || audio.paused) return
+
+      const duration = playbackDuration()
+      if (duration > 0) {
+        setProgress((prev) => ({
+          ...prev,
+          [markerId]: (audio.currentTime / duration) * 100,
+        }))
+
+        if (fadingOutId.current !== markerId && !rampCancels.current.has(audio)) {
+          const tail = endingFadeVolume(audio.currentTime, duration, END_FADE_MS)
+          if (tail !== null) output.setVolume(tail)
+        }
       }
 
-      // Play new
-      const audio = new Audio(resolveAudioUrl(audioUrl))
-      audioRef.current = audio
-
-      // Resume from the remembered position once we know the duration.
-      audio.addEventListener("loadedmetadata", () => {
-        if (Number.isFinite(audio.duration) && audio.duration > 0) {
-          setDurations((prev) => ({ ...prev, [markerId]: audio.duration }))
-        }
-        const resumeAt = progressRef.current[markerId] ?? 0
-        if (resumeAt > 0 && resumeAt < 100 && audio.duration) {
-          audio.currentTime = (resumeAt / 100) * audio.duration
-        }
-      })
-
-      audio.addEventListener("timeupdate", () => {
-        if (audio.duration) {
-          setProgress((prev) => ({
-            ...prev,
-            [markerId]: (audio.currentTime / audio.duration) * 100,
-          }))
-        }
-      })
-
-      audio.addEventListener("ended", () => {
-        setPlayingId(null)
-        setProgress((prev) => ({ ...prev, [markerId]: 0 }))
-      })
-
-      audio.play().catch(() => {
-        // Audio file not found, silently fail
-        setPlayingId(null)
-      })
-      setPlayingId(markerId)
+      endFadeFrame.current = requestAnimationFrame(syncPlayback)
     }
+    playbackClockRef.current = syncPlayback
+
+    audio.addEventListener("ended", () => {
+      cancelEndFade()
+      setPlayingId(null)
+      setProgress((prev) => ({ ...prev, [markerId]: 0 }))
+    })
+
+    const fallbackOrFail = () => {
+      if (audioRef.current !== audio) return
+      if (format === "opus") {
+        output.dispose()
+        attachLibraryAudio(markerId, audioUrl, "mp3")
+        return
+      }
+      setPlayingId(null)
+    }
+
+    audio.addEventListener("error", fallbackOrFail, { once: true })
+
+    audio
+      .play()
+      .then(() => {
+        if (audioRef.current !== audio || fadingOutId.current === markerId) return
+        ramp(output, 1)
+        if (!endFadeFrame.current) endFadeFrame.current = requestAnimationFrame(syncPlayback)
+      })
+      .catch(fallbackOrFail)
+  }
+
+  const handlePlayPause = (markerId: string, audioUrl: string) => {
+    if (!audioUrl) return
+    const current = audioRef.current
+    const currentOutput = outputRef.current
+
+    if (playingId === markerId && current && currentOutput) {
+      if (fadingOutId.current === markerId) {
+        fadingOutId.current = null
+        void current.play().then(() => {
+          if (!endFadeFrame.current) playbackClockRef.current?.()
+        })
+        ramp(currentOutput, 1)
+        return
+      }
+
+      fadingOutId.current = markerId
+      cancelEndFade()
+      ramp(currentOutput, 0, () => {
+        current.pause()
+        if (audioRef.current === current && fadingOutId.current === markerId) {
+          fadingOutId.current = null
+          setPlayingId(null)
+        }
+      })
+      return
+    }
+
+    cancelEndFade()
+    fadingOutId.current = null
+    if (current && currentOutput) {
+      const outgoing = current
+      const outgoingOutput = currentOutput
+      ramp(outgoingOutput, 0, () => {
+        outgoing.pause()
+        if (outputRef.current !== outgoingOutput) outgoingOutput.dispose()
+      })
+    }
+
+    attachLibraryAudio(markerId, audioUrl, "opus")
+    setPlayingId(markerId)
   }
 
   const handleSeek = (markerId: string, percent: number) => {
     setProgress((prev) => ({ ...prev, [markerId]: percent }))
 
-    // Seek live only if this is the recording currently playing.
     const audio = audioRef.current
-    if (playingId === markerId && audio?.duration) {
-      audio.currentTime = (percent / 100) * audio.duration
+    const knownDuration =
+      durations[markerId] ||
+      audioMarkers.find((marker) => marker.id === markerId)?.durationSeconds ||
+      0
+    const duration = audio ? resolvePlaybackDuration(audio.duration, knownDuration) : 0
+    if (playingId === markerId && audio && duration > 0) {
+      audio.currentTime = (percent / 100) * duration
     }
   }
 
   return (
     <SitePage current="library">
-        <main className="pct-stagger mx-auto max-w-4xl px-6 py-12 md:py-20">
-          <section className="mb-12 text-center md:mb-16">
+        <main className="pct-stagger mx-auto max-w-4xl py-12 md:px-6 md:py-20">
+          <section className="mb-12 px-6 text-center md:mb-16 md:px-0">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
               Audio <span className="pct-wordmark font-wordmark uppercase text-[#ed5a43]">Library</span>
             </h1>
@@ -108,60 +224,27 @@ export default function LibraryPage() {
           </section>
 
           {/* Audio listings by chapter */}
-          <div className="space-y-4">
-            {libraryFolders.map(({ id, title, markers }) => {
-              const isExpanded = !!expandedChapters[id]
-
-              return (
-                <section
-                  key={id}
-                  className="pct-glass-panel overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleChapter(id)}
-                    aria-expanded={isExpanded}
-                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-white/[0.035]"
-                  >
-                    <Mountain className="h-5 w-5 flex-shrink-0 text-[#ed5a43]" />
-                    <h2 className="pct-display min-w-0 flex-1 text-xl font-medium text-[#ede8dc]">
-                      {title}
-                      <span className="ml-2 text-sm font-normal text-stone-500">
-                        ({markers.length} recordings)
-                      </span>
-                    </h2>
-                    <ChevronDown
-                      className={`h-5 w-5 flex-shrink-0 text-[#8b8271] transition-transform duration-200 ${
-                        isExpanded ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {isExpanded ? (
-                    <div className="space-y-3 px-4 pb-4">
-                      {markers.map((marker) => (
-                        <LibraryRecordingCard
-                          key={marker.id}
-                          marker={marker}
-                          isPlaying={playingId === marker.id}
-                          progress={progress[marker.id] || 0}
-                          durationSeconds={durations[marker.id] || 0}
-                          onPlayPause={() => handlePlayPause(marker.id, marker.audioUrl)}
-                          onSeek={(percent) => handleSeek(marker.id, percent)}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                </section>
-              )
-            })}
+          <div className="space-y-8 px-3 md:px-0">
+            {libraryFolders.map(({ id, title, markers }) => (
+              <LibraryChapter
+                key={id}
+                chapterId={id}
+                title={title}
+                markers={markers}
+                playingId={playingId}
+                progress={progress}
+                durations={durations}
+                onPlayPause={handlePlayPause}
+                onSeek={handleSeek}
+              />
+            ))}
           </div>
         </main>
 
         <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
           <div className="mx-auto max-w-4xl px-6 text-center">
             <p className="font-mono text-micro uppercase tracking-[0.14em] text-[#6b6455]">
-              Offbeat: Soundscapes of the PCT · Field recordings collected 2025
+              Offbeat: Soundscapes of the PCT
             </p>
           </div>
         </footer>

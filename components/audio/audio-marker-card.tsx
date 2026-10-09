@@ -1,4 +1,4 @@
-import { CalendarDays, CloudMoon, CloudSun, MapPin, Milestone, Moon, SunMedium } from "lucide-react"
+import { CalendarDays, CloudMoon, CloudSun, Milestone, Moon, SunMedium } from "lucide-react"
 import { getMarkerMile } from "@/lib/marker-miles"
 import { TIME_OF_DAY_LABEL, formatMonthDay, type TimeOfDay } from "@/lib/time-of-day"
 import type { AudioMarker } from "@/types/map"
@@ -6,7 +6,7 @@ import type { AudioMarker } from "@/types/map"
 export const audioMarkerStatusClass =
   "flex items-center gap-2 font-mono text-micro uppercase tracking-[0.18em]"
 
-/** Horizon sun (Material wb_twilight). Dawn and evening share it; evening has no cloud. */
+/** Horizon sun (Material wb_twilight). Dawn and dusk share it. */
 function TwilightIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -49,90 +49,88 @@ const TIME_OF_DAY_ICON = {
   morning: CloudSun,
   midday: SunMedium,
   afternoon: BrightnessIcon,
-  evening: TwilightIcon,
-  dusk: CloudMoon,
+  evening: CloudMoon,
+  dusk: TwilightIcon,
   night: Moon,
 } satisfies Record<TimeOfDay, typeof SunMedium | typeof TwilightIcon>
-
-/** Map playback cards hide the recording date. Set true to show it again. */
-const SHOW_MAP_RECORDING_DATE = false
 
 interface AudioMarkerCardBodyProps {
   marker: AudioMarker
   /** Draw the rule the date aligns to. Off where the card is already busy. */
   showMetaRule?: boolean
-  /** Map cards show time of day instead of elevation, and dates without a year. */
+  /** Map cards linger. Library cards keep the note, with quieter type. */
   variant?: "map" | "library"
+  /** Library cards render the note in a desktop block / mobile expand instead. */
+  showDescription?: boolean
 }
 
 /**
- * Shared innards of a recording card: title, date, trail meta, description.
- * Used by the map playback card and the audio library so the two stay twins.
+ * Shared innards of a recording card. Library keeps the note at catalog size.
  */
 export function AudioMarkerCardBody({
   marker,
   showMetaRule = true,
   variant = "library",
+  showDescription = true,
 }: AudioMarkerCardBodyProps) {
   const mile = getMarkerMile(marker.id)
-  const dateLabel =
-    variant === "map" && !SHOW_MAP_RECORDING_DATE
-      ? null
-      : marker.recordingDate && variant === "map"
-        ? formatMonthDay(marker.recordingDate)
-        : marker.recordingDate
+  const dateLabel = marker.recordingDate ? formatMonthDay(marker.recordingDate) : null
   const TimeIcon = marker.timeOfDay ? TIME_OF_DAY_ICON[marker.timeOfDay] : null
+  const isLibrary = variant === "library"
 
   return (
     <>
-      {/* Date sits above the rule, its right edge flush with the rule's end. */}
       <div className="flex items-start justify-between gap-3">
-        <h3 className="pct-display min-w-0 text-[21px] font-medium leading-[1.14] text-[#ede8dc] md:text-[26px]">
+        <h3
+          className={`pct-display min-w-0 font-medium leading-[1.2] text-[#ede8dc] ${
+            isLibrary ? "text-[18px] md:text-[22px]" : "text-[21px] md:text-[26px]"
+          }`}
+        >
           {marker.name}
         </h3>
-        {dateLabel ? (
-          <span className="mt-1 flex shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">
+        {isLibrary && dateLabel ? (
+          <span className="mt-1 hidden shrink-0 items-center gap-1.5 font-mono text-micro uppercase tracking-[0.08em] text-[#9b8e7a] md:inline-flex">
             <CalendarDays className="h-3 w-3" />
             {dateLabel}
           </span>
         ) : null}
       </div>
 
-      <div className="mt-2.5 flex items-center gap-2.5">
-        <div className="flex shrink-0 items-center gap-3 font-mono text-micro uppercase tracking-[0.18em] text-[#9b8e7a]">
+      <div className={`${isLibrary ? "mt-1.5" : "mt-2.5"} flex items-center gap-2.5`}>
+        <div
+          className={`flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-micro uppercase text-[#9b8e7a] ${
+            isLibrary ? "tracking-[0.08em]" : "tracking-[0.18em]"
+          }`}
+        >
           {mile !== null ? (
             <span className="flex items-center gap-1.5">
               <Milestone className="h-3 w-3" />
               MI {mile.toLocaleString("en-US")}
             </span>
           ) : null}
-          {variant === "map" && marker.timeOfDay && TimeIcon ? (
+          {dateLabel ? (
+            <span className={`items-center gap-1.5 ${isLibrary ? "inline-flex md:hidden" : "flex"}`}>
+              <CalendarDays className="h-3 w-3" />
+              {dateLabel}
+            </span>
+          ) : null}
+          {marker.timeOfDay && TimeIcon ? (
             <span className="flex items-center gap-1.5">
               <TimeIcon className="h-3 w-3" />
               {TIME_OF_DAY_LABEL[marker.timeOfDay]}
-            </span>
-          ) : null}
-          {variant !== "map" && marker.elevation ? (
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-3 w-3" />
-              {marker.elevation.toLocaleString("en-US")} ft
             </span>
           ) : null}
         </div>
         {showMetaRule ? <div className="h-px flex-1 bg-white/15" /> : null}
       </div>
 
-      {marker.description ? (
-        <p className="pct-display mt-3 text-copy font-light leading-[1.6] text-[#ada396] md:text-prose">
+      {showDescription && marker.description ? (
+        <p
+          className={`pct-display mt-3 font-light leading-[1.6] text-[#ada396] ${
+            isLibrary ? "text-copy" : "text-copy md:text-prose"
+          }`}
+        >
           {marker.description}
-        </p>
-      ) : null}
-
-      {marker.lands && marker.lands.length > 0 ? (
-        <p className="mt-3">
-          <span className="inline-block max-w-full rounded-full bg-[#ed5a43]/20 px-3 py-1 font-mono text-[11px] leading-snug text-[#ed5a43]">
-            {marker.lands.map((land) => land.name).join(" · ")}
-          </span>
         </p>
       ) : null}
     </>

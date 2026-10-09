@@ -15,14 +15,14 @@ import { createTrailheadNotifier } from "@/lib/trailhead-readiness"
 import { isResumeTrailPosition } from "@/lib/map-resume"
 
 /** Warm style + terrain out to early Oregon; content ends there for now. */
-export const PREFETCH_END_MILES = 1800
+const PREFETCH_END_MILES = 1800
 /** Gate "Begin Journey" once this corridor is warm. */
-export const TRAILHEAD_WARM_MILES = 120
+const TRAILHEAD_WARM_MILES = 120
 /** Background preload target while splash is up (no visible camera walking). */
-export const PRIORITY_WARM_MILES = 400
+const PRIORITY_WARM_MILES = 400
 
 /** Soft cap so a slow network never blocks Enter forever. */
-export const TRAILHEAD_READY_TIMEOUT_MS = 12_000
+const TRAILHEAD_READY_TIMEOUT_MS = 12_000
 
 /** Spread preloadOnly calls out — each one does real decode/GPU-upload work. */
 const PRELOAD_STAGGER_MS = 120

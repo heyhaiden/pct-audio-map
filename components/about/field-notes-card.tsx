@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   cssFontFamily,
   drawFieldNotesCard,
   FIELD_NOTES_PRONUNCIATION,
+  MOBILE_FIELD_NOTES_TYPE_SCALE,
 } from "@/lib/draw-field-notes-card"
 
 const TEXTURE_W = 2048
@@ -33,12 +34,14 @@ const FLOAT_POSE: Pose = {
   rx: -0.12,
   ry: 0.07,
   rz: -0.02,
-  y: 0.18,
+  y: 0.36,
   z: 0,
 }
 
 const TABLE_CAM = { beta: Math.PI / 2 - 0.04, radius: 3.7 }
 const FLOAT_CAM = { beta: Math.PI / 2 - 0.05, radius: 3.55 }
+/** Phone: start smaller so the table pose doesn't fill the viewport, then grow. */
+const TABLE_SCALE_MOBILE = 0.74
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t
@@ -66,8 +69,24 @@ function applyPose(node: { rotation: { x: number; y: number; z: number }; positi
   node.position.z = pose.z
 }
 
-export function FieldNotesCard({ definitions }: { definitions: readonly string[] }) {
+const EMERGE_PX = 56
+
+function placeCopy(el: HTMLElement | null, progress: number) {
+  if (!el) return
+  const t = Math.min(1, Math.max(0, progress))
+  el.style.opacity = String(t)
+  el.style.transform = t >= 1 ? "none" : `translateY(${(1 - t) * -EMERGE_PX}px)`
+}
+
+export function FieldNotesCard({
+  definitions,
+  children,
+}: {
+  definitions: readonly string[]
+  children?: ReactNode
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const copyRef = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -75,6 +94,7 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
     if (!canvas) return
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduced) placeCopy(copyRef.current, 1)
     let disposed = false
     let engine: import("@babylonjs/core").Engine | undefined
 
@@ -151,7 +171,11 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
         engine.dispose()
         return
       }
-      drawFieldNotesCard(ctx, TEXTURE_W, TEXTURE_H, definitions, fonts)
+      drawFieldNotesCard(ctx, TEXTURE_W, TEXTURE_H, definitions, fonts, {
+        typeScale: window.matchMedia("(max-width: 767px)").matches
+          ? MOBILE_FIELD_NOTES_TYPE_SCALE
+          : 1,
+      })
 
       const texture = new DynamicTexture("notes", paperCanvas, {
         scene,
@@ -204,7 +228,10 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
       shadow.material = shadowMat
       shadow.position.y = -0.72
 
+      const mobile = window.matchMedia("(max-width: 767px)").matches
+      const startScale = !reduced && mobile ? TABLE_SCALE_MOBILE : 1
       applyPose(root, reduced ? FLOAT_POSE : TABLE_POSE)
+      root.scaling.setAll(startScale)
       if (reduced) shadowMat.alpha = 0.08
 
       let elapsed = 0
@@ -239,13 +266,16 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
           const u = Math.min(1, Math.max(0, (elapsed - delay) / duration))
           const e = easeInOutCubic(u)
           applyPose(root, mix(TABLE_POSE, FLOAT_POSE, e))
+          root.scaling.setAll(lerp(startScale, 1, e))
           camera.beta = lerp(TABLE_CAM.beta, FLOAT_CAM.beta, e)
           camera.radius = lerp(TABLE_CAM.radius, FLOAT_CAM.radius, e)
           shadow.scaling.x = lerp(1.02, 0.78, e)
           shadow.scaling.z = lerp(1.08, 0.72, e)
           shadowMat.alpha = lerp(0.22, 0.07, e)
+          placeCopy(copyRef.current, e)
           if (u >= 1) {
             settled = true
+            placeCopy(copyRef.current, 1)
             camera.lowerRadiusLimit = FLOAT_CAM.radius
             camera.upperRadiusLimit = FLOAT_CAM.radius
           }
@@ -286,11 +316,12 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
 
   if (failed) {
     return (
+      <>
       <article className="pct-field-card relative mx-auto w-full max-w-xl bg-[#efe4cc] pl-12 pr-8 pb-8 pt-6 text-left shadow-[0_18px_42px_rgba(0,0,0,0.42)]">
         <p className="mb-4 font-mono text-micro uppercase tracking-[0.18em] text-[#8a6f4e]">
           Field notes
         </p>
-        <p className="pct-display text-[22px] font-normal leading-snug text-[#2a241c] md:text-[26px]">
+        <p className="pct-display text-[24px] font-normal leading-snug text-[#2a241c] md:text-[26px]">
           Offbeat <span className="text-[#7a6a56]">(noun)</span>{" "}
           <span className="font-mono text-copy font-normal tracking-normal text-[#ed5a43]">
             {FIELD_NOTES_PRONUNCIATION}
@@ -300,7 +331,7 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
           {definitions.map((definition, index) => (
             <li
               key={definition}
-              className="flex items-start gap-3 pct-display text-prose font-light leading-[1.65] text-[#4a4238]"
+              className="flex items-start gap-3 pct-display text-lede font-light leading-[1.65] text-[#4a4238] md:text-prose"
             >
               <span className="mt-0.5 w-4 shrink-0 font-mono text-micro text-[#9a7b5a]">
                 {index + 1}
@@ -310,11 +341,14 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
           ))}
         </ol>
       </article>
+      {children}
+    </>
     )
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-2xl">
+    <div>
+    <div className="relative z-10 left-1/2 w-screen -translate-x-1/2 md:w-[min(54.6rem,calc(100vw-3rem))]">
       <div className="sr-only">
         <p>
           Offbeat (noun) {FIELD_NOTES_PRONUNCIATION}
@@ -327,9 +361,18 @@ export function FieldNotesCard({ definitions }: { definitions: readonly string[]
       </div>
       <canvas
         ref={canvasRef}
-        className="pointer-events-none mx-auto block h-[min(58vw,420px)] w-full"
+        className="pointer-events-none mx-auto block h-[min(75.4vw,546px)] w-full"
         aria-hidden
       />
+    </div>
+    {children ? (
+      <div
+        ref={copyRef}
+        className="pct-card-copy relative z-0 -mt-[calc(min(75.4vw,546px)*0.14-0.5rem)] -translate-y-11 opacity-0"
+      >
+        {children}
+      </div>
+    ) : null}
     </div>
   )
 }

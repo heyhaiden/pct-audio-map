@@ -5,15 +5,48 @@ const HIDDEN_CHAPTERS = new Set(["washington-cascades"])
 
 export const AUDIO_MARKER_SOURCE_ID = "pct-audio-markers"
 export const AUDIO_MARKER_LAYER_ID = "pct-audio-markers-pin"
-export const AUDIO_MARKER_IMAGE_ID = "pct-audio-pin"
+const AUDIO_MARKER_IMAGE_ID = "pct-audio-pin"
 
-export function markerIconSize(activeMarkerId: string | null) {
-  if (!activeMarkerId) return 0.9
-  return ["case", ["==", ["get", "id"], activeMarkerId], 1.2, 0.9]
+export const MARKER_ICON_REST_SIZE = 0.9
+export const MARKER_ICON_ACTIVE_SIZE = 1.7
+export const MARKER_ICON_SIZE_MS = 880
+
+export function easeMarkerSize(t: number) {
+  const x = Math.min(1, Math.max(0, t))
+  return 1 - (1 - x) ** 3
+}
+
+export function markerIconSize(
+  activeMarkerId: string | null,
+  activeSize = MARKER_ICON_ACTIVE_SIZE,
+  restSize = MARKER_ICON_REST_SIZE,
+) {
+  if (!activeMarkerId) return restSize
+  return ["case", ["==", ["get", "id"], activeMarkerId], activeSize, restSize]
+}
+
+/** Incoming pin grows while the outgoing pin shrinks. */
+export function markerIconSizeSwap(
+  growingId: string | null,
+  growingSize: number,
+  shrinkingId: string | null,
+  shrinkingSize: number,
+) {
+  if (!growingId && !shrinkingId) return MARKER_ICON_REST_SIZE
+  if (!shrinkingId || shrinkingId === growingId) return markerIconSize(growingId, growingSize)
+  if (!growingId) return markerIconSize(shrinkingId, shrinkingSize)
+  return [
+    "case",
+    ["==", ["get", "id"], growingId],
+    growingSize,
+    ["==", ["get", "id"], shrinkingId],
+    shrinkingSize,
+    MARKER_ICON_REST_SIZE,
+  ]
 }
 
 /** Classic Mapbox-style teardrop pin as an ImageData for symbol layers. */
-export function createPinImage(size = 64): { width: number; height: number; data: Uint8Array } {
+function createPinImage(size = 64): { width: number; height: number; data: Uint8Array } {
   const canvas = document.createElement("canvas")
   canvas.width = size
   canvas.height = size
@@ -60,7 +93,7 @@ export function createPinImage(size = 64): { width: number; height: number; data
 }
 
 /** Pins along the whole trail. Washington stays empty until that chapter has recordings. */
-export function chapterCollection(_chapter?: string) {
+export function chapterCollection() {
   const features = audioMarkers
     .filter((marker) => !HIDDEN_CHAPTERS.has(marker.chapter) && marker.coordinates?.length === 2)
     .map((marker) => ({
@@ -91,7 +124,7 @@ export function chapterCollection(_chapter?: string) {
  * Idempotent, so it can be replayed on `style.load` (a style reload drops every
  * image, source and layer we added).
  */
-export function installAudioMarkerLayer(map: any, initialChapter = "southern-california"): void {
+export function installAudioMarkerLayer(map: any): void {
   if (!map || map._removed) return
 
   if (!map.hasImage?.(AUDIO_MARKER_IMAGE_ID)) {
@@ -99,12 +132,11 @@ export function installAudioMarkerLayer(map: any, initialChapter = "southern-cal
   }
 
   if (!map.getSource(AUDIO_MARKER_SOURCE_ID)) {
-    // Seeded with the opening chapter rather than empty, so the trailhead warm
-    // has real pins to place before the splash lifts. AudioMarkers swaps in the
-    // live chapter as soon as it mounts.
+    // Seeded with every playable pin rather than empty, so trailhead warm can
+    // place Campo before the splash lifts. AudioMarkers keeps the same set.
     map.addSource(AUDIO_MARKER_SOURCE_ID, {
       type: "geojson",
-      data: chapterCollection(initialChapter),
+      data: chapterCollection(),
       // Deliberately left at the default maxzoom. Capping it low (tried 4) makes
       // symbols place against a coarse tile with no usable DEM under it, so
       // their terrain elevation resolves to ~0: the pins sink to sea level,
@@ -129,6 +161,8 @@ export function installAudioMarkerLayer(map: any, initialChapter = "southern-cal
       },
       paint: {
         "icon-opacity": 1,
+        // Draw through ridges so canyon-floor pins stay findable.
+        "icon-occlusion-opacity": 1,
         // Self-lit, so scene lighting can't dim the pins as the camera moves.
         "icon-emissive-strength": 1,
       },

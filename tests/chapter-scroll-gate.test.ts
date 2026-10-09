@@ -3,14 +3,32 @@ import test from "node:test"
 import { PCT_TOTAL_MILES } from "../lib/railing-camera.ts"
 import {
   CHAPTER_GATE_LANDING_MILES,
+  chapterIndexForMiles,
   clampMilesAtChapterGate,
+  nextChapterGateMiles,
   scrollTopForMiles,
 } from "../lib/chapter-scroll-gate.ts"
+
+test("chapterIndexForMiles maps mile boundaries to the same chapters as the overlays", () => {
+  assert.equal(chapterIndexForMiles(0), 0)
+  assert.equal(chapterIndexForMiles(702.9), 0)
+  assert.equal(chapterIndexForMiles(703), 1)
+  assert.equal(chapterIndexForMiles(1158), 2)
+  assert.equal(chapterIndexForMiles(1693), 3)
+  assert.equal(chapterIndexForMiles(2150), 4)
+  assert.equal(chapterIndexForMiles(2650), 4)
+  assert.equal(chapterIndexForMiles(3000), 4)
+})
 
 test("a northbound jump stops just inside the next chapter", () => {
   const result = clampMilesAtChapterGate(700, 740)
   assert.equal(result.hitGate, true)
   assert.equal(result.miles, 703 + CHAPTER_GATE_LANDING_MILES)
+})
+
+test("nextChapterGateMiles is null when the hop stays inside the chapter", () => {
+  assert.equal(nextChapterGateMiles(710, 800), null)
+  assert.equal(nextChapterGateMiles(700, 740), 703 + CHAPTER_GATE_LANDING_MILES)
 })
 
 test("motion inside a chapter is not gated", () => {

@@ -5,14 +5,21 @@ import { audioMarkers } from "@/data/audio-markers"
 import {
   AUDIO_MARKER_LAYER_ID,
   AUDIO_MARKER_SOURCE_ID,
+  MARKER_ICON_ACTIVE_SIZE,
+  MARKER_ICON_REST_SIZE,
+  MARKER_ICON_SIZE_MS,
   chapterCollection,
+  easeMarkerSize,
   markerIconSize,
+  markerIconSizeSwap,
 } from "@/lib/audio-marker-layer"
 import type { AudioMarker } from "@/types/map"
 
 interface AudioMarkersProps {
   map: any
   onMarkerClick: (marker: AudioMarker) => void
+  /** Same-turn as the tap: start media playback before fetch/decode. */
+  onMarkerPrime?: (marker: AudioMarker) => void
   activeMarkerId?: string | null
   /** When false, canvas clicks never open a pin (opening crane / SoCal overlay). */
   enabled?: boolean
@@ -29,13 +36,18 @@ interface AudioMarkersProps {
 export function AudioMarkers({
   map,
   onMarkerClick,
+  onMarkerPrime,
   activeMarkerId = null,
   enabled = true,
 }: AudioMarkersProps) {
   const onMarkerClickRef = useRef(onMarkerClick)
   onMarkerClickRef.current = onMarkerClick
+  const onMarkerPrimeRef = useRef(onMarkerPrime)
+  onMarkerPrimeRef.current = onMarkerPrime
   const enabledRef = useRef(enabled)
   enabledRef.current = enabled
+  const activeMarkerIdRef = useRef(activeMarkerId)
+  const previousActiveRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!map || map._removed) return
@@ -46,7 +58,7 @@ export function AudioMarkers({
         map.setLayoutProperty?.(
           AUDIO_MARKER_LAYER_ID,
           "icon-size",
-          markerIconSize(activeMarkerId),
+          markerIconSize(activeMarkerIdRef.current),
         )
       } catch {
         /* map may already be gone */
@@ -57,6 +69,46 @@ export function AudioMarkers({
     // A style reload rebuilds the layer empty; refill it once that lands.
     map.on("style.load", applyMarkerData)
     return () => map.off?.("style.load", applyMarkerData)
+  }, [map])
+
+  useEffect(() => {
+    if (!map || map._removed) return
+
+    const fromId = previousActiveRef.current
+    const toId = activeMarkerId ?? null
+    previousActiveRef.current = toId
+    activeMarkerIdRef.current = toId
+
+    const applySize = (value: unknown) => {
+      try {
+        map.setLayoutProperty?.(AUDIO_MARKER_LAYER_ID, "icon-size", value)
+      } catch {
+        /* map may already be gone */
+      }
+    }
+
+    if (fromId === toId) {
+      applySize(markerIconSize(toId))
+      return
+    }
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduce) {
+      applySize(markerIconSize(toId))
+      return
+    }
+
+    const started = performance.now()
+    let frame = 0
+    const tick = (now: number) => {
+      const t = easeMarkerSize((now - started) / MARKER_ICON_SIZE_MS)
+      const growing = MARKER_ICON_REST_SIZE + (MARKER_ICON_ACTIVE_SIZE - MARKER_ICON_REST_SIZE) * t
+      const shrinking = MARKER_ICON_ACTIVE_SIZE - (MARKER_ICON_ACTIVE_SIZE - MARKER_ICON_REST_SIZE) * t
+      applySize(markerIconSizeSwap(toId, growing, fromId, shrinking))
+      if (t < 1) frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
   }, [map, activeMarkerId])
 
   useEffect(() => {
@@ -65,9 +117,9 @@ export function AudioMarkers({
     const canvas: HTMLCanvasElement | null = map.getCanvas?.() ?? null
     if (!canvas) return
 
-    const onCanvasClick = (event: MouseEvent) => {
-      if (!enabledRef.current) return
-      if (!map.getLayer?.(AUDIO_MARKER_LAYER_ID)) return
+    const markerAtEvent = (event: MouseEvent | PointerEvent) => {
+      if (!enabledRef.current) return null
+      if (!map.getLayer?.(AUDIO_MARKER_LAYER_ID)) return null
 
       const rect = canvas.getBoundingClientRect()
       const px = event.clientX - rect.left
@@ -81,14 +133,28 @@ export function AudioMarkers({
         { layers: [AUDIO_MARKER_LAYER_ID] },
       )
 
-      const id = features[0]?.properties?.id
-      if (!id) return
-      const marker = audioMarkers.find((m) => m.id === id)
+      const id = features[0]?.properties?.id as string | undefined
+      if (!id) return null
+      return audioMarkers.find((m) => m.id === id) ?? null
+    }
+
+    // Pointerdown is the play gesture (Chrome/iOS). Click still opens the card.
+    const onCanvasPointerDown = (event: PointerEvent) => {
+      const marker = markerAtEvent(event)
+      if (marker) onMarkerPrimeRef.current?.(marker)
+    }
+
+    const onCanvasClick = (event: MouseEvent) => {
+      const marker = markerAtEvent(event)
       if (marker) onMarkerClickRef.current(marker)
     }
 
+    canvas.addEventListener("pointerdown", onCanvasPointerDown)
     canvas.addEventListener("click", onCanvasClick)
-    return () => canvas.removeEventListener("click", onCanvasClick)
+    return () => {
+      canvas.removeEventListener("pointerdown", onCanvasPointerDown)
+      canvas.removeEventListener("click", onCanvasClick)
+    }
   }, [map])
 
   return null

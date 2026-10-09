@@ -1,10 +1,17 @@
 "use client"
 
+import { useId } from "react"
 import { Pause, Play } from "lucide-react"
 import { AudioMarkerCardBody } from "@/components/audio/audio-marker-card"
+import { NativeLandPills } from "@/components/audio/native-land-pills"
+import { RecordingNote, hasRecordingNote } from "@/components/audio/recording-note"
 import { ScrubBar } from "@/components/audio/scrub-bar"
+import { slideContentClass, slidePanelClass, useSlidePanel } from "@/hooks/use-slide-panel"
 import { formatTimecode } from "@/lib/format-timecode"
+import { collapsedLibraryNote, libraryNoteNeedsExpand } from "@/lib/preview-description"
 import type { AudioMarker } from "@/types/map"
+
+const noteCopyClass = "pct-display text-copy font-light leading-[1.6] text-[#ada396]"
 
 interface LibraryRecordingCardProps {
   marker: AudioMarker
@@ -16,10 +23,8 @@ interface LibraryRecordingCardProps {
 }
 
 /**
- * One recording in the library: play control on the left, details on the right,
- * scrubber underneath. The scrub track is the card's only horizontal rule — the
- * meta divider and footer border are both off, since the play button already
- * separates the control from the content.
+ * One recording card. The chapter above it is only a heading, so this card is
+ * the single frame.
  */
 export function LibraryRecordingCard({
   marker,
@@ -33,41 +38,87 @@ export function LibraryRecordingCard({
 
   const currentSeconds =
     knownDuration > 0 ? (Math.max(0, Math.min(100, progress)) / 100) * knownDuration : 0
+  const ready = Boolean(marker.audioUrl)
+  const hasDetails = hasRecordingNote(marker)
+  const needsExpand = libraryNoteNeedsExpand(marker)
+  const hasLands = Boolean(marker.lands?.length)
+  const { open, toggle, panelRef } = useSlidePanel()
+  const detailsId = useId()
+  const collapsedNote = marker.description
+    ? collapsedLibraryNote(marker.description, { revealMore: hasLands })
+    : ""
 
   return (
-    <article
-      className={`pct-glass-panel p-[15px_16px] transition-shadow md:p-[18px_18px] ${
-        isPlaying ? "ring-1 ring-[#ed5a43]/35" : ""
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <button
-          type="button"
-          onClick={onPlayPause}
-          aria-pressed={isPlaying}
-          aria-label={isPlaying ? `Pause ${marker.name}` : `Play ${marker.name}`}
-          className={`mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full border transition-[color,background-color,border-color,transform] duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] active:scale-95 motion-reduce:transition-none ${
-            isPlaying
-              ? "border-[#ed5a43] bg-[#ed5a43] text-white"
-              : "border-white/20 bg-[rgba(12,11,9,0.62)] text-[#ada396] hover:border-[#ed5a43]/45 hover:text-[#ed5a43]"
-          }`}
-        >
-          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
-        </button>
+    <article className="pct-glass-panel p-4 md:p-5">
+      <div className="text-left">
+        <AudioMarkerCardBody marker={marker} showMetaRule={false} showDescription={false} />
 
-        <div className="min-w-0 flex-1 text-left">
-          <AudioMarkerCardBody marker={marker} showMetaRule={false} />
-          <ScrubBar
-            value={progress}
-            onSeek={onSeek}
-            label={`Seek ${marker.name}`}
-            className="mt-3"
-          />
-          <div className="mt-1.5 flex items-center justify-between font-mono text-micro tabular-nums tracking-[0.08em] text-[#8b8271]">
-            <span>{formatTimecode(currentSeconds)}</span>
-            <span>{formatTimecode(knownDuration)}</span>
+        {hasDetails ? (
+          <div className="md:hidden">
+            {marker.description ? (
+              needsExpand ? (
+                <button
+                  type="button"
+                  className={`mt-3 w-full text-left ${noteCopyClass} focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]`}
+                  aria-expanded={open}
+                  aria-controls={detailsId}
+                  onClick={toggle}
+                >
+                  {open ? marker.description : collapsedNote}
+                </button>
+              ) : (
+                <p className={`mt-3 ${noteCopyClass}`}>{marker.description}</p>
+              )
+            ) : null}
+            {needsExpand ? (
+              <div
+                ref={panelRef}
+                id={detailsId}
+                aria-hidden={!open}
+                inert={!open}
+                className={slidePanelClass}
+              >
+                {hasLands ? (
+                  <NativeLandPills lands={marker.lands} className={`pt-3 ${slideContentClass(open)}`} />
+                ) : null}
+              </div>
+            ) : null}
           </div>
-        </div>
+        ) : null}
+        {hasDetails ? <RecordingNote marker={marker} className="mt-3 hidden md:block" /> : null}
+
+        {ready ? (
+          <div className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0 md:gap-x-4">
+            <button
+              type="button"
+              onClick={onPlayPause}
+              aria-pressed={isPlaying}
+              aria-label={isPlaying ? `Pause ${marker.name}` : `Play ${marker.name}`}
+              className={`row-start-1 grid h-10 w-10 shrink-0 place-items-center rounded-full border transition-[color,background-color,border-color,transform] duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] active:scale-95 motion-reduce:transition-none md:h-11 md:w-11 ${
+                isPlaying
+                  ? "border-[#ed5a43] bg-[#ed5a43] text-white"
+                  : "border-white/20 bg-[rgba(12,11,9,0.62)] text-[#ada396] hover:border-[#ed5a43]/45 hover:text-[#ed5a43]"
+              }`}
+            >
+              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
+            </button>
+
+            <ScrubBar
+              value={progress}
+              onSeek={onSeek}
+              label={`Seek ${marker.name}`}
+              className="row-start-1 min-w-0"
+            />
+            <div className="col-start-2 -mt-1.5 flex items-center justify-between font-mono text-micro tabular-nums tracking-[0.08em] text-[#8b8271]">
+              <span>{formatTimecode(currentSeconds)}</span>
+              <span>{formatTimecode(knownDuration)}</span>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-5 font-mono text-micro uppercase tracking-[0.18em] text-[#8b8271]">
+            Waiting on audio
+          </p>
+        )}
       </div>
     </article>
   )

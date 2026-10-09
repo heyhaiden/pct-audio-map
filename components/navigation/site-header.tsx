@@ -1,14 +1,16 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useState } from "react"
+import { useEffect, useLayoutEffect, useState, type MouseEvent } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, Mountain } from "lucide-react"
 import { MobileNavigationMenu } from "@/components/navigation/mobile-navigation-menu"
-import { cameFromActiveMap, goHomeToSplash, setResumeIntent } from "@/lib/map-session"
+import { handleHomeNavClick } from "@/lib/home-exit"
+import { cameFromActiveMap, setResumeIntent } from "@/lib/map-session"
 
 export type SiteNavPage = "map" | "home" | "library" | "about" | "resources"
 
-export const NAV_LINKS: { id: SiteNavPage; href: string; label: string }[] = [
+const NAV_LINKS: { id: SiteNavPage; href: string; label: string }[] = [
   // Only rendered once you've left home — see the nav below.
   { id: "home", href: "/", label: "Home" },
   { id: "library", href: "/library", label: "Audio library" },
@@ -30,6 +32,8 @@ let homeLinkVisibleOn: string | null = null
 interface SiteHeaderProps {
   /** Page currently viewing — that nav item is marked current. */
   current: Exclude<SiteNavPage, "map">
+  /** Pin the bar on phones so it stays put while the page scrolls. */
+  pinned?: boolean
 }
 
 /**
@@ -39,7 +43,11 @@ interface SiteHeaderProps {
  * journey. Nav on the right always lists every page — the current one is
  * marked, not removed.
  */
-export function SiteHeader({ current }: SiteHeaderProps) {
+export function SiteHeader({ current, pinned = false }: SiteHeaderProps) {
+  const router = useRouter()
+  const goHome = (event: MouseEvent<HTMLAnchorElement>) => {
+    handleHomeNavClick(event, () => router.push("/"))
+  }
   const [showBackToMap, setShowBackToMap] = useState(false)
   const showHomeLink = current !== "home"
   // Decided once per mount, before first paint, so the class is never applied
@@ -55,8 +63,14 @@ export function SiteHeader({ current }: SiteHeaderProps) {
   }, [showHomeLink, current])
 
   return (
-    <header className="bg-transparent">
-      <div className="flex items-center justify-between gap-4 px-[18px] py-4 md:px-[28px]">
+    <header
+      className={
+        pinned
+          ? "max-md:sticky max-md:top-0 max-md:z-30 max-md:border-b max-md:border-white/[0.06] max-md:bg-[#151310]/92 max-md:backdrop-blur-md"
+          : "bg-transparent"
+      }
+    >
+      <div className="pct-site-header-bar flex items-center justify-between gap-4 px-[18px] py-4 max-md:pt-[max(1rem,env(safe-area-inset-top))] md:px-[28px] md:pt-4">
         <div className="flex min-w-0 items-center gap-3">
           {current !== "home" && showBackToMap ? (
             // Arrived here from a running journey — offer the way back instead
@@ -77,7 +91,7 @@ export function SiteHeader({ current }: SiteHeaderProps) {
           ) : (
             <Link
               href="/"
-              onClick={() => goHomeToSplash()}
+              onClick={goHome}
               aria-label="Back to home"
               className="inline-flex text-[#9b8e7a] transition-colors hover:text-[#ed5a43]"
             >
@@ -86,7 +100,7 @@ export function SiteHeader({ current }: SiteHeaderProps) {
           )}
         </div>
 
-        <nav className="hidden items-center gap-2 md:flex" aria-label="Site">
+        <nav className="pct-site-nav-desktop hidden items-center gap-2 md:flex" aria-label="Site">
           {NAV_LINKS.map((link) => {
             // Home is only offered once you've left it.
             if (link.id === "home" && current === "home") return null
@@ -105,7 +119,7 @@ export function SiteHeader({ current }: SiteHeaderProps) {
                 key={link.id}
                 href={link.href}
                 prefetch={current !== "home"}
-                onClick={isHome ? () => goHomeToSplash() : undefined}
+                onClick={isHome ? goHome : undefined}
                 className={`${navItemClass} text-[#8b8271] hover:text-[#ede8dc] ${
                   isHome && animateHomeLink ? "pct-nav-in" : ""
                 }`}
@@ -116,7 +130,7 @@ export function SiteHeader({ current }: SiteHeaderProps) {
           })}
         </nav>
 
-        <div className="md:hidden">
+        <div className="pct-site-nav-mobile md:hidden">
           <MobileNavigationMenu source="site" current={current} />
         </div>
       </div>
