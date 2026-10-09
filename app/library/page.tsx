@@ -228,6 +228,7 @@ export default function LibraryPage() {
             {libraryFolders.map(({ id, title, markers }) => (
               <LibraryChapter
                 key={id}
+                chapterId={id}
                 title={title}
                 markers={markers}
                 playingId={playingId}

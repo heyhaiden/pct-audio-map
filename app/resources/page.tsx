@@ -12,7 +12,6 @@ const folders: Array<{
     id: "plan",
     title: "Plan the hike",
     icon: "compass",
-    defaultOpen: true,
     resources: [
       {
         name: "Pacific Crest Trail Association",
