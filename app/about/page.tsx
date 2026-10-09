@@ -49,7 +49,10 @@ const team = [
     role: "Field recording & experience design",
     description:
       "As a queer woman and avid hiker, skier, and (more recently, due to my PCT-ending injury) biker, I don’t often see myself represented in the spaces I love most. I want everyone to feel empowered to get out there and participate in the incredible gift that is nature, and I hope this project will inspire others to take a walk – whether it’s 1, 10, or 1000 miles – and to pause long enough to hear that nature is never truly silent. The outdoors are for everyone, and for anyone who doesn’t have the privilege of doing a thru hike, or isn’t able to enjoy the PCT for themselves: I hope that I can bring the feeling of it to wherever in the world you are. Thank you for being part of my journey.",
-    photoAlt: "Portrait of Anna Wozniewicz on trail",
+    photoAlt: "Anna Wozniewicz hiking at the California–Oregon border on the Pacific Crest Trail",
+    photoSrc: "/team/anna-border.jpg",
+    photoWidth: 1024,
+    photoHeight: 682,
     links: [
       {
         href: "https://www.linkedin.com/in/annawozniewicz",
@@ -60,10 +63,34 @@ const team = [
   },
   {
     name: "Haiden McGill",
-    role: "Design & development",
-    description:
-      "Designed and built the interactive experience, transforming hours of field recordings into a scroll-driven journey. Anna and I started our queer backpacking troop during COVID and have hiked Patagonia, Catalina, the High Sierras, and Norway since. An aspiring thru-hiker, this project is a love letter to those who walked these paths before us, and to the stewards who cared for this land long before we arrived.",    
-    photoAlt: "Portrait of Haiden McGill on trail",
+    role: "Spatial experience & product engineering",
+    description: (
+      <>
+        I chase glaciers and the remote, off-the-beaten-path places where wilderness is still wild. Cold
+        climates, dark skies, and high altitude are where I feel most myself. Anna and I started our queer
+        backpacking troop during COVID, and I’ve since backpacked across four continents, including
+        Patagonia, the High Sierras, South Africa, and Norway. I’m an aspiring mountaineer, and climate
+        resilience is why I keep going back: storytelling and activism that move people to protect these
+        landscapes while they’re still here. I’m a software engineer and product builder with an audio
+        engineering background, and I designed and built Offbeat from Anna’s field recordings, a
+        scroll-driven love letter to the people who walked the PCT before us. See more of my projects and
+        climate work{" "}
+        <a
+          href="https://heyhaiden.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#ed5a43] underline decoration-[#ed5a43]/40 underline-offset-[3px] hover:text-[#f06b57] hover:decoration-[#f06b57]"
+          aria-label="Haiden McGill's projects and climate work"
+        >
+          here
+        </a>
+        .
+      </>
+    ),    
+    photoAlt: "Haiden McGill hiking a snowfield below a glacier",
+    photoSrc: "/team/haiden-snow.jpg",
+    photoWidth: 768,
+    photoHeight: 1024,
     links: [
       {
         href: "https://www.linkedin.com/in/haidenmcgill",
