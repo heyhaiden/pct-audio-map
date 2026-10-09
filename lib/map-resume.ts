@@ -1,7 +1,7 @@
 import { PCT_TOTAL_MILES } from "./railing-camera.ts"
 
 /** ~5 miles. Scroll restore has landed if we are this close to the saved progress. */
-export const RESUME_UNLOCK_PROGRESS_EPS = 0.002
+const RESUME_UNLOCK_PROGRESS_EPS = 0.002
 
 /** Saved journeys are mid-trail; mile 0 is a fresh start, not a resume pose. */
 export function isResumeTrailPosition(miles: number | null | undefined): miles is number {

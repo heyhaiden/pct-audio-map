@@ -99,8 +99,16 @@ export function useAudioPlayer() {
     await getEngine().suspend()
   }, [getEngine])
 
+  const primeLoop = useCallback(
+    (audioUrl: string) => {
+      getEngine().prime(audioUrl)
+    },
+    [getEngine],
+  )
+
   const transitionToTrack = useCallback(
     async (track: AudioTrack, fadeMs = DEFAULT_FADE_MS) => {
+      getEngine().prime(track.url)
       pendingTrackRef.current = track.id
       await getEngine().play(track.url, { fadeMs, volume: track.volume })
     },
@@ -141,6 +149,7 @@ export function useAudioPlayer() {
   return {
     ...state,
     transitionToTrack,
+    primeLoop,
     fadeOutAndStop,
     unlockAudio,
     resumeAudio,

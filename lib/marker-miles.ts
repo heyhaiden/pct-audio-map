@@ -7,7 +7,7 @@
  * otherwise have to load and walk 12,657 trail points just to print a number.
  * Regenerate if the trail geometry or marker coordinates change.
  */
-export const MARKER_MILES: Record<string, number> = {
+const MARKER_MILES: Record<string, number> = {
   "marker-1": 1,
   "marker-2": 43,
   "marker-4": 44,

@@ -4,7 +4,7 @@ import { audioMarkers } from "../data/audio-markers.ts"
 import * as markerLayer from "../lib/audio-marker-layer.ts"
 
 test("chapterCollection places every spreadsheet marker, not only Campo", () => {
-  const collection = markerLayer.chapterCollection("southern-california")
+  const collection = markerLayer.chapterCollection()
   const ids = collection.features.map((feature) => feature.properties.id)
 
   assert.ok(ids.includes("marker-1"), "Campo stays on the map")

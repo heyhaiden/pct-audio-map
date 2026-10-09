@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, type PointerEvent } from "react"
+import { useRef, type PointerEvent } from "react"
 import { shouldDismissChapterOverlay } from "@/lib/mobile-chapter-overlay-gesture"
 import type { PCTChapter } from "@/types/map"
 
@@ -20,11 +20,6 @@ export function MobileChapterOverlay({
   const startYRef = useRef<number | null>(null)
   const isVisible = opacity > 0.01
   const romanNumerals = ["I", "II", "III", "IV", "V"]
-
-  // Scroll locking is owned solely by app/page.tsx (isOverlayBlockingScroll).
-  // This component used to set body overflow AND touch-action itself; both are
-  // what useInvertedTouchScroll's isLocked() reads, and its snapshot/restore
-  // raced the page lock and left them stuck on.
 
   if (!isVisible) return null
 
