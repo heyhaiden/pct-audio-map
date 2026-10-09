@@ -47,7 +47,7 @@ export function MobileChapterOverlay({
       aria-modal="true"
       aria-labelledby="mobile-chapter-title"
       aria-describedby="mobile-chapter-description"
-      className="fixed inset-0 z-[70] touch-none cursor-pointer overflow-hidden bg-[rgba(12,10,8,0.58)] backdrop-blur-[4px] transition-opacity duration-300 md:hidden"
+      className="pct-chapter-overlay-mobile fixed inset-0 z-[70] touch-none cursor-pointer overflow-hidden bg-[rgba(12,10,8,0.58)] backdrop-blur-[4px] transition-opacity duration-300 md:hidden"
       style={{ opacity }}
       onPointerDown={handlePointerDown}
       onPointerUp={finishGesture}
@@ -56,16 +56,16 @@ export function MobileChapterOverlay({
       }}
     >
       <div className="relative flex h-full flex-col items-center px-[30px] text-center">
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
-          <p className="pct-display text-[56px] font-normal leading-none text-[#ed5a43]/90">
+        <div className="pct-chapter-overlay-stack flex min-h-0 flex-1 flex-col items-center justify-center py-8">
+          <p className="pct-chapter-overlay-numeral pct-display text-[56px] font-normal leading-none text-[#ed5a43]/90">
             {romanNumerals[chapterIndex] ?? chapterIndex + 1}
           </p>
-          <h2 id="mobile-chapter-title" className="pct-display mb-3 mt-3.5 text-[31px] font-normal text-[#f6f1e4]">
+          <h2 id="mobile-chapter-title" className="pct-chapter-overlay-title pct-display mb-3 mt-3.5 text-[31px] font-normal text-[#f6f1e4]">
             {chapter.title}
           </h2>
           <p
             id="mobile-chapter-description"
-            className="pct-display max-w-[300px] text-base font-light leading-[1.65] text-[#cfc6b4]"
+            className="pct-chapter-overlay-copy pct-display max-w-[300px] text-base font-light leading-[1.65] text-[#cfc6b4]"
           >
             {chapter.description}
           </p>

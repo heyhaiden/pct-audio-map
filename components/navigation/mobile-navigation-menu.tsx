@@ -24,7 +24,7 @@ interface MobileNavigationMenuProps {
 }
 
 const defaultControlClass =
-  "pct-glass-control grid h-11 w-11 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
+  "pct-glass-control relative grid h-11 w-11 place-items-center rounded-full transition hover:border-[#ed5a43]/45 hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
 
 const NAV_ICONS: Record<MobileNavigationPage, LucideIcon> = {
   home: Mountain,

@@ -38,3 +38,12 @@ test("resolveAudioUrl falls back to same-origin path when CDN is unset", async (
 
   process.env.NEXT_PUBLIC_AUDIO_CDN_URL = previous
 })
+
+test("resolveLibraryAudioUrl serves Opus from the app origin", async () => {
+  const { resolveLibraryAudioUrl } = await import("../lib/resolve-audio-url.ts")
+  assert.equal(resolveLibraryAudioUrl("/audio/1-1.mp3", "opus"), "/audio/opus/1-1.opus")
+  assert.equal(
+    resolveLibraryAudioUrl("/audio/1-1.mp3", "mp3", "https://store.public.blob.vercel-storage.com"),
+    "https://store.public.blob.vercel-storage.com/audio/1-1.mp3",
+  )
+})

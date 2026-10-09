@@ -28,6 +28,7 @@ import {
   readFreeCameraPose,
 } from "@/lib/node-camera"
 import { useChapterIntro, introOpacity } from "@/hooks/use-chapter-intro"
+import { useViewportLayout } from "@/hooks/use-viewport-layout"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { useInvertedWheelScroll } from "@/hooks/use-inverted-wheel-scroll"
 import { useAudioPlayer } from "@/hooks/use-audio-player"
@@ -49,8 +50,6 @@ import {
   type MapSessionState,
 } from "@/lib/map-session"
 import { adjacentPlayable, hasMarkerAudio } from "@/lib/marker-navigation"
-import { prefetchAudio } from "@/lib/prefetch-audio"
-import { resolveAudioUrl } from "@/lib/resolve-audio-url"
 import type { AudioMarker } from "@/types/map"
 
 /**
@@ -106,14 +105,19 @@ function chapterIndexForMiles(miles: number): number {
 }
 
 export default function Home() {
+  const { useDesktopChapterOverlay } = useViewportLayout()
+
   const {
     transitionToTrack,
-    isLoading: isAudioLoading,
     isPlaying: isAudioPlaying,
     error: audioError,
     isMuted,
     setMuted,
     fadeOutAndStop,
+    unlockAudio,
+    resumeAudio,
+    suspendAudio,
+    prefetchLoop,
   } = useAudioPlayer()
 
   // 'boot' avoids SSR/client mismatch while we read resume intent from sessionStorage.
@@ -140,8 +144,6 @@ export default function Home() {
   // Chapter index whose held-breath overlay the user manually dismissed.
   const [overlayDismissedChapter, setOverlayDismissedChapter] = useState<number | null>(null)
   const [isNodeCameraBusy, setIsNodeCameraBusy] = useState(false)
-  /** Matches Tailwind's `md` breakpoint, so JS agrees with which card is shown. */
-  const [isDesktopViewport, setIsDesktopViewport] = useState(false)
   /** Controls arrive via a ref, so state is needed to re-run the block effect. */
   const [scrollControlsReady, setScrollControlsReady] = useState(false)
   /** User peeked the chapter rail open while audio owns the view. */
@@ -227,11 +229,10 @@ export default function Home() {
     introChapterIndex,
   )
   const isMobileChapterOverlayVisible = mobileIntroOpacity > 0.01
-  // Only the overlay actually rendered at this width counts. The two cards are
-  // swapped by Tailwind (`hidden md:block` / `md:hidden`) but both opacities are
-  // always computed, and the desktop card holds far longer (60mi vs 14mi). ORing
-  // them locked scrolling on phones against a card that isn't on screen to tap.
-  const isChapterOverlayVisible = isDesktopViewport
+  // Only the overlay actually rendered counts. Tailwind `md:` is width-only, so
+  // landscape phones would show the desktop card and hold 60mi. Overlay choice
+  // follows layout (rail vs landscape phone), not min-width 768.
+  const isChapterOverlayVisible = useDesktopChapterOverlay
     ? desktopIntroOpacity > 0.01
     : isMobileChapterOverlayVisible
   visibleChapterOverlayRef.current = isChapterOverlayVisible ? introChapterIndex : null
@@ -242,14 +243,6 @@ export default function Home() {
   })
   /** Any overlay that must be clicked away rather than scrolled past. */
   const isOverlayBlockingScroll = isChapterOverlayVisible || showWip || showCompletion
-
-  useEffect(() => {
-    const query = window.matchMedia("(min-width: 768px)")
-    const sync = () => setIsDesktopViewport(query.matches)
-    sync()
-    query.addEventListener("change", sync)
-    return () => query.removeEventListener("change", sync)
-  }, [])
 
   // Single owner for the scroll-camera block, derived rather than toggled.
   // Several paths used to set it imperatively (overlays, marker punch-in, the
@@ -311,6 +304,7 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    void unlockAudio()
     clearMapSession()
 
     // Don't call requestFullscreen here — on Android it collapses browser chrome
@@ -329,7 +323,7 @@ export default function Home() {
 
     // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
-  }, [])
+  }, [unlockAudio])
 
   const handleOverviewReady = useCallback(() => {
     // Overview camera + tiles settled — fade splash while it stays mounted
@@ -678,6 +672,7 @@ export default function Home() {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
       markDirectNavigation()
+      void unlockAudio()
       const fadeMs = audioFadeMs ?? cameraDurationMs
       // Match the crossfade to the camera move on first open; arrow hops can
       // crossfade audio faster than the camera finishes repositioning.
@@ -685,9 +680,8 @@ export default function Home() {
         void transitionToTrack(
           {
             id: marker.id,
-            url: resolveAudioUrl(marker.audioUrl),
+            url: marker.audioUrl,
             volume: 0.7,
-            loop: true,
           },
           fadeMs,
         )
@@ -704,7 +698,7 @@ export default function Home() {
 
       setSelectedAudioMarker(marker)
     },
-    [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack],
+    [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, transitionToTrack, unlockAudio],
   )
 
   const handleCloseAudio = async () => {
@@ -767,9 +761,17 @@ export default function Home() {
 
   // Warm next/prev recordings only while a pin is open — not the full catalog.
   useEffect(() => {
-    if (previousPlayable) prefetchAudio(previousPlayable.audioUrl)
-    if (nextPlayable) prefetchAudio(nextPlayable.audioUrl)
-  }, [previousPlayable, nextPlayable])
+    prefetchLoop(previousPlayable?.audioUrl, nextPlayable?.audioUrl)
+  }, [nextPlayable, prefetchLoop, previousPlayable])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) void suspendAudio()
+      else void resumeAudio()
+    }
+    document.addEventListener("visibilitychange", onVis)
+    return () => document.removeEventListener("visibilitychange", onVis)
+  }, [resumeAudio, suspendAudio])
 
   const openingChapterTabsLocked = introChapterIndex === 0 && isChapterOverlayVisible
   const autoHideChapterTimeline = shouldHideChapterTimeline(
@@ -946,7 +948,7 @@ export default function Home() {
         />
       </div>
 
-      <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? "opacity-100" : "opacity-0"}`}>
+      <div className={`transition-opacity duration-1000 ease-out delay-500 ${introComplete && journeyStarted ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         <AboutSocial soundEnabled={!isMuted} onSoundToggle={() => setMuted(!isMuted)} />
       </div>
 
@@ -954,7 +956,6 @@ export default function Home() {
       <AudioPlayer
         marker={selectedAudioMarker}
         onClose={handleCloseAudio}
-        isLoading={isAudioLoading}
         isPlaying={isAudioPlaying}
         error={audioError}
         hasPrevious={hasPreviousMarker}
