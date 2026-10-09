@@ -5,6 +5,7 @@ export interface EnrichedMarker extends CsvRow {
   elevation: number
   audioUrl: string
   durationSeconds?: number
+  lands?: { name: string; slug: string }[]
 }
 
 const CHAPTER_LABELS: Record<string, string> = {
@@ -17,6 +18,17 @@ const CHAPTER_LABELS: Record<string, string> = {
 
 function escapeTsString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+}
+
+function formatLands(lands: { name: string; slug: string }[]): string {
+  if (lands.length === 0) return "    lands: [],"
+  const entries = lands
+    .map(
+      (land) =>
+        `      { name: "${escapeTsString(land.name)}", slug: "${escapeTsString(land.slug)}" },`,
+    )
+    .join("\n")
+  return `    lands: [\n${entries}\n    ],`
 }
 
 function chapterComment(chapter: string, index: number, markers: EnrichedMarker[]): string | null {
@@ -50,6 +62,7 @@ export function formatAudioMarkersTs(markers: EnrichedMarker[]): string {
         ? `    recordingDate: "${escapeTsString(marker.recordingDate)}",`
         : undefined,
       timeOfDay ? `    timeOfDay: "${timeOfDay}",` : undefined,
+      marker.lands != null ? formatLands(marker.lands) : undefined,
       "  },",
     ].filter(Boolean)
 
