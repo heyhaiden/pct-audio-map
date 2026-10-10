@@ -108,3 +108,9 @@ Built with Next.js 16, React 19, Mapbox GL JS, Turf.js and the Web Audio API. De
 - **Haiden McGill**: spatial experience and product engineering. [GitHub](https://github.com/heyhaiden) · [LinkedIn](https://www.linkedin.com/in/haidenmcgill)
 
 Say hi: [hello@offbeathike.com](mailto:hello@offbeathike.com)
+
+## License
+
+The code is [MIT licensed](LICENSE).
+
+The field recordings (`public/audio/`), recording descriptions (`content/`, `data/audio-markers.ts`), team photos (`public/team/`) and site writing are © Anna Wozniewicz and Haiden McGill, all rights reserved. They're not covered by the MIT license; please ask before reusing them. Mapbox and Native Land Digital logos belong to their owners.
