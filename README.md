@@ -2,6 +2,8 @@
 
 **Hike the Pacific Crest Trail: a scroll-driven 3D journey over live terrain from Mexico toward Canada, featuring 74 field recordings taken along the way.**
 
+**[Try it live at offbeathike.com →](https://offbeathike.com)**
+
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/desktop-splash.jpg" alt="Offbeat splash screen with the Begin Journey button" /></td>
