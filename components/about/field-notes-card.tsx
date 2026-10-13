@@ -7,6 +7,7 @@ import {
   FIELD_NOTES_PRONUNCIATION,
   MOBILE_FIELD_NOTES_TYPE_SCALE,
 } from "@/lib/draw-field-notes-card"
+import { loadFieldNotesBabylon } from "@/lib/load-field-notes-babylon"
 
 const TEXTURE_W = 2048
 const TEXTURE_H = 1120
@@ -69,13 +70,15 @@ function applyPose(node: { rotation: { x: number; y: number; z: number }; positi
   node.position.z = pose.z
 }
 
-const EMERGE_PX = 56
-
-function placeCopy(el: HTMLElement | null, progress: number) {
-  if (!el) return
-  const t = Math.min(1, Math.max(0, progress))
-  el.style.opacity = String(t)
-  el.style.transform = t >= 1 ? "none" : `translateY(${(1 - t) * -EMERGE_PX}px)`
+/** Run after first paint settles so WebGL setup doesn't compete with it. */
+function whenIdle() {
+  return new Promise<void>((resolve) => {
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(() => resolve(), { timeout: 600 })
+    } else {
+      setTimeout(resolve, 1)
+    }
+  })
 }
 
 export function FieldNotesCard({
@@ -86,7 +89,6 @@ export function FieldNotesCard({
   children?: ReactNode
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const copyRef = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -94,15 +96,21 @@ export function FieldNotesCard({
     if (!canvas) return
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (reduced) placeCopy(copyRef.current, 1)
     let disposed = false
-    let engine: import("@babylonjs/core").Engine | undefined
+    let engine: import("@babylonjs/core/Engines/engine").Engine | undefined
 
     const boot = async () => {
       await document.fonts.ready
+      await whenIdle()
       if (disposed) return
 
-      const BABYLON = await import("@babylonjs/core")
+      let BABYLON: Awaited<ReturnType<typeof loadFieldNotesBabylon>>
+      try {
+        BABYLON = await loadFieldNotesBabylon()
+      } catch {
+        if (!disposed) setFailed(true)
+        return
+      }
       if (disposed) return
 
       const {
@@ -114,7 +122,9 @@ export function FieldNotesCard({
         Vector3,
         Color3,
         Color4,
-        MeshBuilder,
+        CreateBox,
+        CreatePlane,
+        CreateGround,
         StandardMaterial,
         DynamicTexture,
         TransformNode,
@@ -205,7 +215,7 @@ export function FieldNotesCard({
 
       const root = new TransformNode("cardRoot", scene)
 
-      const stock = MeshBuilder.CreateBox(
+      const stock = CreateBox(
         "stock",
         { width: CARD_W, height: CARD_D, depth: CARD_T },
         scene,
@@ -213,7 +223,7 @@ export function FieldNotesCard({
       stock.material = edge
       stock.parent = root
 
-      const face = MeshBuilder.CreatePlane("face", { width: CARD_W, height: CARD_D }, scene)
+      const face = CreatePlane("face", { width: CARD_W, height: CARD_D }, scene)
       face.position.z = CARD_T / 2 + 0.0015
       face.material = paper
       face.parent = root
@@ -224,7 +234,7 @@ export function FieldNotesCard({
       shadowMat.backFaceCulling = false
       shadowMat.disableLighting = true
 
-      const shadow = MeshBuilder.CreateGround("shadow", { width: CARD_W * 1.08, height: CARD_D * 1.15 }, scene)
+      const shadow = CreateGround("shadow", { width: CARD_W * 1.08, height: CARD_D * 1.15 }, scene)
       shadow.material = shadowMat
       shadow.position.y = -0.72
 
@@ -272,10 +282,8 @@ export function FieldNotesCard({
           shadow.scaling.x = lerp(1.02, 0.78, e)
           shadow.scaling.z = lerp(1.08, 0.72, e)
           shadowMat.alpha = lerp(0.22, 0.07, e)
-          placeCopy(copyRef.current, e)
           if (u >= 1) {
             settled = true
-            placeCopy(copyRef.current, 1)
             camera.lowerRadiusLimit = FLOAT_CAM.radius
             camera.upperRadiusLimit = FLOAT_CAM.radius
           }
@@ -296,9 +304,25 @@ export function FieldNotesCard({
       window.addEventListener("pointermove", onPointerMove, { passive: true })
       window.addEventListener("pointerleave", onPointerLeave)
       window.addEventListener("resize", onResize)
-      engine.runRenderLoop(() => scene.render())
+
+      // Only draw while the card is on screen; below the fold it would keep
+      // the GPU busy at 60fps for nothing.
+      const render = () => scene.render()
+      let running = false
+      const visibility = new IntersectionObserver(([entry]) => {
+        if (!engine) return
+        if (entry.isIntersecting && !running) {
+          running = true
+          engine.runRenderLoop(render)
+        } else if (!entry.isIntersecting && running) {
+          running = false
+          engine.stopRenderLoop(render)
+        }
+      })
+      visibility.observe(canvas)
 
       return () => {
+        visibility.disconnect()
         window.removeEventListener("pointermove", onPointerMove)
         window.removeEventListener("pointerleave", onPointerLeave)
         window.removeEventListener("resize", onResize)
@@ -366,10 +390,7 @@ export function FieldNotesCard({
       />
     </div>
     {children ? (
-      <div
-        ref={copyRef}
-        className="pct-card-copy relative z-0 -mt-[calc(min(75.4vw,546px)*0.14-0.5rem)] -translate-y-11 opacity-0"
-      >
+      <div className="pct-card-copy relative z-0 -mt-[calc(min(75.4vw,546px)*0.14-0.5rem)] -translate-y-11">
         {children}
       </div>
     ) : null}

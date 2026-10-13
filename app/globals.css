@@ -1251,10 +1251,12 @@ html[data-pct-layout="dock"] .pct-chapter-tab--active {
   }
 }
 
-/* Staggered entrance for site page sections. */
+/* Staggered entrance for site page sections. Starts at 0.01, not 0: the
+   browser skips fully transparent text when timing Largest Contentful Paint,
+   so a 0 start would push LCP back by the whole fade. */
 @keyframes pct-fade-up {
   from {
-    opacity: 0;
+    opacity: 0.01;
     transform: translateY(10px);
   }
   to {
@@ -1287,6 +1289,24 @@ html[data-pct-layout="dock"] .pct-chapter-tab--active {
   animation-delay: 320ms;
 }
 
+/* About intro copy slides out from under the field-notes card. Runs on its
+   own clock rather than waiting for the 3D card to load, so the text never
+   sits hidden behind a WebGL download. */
+@keyframes pct-card-copy-in {
+  from {
+    opacity: 0.01;
+    transform: translateY(-56px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pct-card-copy {
+  animation: pct-card-copy-in 1100ms cubic-bezier(0.65, 0, 0.35, 1) 350ms both;
+}
+
 /* Press feedback on the shared controls and link rows. */
 .pct-glass-control:active:not(:disabled) {
   transform: scale(0.94);
@@ -1301,7 +1321,8 @@ html[data-pct-layout="dock"] .pct-chapter-tab--active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pct-stagger > * {
+  .pct-stagger > *,
+  .pct-card-copy {
     animation: none;
   }
 

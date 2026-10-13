@@ -1,6 +1,7 @@
 "use client"
 
 import { useId, type ReactNode } from "react"
+import Image from "next/image"
 import { ChevronDown, Github, Linkedin } from "lucide-react"
 import { slideContentClass, slidePanelClass, useSlidePanel } from "@/hooks/use-slide-panel"
 
@@ -52,11 +53,11 @@ export function TeamMember({
   return (
     <article className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
       <div className={`${portraitFrame} relative aspect-[3/4] overflow-hidden`}>
-        <img
+        <Image
           src={photoSrc}
           alt={photoAlt}
-          width={photoWidth}
-          height={photoHeight}
+          fill
+          sizes="(min-width: 768px) 15rem, 17.5rem"
           className={
             photoWidth > photoHeight
               ? "absolute inset-0 h-full w-full object-cover object-[16%_center]"
