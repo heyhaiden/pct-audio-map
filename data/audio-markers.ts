@@ -1000,7 +1000,7 @@ export const audioMarkers: AudioMarker[] = [
     chapter: "sierra-nevada",
     featured: false,
     description:
-      "Steady wind rustles tree leaves. Mule Ears blanket the ground, glowing in the setting sun",
+      "Steady wind rustles tree leaves. Mule Ears blanket the ground, glowing in the setting sun.",
     recordingDate: "July 19, 2025",
     timeOfDay: "evening",
     lands: [
