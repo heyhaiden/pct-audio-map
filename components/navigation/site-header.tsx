@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Mountain } from "lucide-react"
 import { MobileNavigationMenu } from "@/components/navigation/mobile-navigation-menu"
 import { handleHomeNavClick } from "@/lib/home-exit"
+import { loadFieldNotesBabylon } from "@/lib/load-field-notes-babylon"
 import { cameFromActiveMap, setResumeIntent } from "@/lib/map-session"
 
 export type SiteNavPage = "map" | "home" | "library" | "about" | "resources"
@@ -114,12 +115,20 @@ export function SiteHeader({ current, pinned = false }: SiteHeaderProps) {
             }
 
             const isHome = link.id === "home"
+            // About's 3D card is its heaviest chunk; start fetching it on intent.
+            // Not from the splash, where map tiles need the bandwidth.
+            const warmAbout =
+              link.id === "about" && current !== "home"
+                ? () => void loadFieldNotesBabylon().catch(() => {})
+                : undefined
             return (
               <Link
                 key={link.id}
                 href={link.href}
                 prefetch={current !== "home"}
                 onClick={isHome ? goHome : undefined}
+                onPointerEnter={warmAbout}
+                onFocus={warmAbout}
                 className={`${navItemClass} text-[#8b8271] hover:text-[#ede8dc] ${
                   isHome && animateHomeLink ? "pct-nav-in" : ""
                 }`}

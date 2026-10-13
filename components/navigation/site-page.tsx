@@ -72,9 +72,7 @@ export function SitePage({
       />
       <div className="relative z-10">
         <SiteHeader current={current} pinned />
-        <div className="animate-in fade-in duration-500">
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   )
