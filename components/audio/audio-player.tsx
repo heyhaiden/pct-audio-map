@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { AudioMarkerCardBody, audioMarkerStatusClass } from "@/components/audio/audio-marker-card"
 import { shouldDismissAudioCard } from "@/lib/audio-player-dismiss"
 import type { AudioMarker } from "@/types/map"
@@ -153,19 +153,30 @@ export function AudioPlayer({
             transitionDuration: easeHeight ? `${CARD_HEIGHT_MS}ms` : undefined,
           } as CSSProperties
         }
-        className={`pct-glass-panel relative overflow-hidden md:min-h-[268px] md:overflow-visible ${
+        className={`pct-glass-panel group relative overflow-hidden md:min-h-[268px] md:overflow-visible ${
           easeHeight
             ? "transition-[height] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
             : ""
         } max-md:h-[var(--audio-card-h,auto)]`}
       >
+        {/* Reminds people they can leave the recording and free-scroll. Small and
+            always visible on mobile; floats off the corner on desktop hover. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close audio player"
+          className="absolute right-1.5 top-1.5 z-10 grid h-7 w-7 place-items-center rounded-full text-[#8b8271]/80 transition-[color,background-color,opacity] hover:text-[#ede8dc] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] md:-right-3 md:-top-3 md:h-8 md:w-8 md:border md:border-[var(--pct-glass-border)] md:bg-[rgba(15,14,12,0.92)] md:text-[#ada396] md:opacity-0 md:backdrop-blur-[14px] md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+        >
+          <X className="h-3.5 w-3.5 md:h-4 md:w-4" />
+        </button>
+
         <div
           ref={measureRef}
           className="flex min-h-0 flex-col p-[15px_16px] md:min-h-[268px] md:p-[18px]"
         >
           <div
             key={shown.id}
-            className={`min-w-0 flex-1 text-left ${swapCopy ? "pct-audio-card-copy" : ""}`}
+            className={`min-w-0 flex-1 pr-5 text-left md:pr-0 ${swapCopy ? "pct-audio-card-copy" : ""}`}
           >
             <AudioMarkerCardBody marker={shown} variant="map" />
           </div>

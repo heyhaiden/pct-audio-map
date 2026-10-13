@@ -618,6 +618,9 @@ export default function Home() {
     arrivedByJumpRef.current = true
     const chapterStartMile = CHAPTER_MILE_RANGES[chapterIndex]?.start || 0
     const targetMile = chapterStartMile + 1
+    // Landing past the content edge counts as having seen the notice, so it
+    // only fires again after scrolling back south and re-crossing WIP_MILE.
+    if (targetMile >= WIP_MILE) setWipDismissed(true)
     const progress = targetMile / totalMiles
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const targetScroll = progress * scrollHeight
@@ -844,14 +847,10 @@ export default function Home() {
     openingChapterTabsLocked,
   )
 
-  // Opening an audio node collapses the drawer; closing it clears peek/tuck overrides.
+  // Audio open/close clears the temporary peek but keeps the user's tuck, so
+  // the drawer comes back in whatever state they last left it.
   useEffect(() => {
-    if (autoHideChapterTimeline) {
-      setTabsUserExpanded(false)
-      setTabsUserCollapsed(false)
-    } else {
-      setTabsUserExpanded(false)
-    }
+    setTabsUserExpanded(false)
   }, [autoHideChapterTimeline])
 
   const hideChapterTimeline = resolveChapterTimelineCollapsed(
@@ -862,14 +861,14 @@ export default function Home() {
 
   const handleToggleChapterDrawer = useCallback(() => {
     if (hideChapterTimeline) {
-      // Peek open (works during audio) or undo a manual tuck.
+      // Open: peek past the audio auto-hide if needed, and drop any tuck.
       if (autoHideChapterTimeline) setTabsUserExpanded(true)
-      else setTabsUserCollapsed(false)
+      setTabsUserCollapsed(false)
       return
     }
-    // Close: clear peek, or tuck while exploring.
-    if (autoHideChapterTimeline) setTabsUserExpanded(false)
-    else setTabsUserCollapsed(true)
+    // Close: clear any peek and remember the tuck for after audio.
+    setTabsUserExpanded(false)
+    setTabsUserCollapsed(true)
   }, [autoHideChapterTimeline, hideChapterTimeline])
 
   useEffect(() => {
