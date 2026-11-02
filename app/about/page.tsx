@@ -1,9 +1,18 @@
+import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/site"
 import { Mail } from "lucide-react"
 import { FieldNotesCard } from "@/components/about/field-notes-card"
 import { InfoTip } from "@/components/about/info-tip"
 import { TeamMember } from "@/components/about/team-member"
 import { WhyDrawer } from "@/components/about/why-drawer"
 import { SitePage } from "@/components/navigation/site-page"
+
+export const metadata: Metadata = pageMetadata({
+  title: "About",
+  path: "/about",
+  description:
+    "The story behind Offbeat: why one hiker recorded the sounds of the Pacific Crest Trail, what “offbeat” means, and the people who made it.",
+})
 
 const projectCopy = [
   "Offbeat is a choose-your-own-adventure meditative experience, capturing one hiker's journey along the Pacific Crest Trail.",
@@ -48,7 +57,7 @@ const team = [
     name: "Anna Wozniewicz",
     role: "Field recording & experience design",
     description:
-      "As a queer woman and avid hiker, skier, and (more recently, due to my PCT-ending injury) biker, I don’t often see myself represented in the spaces I love most. I want everyone to feel empowered to get out there and participate in the incredible gift that is nature, and I hope this project will inspire others to take a walk – whether it’s 1, 10, or 1000 miles – and to pause long enough to hear that nature is never truly silent. The outdoors are for everyone, and for anyone who doesn’t have the privilege of doing a thru hike, or isn’t able to enjoy the PCT for themselves: I hope that I can bring the feeling of it to wherever in the world you are. Thank you for being part of my journey.",
+      "As a queer woman and avid hiker, skier, and (more recently, due to my PCT-ending injury) biker, I don’t often see myself represented in the spaces I love most. Offbeat is an invitation into the outdoors, for those who don’t have the immense privilege of going on a thru-hike, or can’t experience the PCT for themselves: I hope I can bring the feeling of my most life-altering experience to wherever in the world you are. It also weaves together all the threads of my professional life — audio engineering, building products, teaching, and fighting climate change — and maybe it’ll inspire you to stop and listen to the world around you (or go on a long walk). When I’m not spending time outdoors, I’m usually chef-ing up a meal or thinking about seaweed. Thank you for being part of my journey.",
     photoAlt: "Anna Wozniewicz hiking at the California–Oregon border on the Pacific Crest Trail",
     photoSrc: "/team/anna-border.jpg",
     photoWidth: 1024,
@@ -76,7 +85,7 @@ const team = [
         scroll-driven love letter to the people who walked the PCT before us. See more of my projects and
         climate work{" "}
         <a
-          href="https://heyhaiden.vercel.app/"
+          href="https://heyhaiden.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="text-[#ed5a43] underline decoration-[#ed5a43]/40 underline-offset-[3px] hover:text-[#f06b57] hover:decoration-[#f06b57]"
@@ -127,7 +136,7 @@ export default function AboutPage() {
               About <span className="pct-wordmark font-wordmark uppercase text-[#ed5a43]">Offbeat</span>
             </h1>
             <FieldNotesCard definitions={definitions}>
-              <div className="mx-auto max-w-xl space-y-4 text-left">
+              <div className="mx-auto max-w-xl space-y-4 text-left md:max-w-none">
                 {projectCopy.map((paragraph) => (
                   <p
                     key={paragraph}

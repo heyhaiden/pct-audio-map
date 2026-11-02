@@ -4,6 +4,7 @@ import { Archivo, IBM_Plex_Mono, Mansalva, Spectral } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css"
+import { SITE_DESCRIPTION, SITE_NAME, SITE_SHORT_NAME, SITE_URL } from "@/lib/site"
 
 const archivo = Archivo({
   subsets: ["latin"],
@@ -33,9 +34,63 @@ const mansalva = Mansalva({
 })
 
 export const metadata: Metadata = {
-  title: "Offbeat: Soundscapes of the PCT",
-  description: "An audio journey along the Pacific Crest Trail",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s · ${SITE_SHORT_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_SHORT_NAME,
   generator: "v0.app",
+  authors: [{ name: "Anna Wozniewicz" }, { name: "Haiden McGill", url: "https://heyhaiden.com/" }],
+  creator: "Anna Wozniewicz & Haiden McGill",
+  keywords: [
+    "Pacific Crest Trail",
+    "PCT",
+    "thru-hike",
+    "field recordings",
+    "soundscapes",
+    "nature sounds",
+    "audio map",
+    "3D trail map",
+    "meditation",
+    "backpacking",
+  ],
+  category: "travel",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+}
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  alternateName: SITE_SHORT_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  inLanguage: "en-US",
+  creator: [
+    { "@type": "Person", name: "Anna Wozniewicz" },
+    { "@type": "Person", name: "Haiden McGill" },
+  ],
+  about: { "@type": "TouristAttraction", name: "Pacific Crest Trail" },
 }
 
 // Immersive, app-like framing: cover the notch/safe areas, match the dark UI,
@@ -64,6 +119,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://events.mapbox.com" />
       </head>
       <body className={`${archivo.variable} ${spectral.variable} ${plexMono.variable} ${mansalva.variable} font-sans`}>
+        <script
+          type="application/ld+json"
+          // Static object, no user input — safe to inline.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
         {children}
         <Analytics />
         <SpeedInsights />
