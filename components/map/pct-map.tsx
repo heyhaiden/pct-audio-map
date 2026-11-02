@@ -24,6 +24,7 @@ import {
   type PrefetchController,
 } from "@/lib/tile-prefetch"
 import { isTrailPrepCached, markTrailPrepCached } from "@/lib/trail-prep-cache"
+import { installTrailLabelLayers } from "@/lib/trail-label-layer"
 import { installAudioMarkerLayer } from "@/lib/audio-marker-layer"
 import { waitForOverviewScene } from "@/lib/splash-map-readiness"
 
@@ -617,10 +618,12 @@ export function PCTMap({
           // from a React effect — an effect can only run after onMapLoad below,
           // by which point tile prefetching keeps isStyleLoaded() false and the
           // install silently never lands.
+          installTrailLabelLayers(map.current)
           installAudioMarkerLayer(map.current)
           // A style reload drops every image, source and layer we added.
           mapInstance.on("style.load", () => {
             if (map.current !== mapInstance || !isMapAlive(mapInstance)) return
+            installTrailLabelLayers(mapInstance)
             installAudioMarkerLayer(mapInstance)
           })
 
