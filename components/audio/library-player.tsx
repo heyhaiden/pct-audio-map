@@ -13,6 +13,8 @@ import {
   type LibraryAudioOutput,
 } from "@/lib/library-audio-output"
 import { resolveLibraryAudioUrl } from "@/lib/resolve-audio-url"
+import { clipPlaybackGain, fetchLoopManifest } from "@/lib/audio-loop-manifest"
+import { clipIdFromAudioUrl } from "@/lib/audio-clip-id"
 
 const PLAYBACK_FADE_MS = 360
 const END_FADE_MS = 2000
@@ -98,6 +100,10 @@ export function LibraryPlayer({ folders }: { folders: AudioLibraryFolder[] }) {
     const output = createLibraryAudioOutput(resolveLibraryAudioUrl(audioUrl, format))
     const audio = output.element
     output.arm()
+    const clipId = clipIdFromAudioUrl(audioUrl)
+    if (clipId) {
+      void fetchLoopManifest().then((manifest) => output.setTrim(clipPlaybackGain(manifest, clipId)))
+    }
     outputRef.current = output
     audioRef.current = audio
 

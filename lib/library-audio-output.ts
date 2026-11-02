@@ -7,6 +7,8 @@ export type LibraryAudioOutput = {
   element: HTMLAudioElement
   getVolume: () => number
   setVolume: (value: number) => void
+  /** Fixed per-clip boost (manifest playbackGainDb). Needs the Web Audio path; element.volume caps at 1. */
+  setTrim: (value: number) => void
   arm: () => void
   dispose: () => void
 }
@@ -30,6 +32,7 @@ export function createLibraryAudioOutput(src: string): LibraryAudioOutput {
   element.src = src
 
   let volume = 0
+  let trim = 1
   let gain: GainNode | null = null
   let source: MediaElementAudioSourceNode | null = null
   let disposed = false
@@ -37,7 +40,7 @@ export function createLibraryAudioOutput(src: string): LibraryAudioOutput {
   const apply = (value: number) => {
     volume = Math.max(0, Math.min(1, value))
     if (gain && sharedContext) {
-      gain.gain.setValueAtTime(volume, sharedContext.currentTime)
+      gain.gain.setValueAtTime(volume * trim, sharedContext.currentTime)
       return
     }
     element.volume = volume
@@ -49,6 +52,10 @@ export function createLibraryAudioOutput(src: string): LibraryAudioOutput {
     element,
     getVolume: () => volume,
     setVolume: apply,
+    setTrim(value) {
+      trim = Number.isFinite(value) && value > 0 ? value : 1
+      apply(volume)
+    },
     arm() {
       if (disposed || source) return
       const context = getSharedContext()
@@ -58,7 +65,7 @@ export function createLibraryAudioOutput(src: string): LibraryAudioOutput {
       }
       try {
         gain = context.createGain()
-        gain.gain.value = volume
+        gain.gain.value = volume * trim
         source = context.createMediaElementSource(element)
         source.connect(gain)
         gain.connect(context.destination)

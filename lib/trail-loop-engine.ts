@@ -2,6 +2,7 @@ import { bufferHasEnergy, chooseLoopFormat } from "@/lib/audio-format-probe"
 import { crossfadeVolumes, fadeOutVolume } from "@/lib/audio-crossfade"
 import { nextDecodedIds } from "@/lib/decoded-clip-cache"
 import {
+  clipPlaybackGain,
   loopWindow,
   normalizeManifest,
   type LoopManifest,
@@ -43,6 +44,8 @@ type LoopFormat = "opus" | "mp3"
 interface Deck {
   source: AudioBufferSourceNode
   gain: GainNode
+  /** Fixed per-clip boost (manifest playbackGainDb), below the fade gain. */
+  trim: GainNode
   clipId: string
 }
 
@@ -148,6 +151,7 @@ export function createTrailLoopEngine(options: {
     }
     deck.source.disconnect()
     deck.gain.disconnect()
+    deck.trim.disconnect()
   }
 
   const disconnectOrphans = (keep: Array<Deck | null>) => {
@@ -246,9 +250,13 @@ export function createTrailLoopEngine(options: {
   const startLoop = (clipId: string, buffer: AudioBuffer, gainValue: number) => {
     if (!context || !master) throw new Error("Audio is locked")
 
+    const trim = context.createGain()
+    trim.gain.value = clipPlaybackGain(manifest, clipId)
+    trim.connect(master)
+
     const gain = context.createGain()
     gain.gain.setValueAtTime(gainValue, context.currentTime)
-    gain.connect(master)
+    gain.connect(trim)
 
     const source = context.createBufferSource()
     source.buffer = buffer
@@ -259,7 +267,7 @@ export function createTrailLoopEngine(options: {
     source.connect(gain)
     source.start()
 
-    const deck = { source, gain, clipId }
+    const deck = { source, gain, trim, clipId }
     liveDecks.add(deck)
     return deck
   }

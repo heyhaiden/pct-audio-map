@@ -6,6 +6,7 @@ import test from "node:test"
 import { audioMarkers } from "../data/audio-markers.ts"
 import { clipIdFromAudioUrl } from "../lib/audio-clip-id.ts"
 import {
+  clipPlaybackGain,
   loopWindow,
   normalizeManifest,
 } from "../lib/audio-loop-manifest.ts"
@@ -63,5 +64,29 @@ test("the real Anna manifest covers every marker clip id", () => {
     assert.equal(raw.clips[id]?.gainDb, -1)
     assert.equal(manifest[id]?.gainDb, undefined)
     assert.ok((manifest[id]?.sampleCount ?? 0) > 0)
+  }
+})
+
+test("playbackGainDb becomes a linear gain, capped at maxGainDb", () => {
+  const manifest = normalizeManifest({
+    clips: {
+      "1-1": { samples: 48000, playbackGainDb: 6, maxGainDb: 15 },
+      "1-4": { samples: 48000, playbackGainDb: 8, maxGainDb: 1.5 },
+      "3-1": { samples: 48000 },
+    },
+  })
+  assert.ok(Math.abs(clipPlaybackGain(manifest, "1-1") - 10 ** (6 / 20)) < 1e-9)
+  assert.ok(Math.abs(clipPlaybackGain(manifest, "1-4") - 10 ** (1.5 / 20)) < 1e-9)
+  assert.equal(clipPlaybackGain(manifest, "3-1"), 1)
+  assert.equal(clipPlaybackGain(manifest, "missing"), 1)
+  assert.equal(clipPlaybackGain(null, "1-1"), 1)
+})
+
+test("shipped manifest gives every clip a boost no higher than its ceiling", () => {
+  const raw = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../public/audio/manifest.json"), "utf8"))
+  const manifest = normalizeManifest(raw)
+  for (const [id, clip] of Object.entries(raw.clips as Record<string, { playbackGainDb: number; maxGainDb: number }>)) {
+    const appliedDb = 20 * Math.log10(clipPlaybackGain(manifest, id))
+    assert.ok(appliedDb <= clip.maxGainDb + 1e-9, `${id} exceeds its ceiling`)
   }
 })
