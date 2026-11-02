@@ -1,5 +1,14 @@
+import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/site"
 import { ResourceFolder, type ResourceLink } from "@/components/resources/resource-folder"
 import { SitePage } from "@/components/navigation/site-page"
+
+export const metadata: Metadata = pageMetadata({
+  title: "Trail Resources",
+  path: "/resources",
+  description:
+    "Planning tools and organizations for the PCT, with a focus on communities supporting women, nonbinary, LGBTQ+, and underrepresented hikers. Plus a land acknowledgement.",
+})
 
 const folders: Array<{
   id: string

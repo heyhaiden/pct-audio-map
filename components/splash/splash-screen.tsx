@@ -238,15 +238,12 @@ export function SplashScreen({
             </span>
           </h1>
 
-          <p className="pct-splash-lede pct-display mb-6 w-full max-w-[23rem] text-lede font-light leading-[1.45] text-[#c7beac]">
+          {/* Phones: one flowing paragraph (forced breaks left ragged short lines).
+              Desktop keeps its three-line rhythm. */}
+          <p className="pct-splash-lede pct-display mb-6 w-full max-w-[23rem] text-pretty text-lede font-light leading-[1.45] text-[#c7beac]">
             An audio journey along the Pacific Crest Trail.
-            <br />
-            <span>
-              Scroll to explore.
-              <br className="md:hidden" /> Stop at waypoints to listen.
-              <br />
-              Stay as long as you like.
-            </span>
+            <br className="hidden md:inline" /> Scroll to explore. Stop at waypoints to listen.
+            <br className="hidden md:inline" /> Stay as long as you like.
           </p>
 
           <div className="pct-splash-cta flex flex-col items-center">

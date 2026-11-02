@@ -1,7 +1,16 @@
+import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/site"
 import { audioMarkers } from "@/data/audio-markers"
 import { LibraryPlayer } from "@/components/audio/library-player"
 import { SitePage } from "@/components/navigation/site-page"
 import { buildAudioLibraryFolders } from "@/lib/audio-library-folders"
+
+export const metadata: Metadata = pageMetadata({
+  title: "Audio Library",
+  path: "/library",
+  description:
+    "Listen to every field recording from the Pacific Crest Trail, organized by trail section from the Mexican border northward.",
+})
 
 const libraryFolders = buildAudioLibraryFolders()
 const recordingCount = audioMarkers.filter((marker) => marker.audioUrl).length
