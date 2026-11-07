@@ -29,3 +29,5 @@ next-env.d.ts
 # local field recordings (upload via scripts/ingest-audio.ts → Vercel Blob)
 /content/audio/*
 !/content/audio/.gitkeep
+.env.local
+.DS_Store

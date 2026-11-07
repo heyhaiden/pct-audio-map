@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
 import dynamic from "next/dynamic"
+import posthog from "posthog-js"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
 import { AudioPlayer } from "@/components/audio/audio-player"
@@ -298,6 +299,7 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    posthog.capture("journey_started")
     void unlockAudio()
     clearMapSession()
 
@@ -612,6 +614,11 @@ export default function Home() {
   }, [introComplete, isResuming])
 
   const handleChapterClick = (chapterIndex: number) => {
+    const chapter = pctSegments[chapterIndex]
+    posthog.capture("chapter_selected", {
+      chapter_id: chapter?.id,
+      chapter_index: chapterIndex,
+    })
     pendingNodeAfterOverlayRef.current = null
     markDirectNavigation()
     // Flying over the content edge via a tab shouldn't trip the WIP notice.
@@ -667,9 +674,20 @@ export default function Home() {
   )
 
   const activateNode = useCallback(
-    (marker: AudioMarker, cameraDurationMs: number, audioFadeMs?: number) => {
+    (
+      marker: AudioMarker,
+      cameraDurationMs: number,
+      audioFadeMs?: number,
+      navigation_source: "map_marker" | "player_previous" | "player_next" | "chapter_transition" = "map_marker",
+    ) => {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
+      posthog.capture("map_recording_opened", {
+        marker_id: marker.id,
+        chapter_id: marker.chapter,
+        has_audio: hasMarkerAudio(marker),
+        navigation_source,
+      })
       markDirectNavigation()
       if (marker.audioUrl) primeLoop(marker.audioUrl)
       void unlockAudio()
@@ -705,7 +723,9 @@ export default function Home() {
     setOverlayDismissedChapter(currentChapter)
     const pending = pendingNodeAfterOverlayRef.current
     pendingNodeAfterOverlayRef.current = null
-    if (pending) activateNode(pending, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+    if (pending) {
+      activateNode(pending, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS, "chapter_transition")
+    }
   }
 
   const handleCloseAudio = async () => {
@@ -747,7 +767,7 @@ export default function Home() {
 
   const handleAudioMarkerClick = (marker: AudioMarker) => {
     if (mapPinsLocked) return
-    activateNode(marker, 2400)
+    activateNode(marker, 2400, undefined, "map_marker")
   }
 
   const { previous: previousPlayable, next: nextPlayable } = selectedAudioMarker
@@ -764,7 +784,7 @@ export default function Home() {
 
   const handlePreviousMarker = () => {
     if (!previousPlayable) return
-    activateNode(previousPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+    activateNode(previousPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS, "player_previous")
   }
 
   const advanceToChapterGate = async (gateMiles: number, nextMarker: AudioMarker | null) => {
@@ -806,7 +826,7 @@ export default function Home() {
       return
     }
     if (nextPlayable) {
-      activateNode(nextPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+      activateNode(nextPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS, "player_next")
       return
     }
     if (!advanceToWip) return
