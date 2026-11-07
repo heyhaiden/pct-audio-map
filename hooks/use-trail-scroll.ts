@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
+import { geoFractionForTrailMile } from "@/lib/trail-mile-calibration"
 import mapboxgl from "mapbox-gl"
 import along from "@turf/along"
 import bearing from "@turf/bearing"
@@ -224,7 +225,8 @@ export function useTrailScroll({
         const points: CameraPathPoint[] = []
 
         for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
-          const distance = (i / CAMERA_PATH_POINTS) * totalLength
+          const distance =
+            geoFractionForTrailMile((i / CAMERA_PATH_POINTS) * PCT_TOTAL_MILES) * totalLength
           const point = along(line, distance, { units: "kilometers" })
           const coords = point.geometry.coordinates
 

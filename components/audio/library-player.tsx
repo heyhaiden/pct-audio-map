@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
+import posthog from "posthog-js"
 import { LibraryChapter } from "@/components/audio/library-chapter"
 import type { AudioLibraryFolder } from "@/lib/audio-library-folders"
 import {
@@ -176,6 +177,10 @@ export function LibraryPlayer({ folders }: { folders: AudioLibraryFolder[] }) {
 
     if (playingId === markerId && current && currentOutput) {
       if (fadingOutId.current === markerId) {
+        posthog.capture("library_recording_played", {
+          marker_id: markerId,
+          playback_action: "resumed",
+        })
         fadingOutId.current = null
         void current.play().then(() => {
           if (!endFadeFrame.current) playbackClockRef.current?.()
@@ -207,6 +212,10 @@ export function LibraryPlayer({ folders }: { folders: AudioLibraryFolder[] }) {
       })
     }
 
+    posthog.capture("library_recording_played", {
+      marker_id: markerId,
+      playback_action: "started",
+    })
     attachLibraryAudio(markerId, audioUrl, "opus")
     setPlayingId(markerId)
   }
@@ -218,6 +227,10 @@ export function LibraryPlayer({ folders }: { folders: AudioLibraryFolder[] }) {
     const knownDuration = durations[markerId] || knownDurations.get(markerId) || 0
     const duration = audio ? resolvePlaybackDuration(audio.duration, knownDuration) : 0
     if (playingId === markerId && audio && duration > 0) {
+      posthog.capture("library_recording_seeked", {
+        marker_id: markerId,
+        seek_percent: Math.round(percent),
+      })
       audio.currentTime = (percent / 100) * duration
     }
   }
