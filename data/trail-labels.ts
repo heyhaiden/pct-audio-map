@@ -11,8 +11,9 @@
 //   pass     → same as road
 //
 // Left out: rows marked "already on map" in the sheet (Big Bear Lake,
-// Wrightwood, Mount Baden-Powell, Vasquez Rocks, South Lake Tahoe), and Big
-// Lake Youth Camp, whose sheet coordinates duplicate McKenzie Pass.
+// Wrightwood, Mount Baden-Powell, South Lake Tahoe), and Big Lake Youth Camp,
+// whose sheet coordinates duplicate McKenzie Pass. Vasquez Rocks comes from
+// the sheet's second tab.
 
 export type TrailLabelKind = "town" | "poi" | "mountain" | "tree" | "water" | "road" | "pass"
 
@@ -54,6 +55,8 @@ export const trailLabels: TrailLabel[] = [
   { name: "Acton", coordinates: [-118.196106, 34.467171], kind: "town" },
   { name: "RV Resort", coordinates: [-118.265831, 34.438057], kind: "poi" },
   { name: "Agua Dulce", coordinates: [-118.326675, 34.496365], kind: "town" },
+  // Sheet2: the base map labels it as a low peak, which the elevation filter hides.
+  { name: "Vasquez Rocks", coordinates: [-118.313847, 34.484559], kind: "poi" },
   { name: "Green Valley", coordinates: [-118.413254, 34.622696], kind: "town" },
   { name: "Hikertown", coordinates: [-118.606773, 34.77578], kind: "town" },
   { name: "Wee Vill Market", coordinates: [-118.457474, 34.77446], kind: "poi" },
