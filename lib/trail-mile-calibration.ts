@@ -19,6 +19,7 @@ const ANCHORS: ReadonlyArray<readonly [number, number]> = [
   [712, 752], // Chicken Spring Lake
   [1110, 1142], // Palisades Ski Resort
   [1777, 1786], // Christi's Spring, Sky Lakes Wilderness
+  [2162, 2147], // Bridge of the Gods, Cascade Locks (OR/WA border)
   [PCT_TOTAL_MILES, PCT_TOTAL_MILES],
 ]
 
