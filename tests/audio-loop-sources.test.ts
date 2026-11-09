@@ -8,15 +8,15 @@ test("resolveLoopSources prefers same-origin Opus and Blob MP3", () => {
   })
   assert.deepEqual(sources, {
     clipId: "1-1",
-    opusUrl: "/audio/opus/1-1.opus",
-    mp3Url: "https://store.public.blob.vercel-storage.com/audio/1-1.mp3",
+    opusUrl: "/audio/opus/1-1.opus?v=2",
+    mp3Url: "https://store.public.blob.vercel-storage.com/audio/1-1.mp3?v=2",
   })
 })
 
 test("resolveLoopSources keeps MP3 same-origin when Blob base is missing", () => {
   const sources = resolveLoopSources("/audio/2-2.mp3", {})
-  assert.equal(sources?.opusUrl, "/audio/opus/2-2.opus")
-  assert.equal(sources?.mp3Url, "/audio/2-2.mp3")
+  assert.equal(sources?.opusUrl, "/audio/opus/2-2.opus?v=2")
+  assert.equal(sources?.mp3Url, "/audio/2-2.mp3?v=2")
 })
 
 test("resolveLoopSources returns null for an unparseable path", () => {

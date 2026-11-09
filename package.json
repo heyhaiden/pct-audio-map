@@ -13,6 +13,10 @@
   },
   "dependencies": {
     "@babylonjs/core": "^9.27.0",
+    "@opentelemetry/api-logs": "^0.223.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.301.0",
+    "@opentelemetry/resources": "^3.1.0",
+    "@opentelemetry/sdk-logs": "^3.1.0",
     "@turf/along": "^7.3.5",
     "@turf/bearing": "^7.3.5",
     "@turf/helpers": "^7.3.5",
@@ -22,6 +26,7 @@
     "lucide-react": "^0.454.0",
     "mapbox-gl": "^3.19.1",
     "next": "16.3.3",
+    "posthog-js": "^1.447.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

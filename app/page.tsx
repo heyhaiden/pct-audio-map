@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect, useCallback, useLayoutEffect } from "react"
 import dynamic from "next/dynamic"
+import posthog from "posthog-js"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
 import { AudioPlayer } from "@/components/audio/audio-player"
@@ -298,6 +299,7 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
+    posthog.capture("journey_started")
     void unlockAudio()
     clearMapSession()
 
@@ -362,12 +364,74 @@ export default function Home() {
 
   useEffect(() => {
     if (currentChapter !== lastChapterRef.current && journeyStarted) {
+      posthog.capture("chapter_reached", {
+        chapter_id: pctSegments[currentChapter]?.id,
+        chapter_index: currentChapter,
+        previous_chapter_index: lastChapterRef.current,
+        direction: currentChapter > lastChapterRef.current ? "forward" : "backward",
+        mile: Math.round(currentMiles),
+      })
       lastChapterRef.current = currentChapter
       if (navigator.vibrate) {
         navigator.vibrate(50)
       }
     }
-  }, [currentChapter, journeyStarted])
+  }, [currentChapter, journeyStarted]) // eslint-disable-line react-hooks/exhaustive-deps -- mile is a snapshot
+
+  // First crossing of each 100-mile mark per visit: drop-off distribution for
+  // "furthest mile reached" without an event per scroll frame.
+  const milestonesReachedRef = useRef<Set<number>>(new Set())
+  useEffect(() => {
+    if (!journeyStarted) return
+    const milestone = Math.floor(currentMiles / 100) * 100
+    if (milestone <= 0 || milestonesReachedRef.current.has(milestone)) return
+    milestonesReachedRef.current.add(milestone)
+    posthog.capture("trail_milestone_reached", { milestone_mile: milestone })
+  }, [currentMiles, journeyStarted])
+
+  // recording_closed: time spent on each map recording. Map audio loops, so
+  // dwell time is the listening signal (there is no "percent heard").
+  const openRecordingRef = useRef<{ id: string; chapter: string; openedAt: number } | null>(null)
+  useEffect(() => {
+    const previous = openRecordingRef.current
+    if (previous && previous.id !== selectedAudioMarker?.id) {
+      posthog.capture("recording_closed", {
+        marker_id: previous.id,
+        chapter_id: previous.chapter,
+        seconds_open: Math.round((Date.now() - previous.openedAt) / 1000),
+        close_reason: selectedAudioMarker ? "switched" : "closed",
+      })
+    }
+    if (selectedAudioMarker && previous?.id !== selectedAudioMarker.id) {
+      openRecordingRef.current = {
+        id: selectedAudioMarker.id,
+        chapter: selectedAudioMarker.chapter,
+        openedAt: Date.now(),
+      }
+    } else if (!selectedAudioMarker) {
+      openRecordingRef.current = null
+    }
+  }, [selectedAudioMarker])
+
+  useEffect(() => {
+    const onPageHide = () => {
+      const open = openRecordingRef.current
+      if (!open) return
+      posthog.capture(
+        "recording_closed",
+        {
+          marker_id: open.id,
+          chapter_id: open.chapter,
+          seconds_open: Math.round((Date.now() - open.openedAt) / 1000),
+          close_reason: "page_exit",
+        },
+        { transport: "sendBeacon" },
+      )
+      openRecordingRef.current = null
+    }
+    window.addEventListener("pagehide", onPageHide)
+    return () => window.removeEventListener("pagehide", onPageHide)
+  }, [])
 
   // WIP notice at early Oregon — shows once when you first reach the content
   // edge. Dismissed until you travel a real stretch south of the boundary;
@@ -388,6 +452,7 @@ export default function Home() {
       !arrivedByJumpRef.current &&
       !selectedAudioMarker
     ) {
+      posthog.capture("wip_reached", { via: "scroll", mile: Math.round(currentMiles) })
       setShowWip(true)
     }
   }, [currentMiles, journeyStarted, showWip, wipDismissed, selectedAudioMarker])
@@ -612,6 +677,11 @@ export default function Home() {
   }, [introComplete, isResuming])
 
   const handleChapterClick = (chapterIndex: number) => {
+    const chapter = pctSegments[chapterIndex]
+    posthog.capture("chapter_selected", {
+      chapter_id: chapter?.id,
+      chapter_index: chapterIndex,
+    })
     pendingNodeAfterOverlayRef.current = null
     markDirectNavigation()
     // Flying over the content edge via a tab shouldn't trip the WIP notice.
@@ -667,9 +737,20 @@ export default function Home() {
   )
 
   const activateNode = useCallback(
-    (marker: AudioMarker, cameraDurationMs: number, audioFadeMs?: number) => {
+    (
+      marker: AudioMarker,
+      cameraDurationMs: number,
+      audioFadeMs?: number,
+      navigation_source: "map_marker" | "player_previous" | "player_next" | "chapter_transition" = "map_marker",
+    ) => {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
+      posthog.capture("map_recording_opened", {
+        marker_id: marker.id,
+        chapter_id: marker.chapter,
+        has_audio: hasMarkerAudio(marker),
+        navigation_source,
+      })
       markDirectNavigation()
       if (marker.audioUrl) primeLoop(marker.audioUrl)
       void unlockAudio()
@@ -705,7 +786,9 @@ export default function Home() {
     setOverlayDismissedChapter(currentChapter)
     const pending = pendingNodeAfterOverlayRef.current
     pendingNodeAfterOverlayRef.current = null
-    if (pending) activateNode(pending, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+    if (pending) {
+      activateNode(pending, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS, "chapter_transition")
+    }
   }
 
   const handleCloseAudio = async () => {
@@ -747,7 +830,7 @@ export default function Home() {
 
   const handleAudioMarkerClick = (marker: AudioMarker) => {
     if (mapPinsLocked) return
-    activateNode(marker, 2400)
+    activateNode(marker, 2400, undefined, "map_marker")
   }
 
   const { previous: previousPlayable, next: nextPlayable } = selectedAudioMarker
@@ -764,7 +847,7 @@ export default function Home() {
 
   const handlePreviousMarker = () => {
     if (!previousPlayable) return
-    activateNode(previousPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+    activateNode(previousPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS, "player_previous")
   }
 
   const advanceToChapterGate = async (gateMiles: number, nextMarker: AudioMarker | null) => {
@@ -806,7 +889,7 @@ export default function Home() {
       return
     }
     if (nextPlayable) {
-      activateNode(nextPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS)
+      activateNode(nextPlayable, NODE_ARROW_CAMERA_MS, NODE_ARROW_AUDIO_FADE_MS, "player_next")
       return
     }
     if (!advanceToWip) return
@@ -823,6 +906,7 @@ export default function Home() {
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight
     window.scrollTo(0, scrollTopForMiles(WIP_MILE, maxScroll))
     controls?.resumeScrollAnimation()
+    posthog.capture("wip_reached", { via: "player_next", mile: WIP_MILE })
     setShowWip(true)
   }
 
