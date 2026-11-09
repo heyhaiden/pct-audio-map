@@ -364,12 +364,74 @@ export default function Home() {
 
   useEffect(() => {
     if (currentChapter !== lastChapterRef.current && journeyStarted) {
+      posthog.capture("chapter_reached", {
+        chapter_id: pctSegments[currentChapter]?.id,
+        chapter_index: currentChapter,
+        previous_chapter_index: lastChapterRef.current,
+        direction: currentChapter > lastChapterRef.current ? "forward" : "backward",
+        mile: Math.round(currentMiles),
+      })
       lastChapterRef.current = currentChapter
       if (navigator.vibrate) {
         navigator.vibrate(50)
       }
     }
-  }, [currentChapter, journeyStarted])
+  }, [currentChapter, journeyStarted]) // eslint-disable-line react-hooks/exhaustive-deps -- mile is a snapshot
+
+  // First crossing of each 100-mile mark per visit: drop-off distribution for
+  // "furthest mile reached" without an event per scroll frame.
+  const milestonesReachedRef = useRef<Set<number>>(new Set())
+  useEffect(() => {
+    if (!journeyStarted) return
+    const milestone = Math.floor(currentMiles / 100) * 100
+    if (milestone <= 0 || milestonesReachedRef.current.has(milestone)) return
+    milestonesReachedRef.current.add(milestone)
+    posthog.capture("trail_milestone_reached", { milestone_mile: milestone })
+  }, [currentMiles, journeyStarted])
+
+  // recording_closed: time spent on each map recording. Map audio loops, so
+  // dwell time is the listening signal (there is no "percent heard").
+  const openRecordingRef = useRef<{ id: string; chapter: string; openedAt: number } | null>(null)
+  useEffect(() => {
+    const previous = openRecordingRef.current
+    if (previous && previous.id !== selectedAudioMarker?.id) {
+      posthog.capture("recording_closed", {
+        marker_id: previous.id,
+        chapter_id: previous.chapter,
+        seconds_open: Math.round((Date.now() - previous.openedAt) / 1000),
+        close_reason: selectedAudioMarker ? "switched" : "closed",
+      })
+    }
+    if (selectedAudioMarker && previous?.id !== selectedAudioMarker.id) {
+      openRecordingRef.current = {
+        id: selectedAudioMarker.id,
+        chapter: selectedAudioMarker.chapter,
+        openedAt: Date.now(),
+      }
+    } else if (!selectedAudioMarker) {
+      openRecordingRef.current = null
+    }
+  }, [selectedAudioMarker])
+
+  useEffect(() => {
+    const onPageHide = () => {
+      const open = openRecordingRef.current
+      if (!open) return
+      posthog.capture(
+        "recording_closed",
+        {
+          marker_id: open.id,
+          chapter_id: open.chapter,
+          seconds_open: Math.round((Date.now() - open.openedAt) / 1000),
+          close_reason: "page_exit",
+        },
+        { transport: "sendBeacon" },
+      )
+      openRecordingRef.current = null
+    }
+    window.addEventListener("pagehide", onPageHide)
+    return () => window.removeEventListener("pagehide", onPageHide)
+  }, [])
 
   // WIP notice at early Oregon — shows once when you first reach the content
   // edge. Dismissed until you travel a real stretch south of the boundary;
@@ -390,6 +452,7 @@ export default function Home() {
       !arrivedByJumpRef.current &&
       !selectedAudioMarker
     ) {
+      posthog.capture("wip_reached", { via: "scroll", mile: Math.round(currentMiles) })
       setShowWip(true)
     }
   }, [currentMiles, journeyStarted, showWip, wipDismissed, selectedAudioMarker])
@@ -843,6 +906,7 @@ export default function Home() {
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight
     window.scrollTo(0, scrollTopForMiles(WIP_MILE, maxScroll))
     controls?.resumeScrollAnimation()
+    posthog.capture("wip_reached", { via: "player_next", mile: WIP_MILE })
     setShowWip(true)
   }
 
