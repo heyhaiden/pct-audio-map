@@ -1,5 +1,6 @@
 import along from "@turf/along"
 import { geoFractionForTrailMile } from "@/lib/trail-mile-calibration"
+import posthog from "posthog-js"
 import bearing from "@turf/bearing"
 import length from "@turf/length"
 import { lineString } from "@turf/helpers"
@@ -335,7 +336,12 @@ export function startPathTilePrefetch(options: {
     }
 
     const readyTimer = setTimeout(() => {
-      if (!cancelled) notifyTrailhead(false)
+      if (cancelled) return
+      // Splash let the visitor in before the trailhead tiles finished warming.
+      if (!trailheadNotified) {
+        posthog.capture("map_load_fallback", { reason: "timeout", timeout_ms: TRAILHEAD_READY_TIMEOUT_MS })
+      }
+      notifyTrailhead(false)
     }, TRAILHEAD_READY_TIMEOUT_MS)
 
     onTrailheadProgress?.(0.02)
@@ -348,6 +354,7 @@ export function startPathTilePrefetch(options: {
       await new Promise((r) => setTimeout(r, 400))
       if (cancelled || !ensurePath()) {
         clearTimeout(readyTimer)
+        if (!cancelled) posthog.capture("map_load_fallback", { reason: "path_unavailable" })
         notifyTrailhead(false)
         return
       }
