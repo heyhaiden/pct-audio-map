@@ -8,6 +8,7 @@ import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
 import { SplashScreen } from "@/components/splash/splash-screen"
+import { HomeIntro } from "@/components/seo/home-intro"
 import { MobileChapterOverlay } from "@/components/mobile/mobile-chapter-overlay"
 import { AboutSocial } from "@/components/navigation/about-social"
 import { ScrollHint } from "@/components/scroll/scroll-hint"
@@ -54,6 +55,7 @@ import {
 } from "@/lib/map-session"
 import { adjacentPlayable, canAdvanceToWip, chapterGateAfterMarker, hasMarkerAudio } from "@/lib/marker-navigation"
 import type { AudioMarker } from "@/types/map"
+import { SoundBlockedPrompt } from "@/components/audio/sound-blocked-prompt"
 
 /**
  * Code-split the map so mapbox-gl (~250KB gz) isn't in the initial bundle. The
@@ -112,10 +114,20 @@ export default function Home() {
     setMuted,
     fadeOutAndStop,
     unlockAudio,
+    retryAudio,
+    audioBlocked,
+    dismissAudioBlocked,
     resumeAudio,
     suspendAudio,
     prefetchLoop,
   } = useAudioPlayer()
+  // Once dismissed, stay quiet for the visit; every pin tap would re-trigger it.
+  const [soundPromptDismissed, setSoundPromptDismissed] = useState(false)
+  const handleDismissSoundPrompt = useCallback(() => {
+    posthog.capture("sound_blocked_dismissed")
+    setSoundPromptDismissed(true)
+    dismissAudioBlocked()
+  }, [dismissAudioBlocked])
 
   // 'boot' avoids SSR/client mismatch while we read resume intent from sessionStorage.
   const [navMode, setNavMode] = useState<"boot" | "fresh" | "resume">("boot")
@@ -989,8 +1001,13 @@ export default function Home() {
     }
   }, [selectedAudioMarker, isNodeCameraBusy])
 
+  // The server only ever renders this branch, so it carries the crawler copy.
   if (navMode === "boot") {
-    return <main className="relative min-h-screen bg-[#151310]" />
+    return (
+      <main className="relative min-h-screen bg-[#151310]">
+        <HomeIntro />
+      </main>
+    )
   }
 
   return (
@@ -1005,6 +1022,12 @@ export default function Home() {
       )}
 
       <WipScreen isVisible={showWip} onRestart={handleRestart} onDismiss={handleDismissWip} />
+
+      <SoundBlockedPrompt
+        isVisible={audioBlocked && !soundPromptDismissed}
+        onRetry={retryAudio}
+        onDismiss={handleDismissSoundPrompt}
+      />
 
       <CompletionScreen
         isVisible={showCompletion}

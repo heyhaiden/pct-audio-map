@@ -10,6 +10,8 @@ interface AudioPlayerState {
   isLoading: boolean
   error: string | null
   currentTrack: string | null
+  /** The device refused to start Web Audio after a tap (in-app browsers, mostly). */
+  audioBlocked: boolean
 }
 
 export interface AudioTrack {
@@ -31,6 +33,7 @@ export function useAudioPlayer() {
     isLoading: false,
     error: null,
     currentTrack: null,
+    audioBlocked: false,
   })
 
   const getEngine = useCallback(() => {
@@ -45,6 +48,13 @@ export function useAudioPlayer() {
   useEffect(() => {
     const engine = getEngine()
     return engine.on((event) => {
+      if (event.type === "blocked") {
+        setState((previous) =>
+          previous.audioBlocked ? previous : { ...previous, audioBlocked: true },
+        )
+        return
+      }
+
       if (event.type === "loading") {
         setState((previous) => ({
           ...previous,
@@ -90,6 +100,19 @@ export function useAudioPlayer() {
   const unlockAudio = useCallback(async () => {
     await getEngine().unlock()
   }, [getEngine])
+
+  /** Runs in the retry tap. Returns true once the context is actually running. */
+  const retryAudio = useCallback(async () => {
+    const engine = getEngine()
+    await engine.unlock()
+    const running = engine.contextState() === "running"
+    if (running) setState((previous) => ({ ...previous, audioBlocked: false }))
+    return running
+  }, [getEngine])
+
+  const dismissAudioBlocked = useCallback(() => {
+    setState((previous) => ({ ...previous, audioBlocked: false }))
+  }, [])
 
   const resumeAudio = useCallback(async () => {
     await getEngine().resume()
@@ -152,6 +175,8 @@ export function useAudioPlayer() {
     primeLoop,
     fadeOutAndStop,
     unlockAudio,
+    retryAudio,
+    dismissAudioBlocked,
     resumeAudio,
     suspendAudio,
     prefetchLoop,

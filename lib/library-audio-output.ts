@@ -21,7 +21,9 @@ function getSharedContext(): AudioContext | null {
   if (!sharedContext || sharedContext.state === "closed") {
     sharedContext = new Ctor()
   }
-  void sharedContext.resume()
+  // Rejects with InvalidStateError when the OS refuses the audio device; the
+  // element still plays through HTMLAudio, so ignore it.
+  sharedContext.resume().catch(() => {})
   return sharedContext
 }
 
