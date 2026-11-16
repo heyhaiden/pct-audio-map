@@ -140,6 +140,10 @@ export default function Home() {
       markerId: string
       chapterId: string
       navigationSource: NavigationSource
+      /** Main-thread cost of the tap itself; filled in as the tap is handled. */
+      tapAudioSyncMs: number | null
+      tapHandlerSyncMs: number | null
+      tapRenderSyncMs: number | null
     }>(),
   )
   const handleAudioPlaying = useCallback((info: AudioPlayingInfo) => {
@@ -151,6 +155,9 @@ export default function Home() {
       chapter_id: measured.meta.chapterId,
       navigation_source: measured.meta.navigationSource,
       device_type: currentPerfDeviceType(),
+      tap_audio_sync_ms: measured.meta.tapAudioSyncMs,
+      tap_handler_sync_ms: measured.meta.tapHandlerSyncMs,
+      tap_render_sync_ms: measured.meta.tapRenderSyncMs,
       cache_state: info.cacheState,
       first_play: info.firstPlay,
       audio_context_state: info.contextState,
@@ -408,8 +415,10 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
-    posthog.capture("journey_started")
+    // Timing only: which part of this tap holds the main thread (INP).
+    const handlerStartMs = performance.now()
     void unlockAudio()
+    const audioUnlockSyncMs = elapsedMs(handlerStartMs, performance.now())
     clearMapSession()
 
     // Don't call requestFullscreen here — on Android it collapses browser chrome
@@ -428,6 +437,17 @@ export default function Home() {
 
     // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
+
+    const handlerSyncMs = elapsedMs(handlerStartMs, performance.now())
+    // React flushes a tap's state updates in a microtask queued before this
+    // one, so this runs once the synchronous render and commit are done.
+    queueMicrotask(() => {
+      posthog.capture("journey_started", {
+        audio_unlock_sync_ms: audioUnlockSyncMs,
+        handler_sync_ms: handlerSyncMs,
+        render_sync_ms: elapsedMs(handlerStartMs, performance.now()),
+      })
+    })
   }, [unlockAudio])
 
   const handleOverviewReady = useCallback(() => {
@@ -855,17 +875,18 @@ export default function Home() {
     ) => {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
 
+      const handlerStartMs = performance.now()
+      const soundMeta = {
+        markerId: marker.id,
+        chapterId: marker.chapter,
+        navigationSource: navigation_source,
+        tapAudioSyncMs: null as number | null,
+        tapHandlerSyncMs: null as number | null,
+        tapRenderSyncMs: null as number | null,
+      }
       const clipId = marker.audioUrl ? clipIdFromAudioUrl(marker.audioUrl) : null
       if (clipId) {
-        firstSoundRef.current.begin({
-          clipId,
-          tapAtMs,
-          meta: {
-            markerId: marker.id,
-            chapterId: marker.chapter,
-            navigationSource: navigation_source,
-          },
-        })
+        firstSoundRef.current.begin({ clipId, tapAtMs, meta: soundMeta })
       } else {
         firstSoundRef.current.clear()
       }
@@ -877,6 +898,7 @@ export default function Home() {
         navigation_source,
       })
       markDirectNavigation()
+      const audioStartMs = performance.now()
       if (marker.audioUrl) primeLoop(marker.audioUrl)
       void unlockAudio()
       const fadeMs = audioFadeMs ?? cameraDurationMs
@@ -894,6 +916,7 @@ export default function Home() {
       } else {
         fadeOutAndStop(fadeMs)
       }
+      soundMeta.tapAudioSyncMs = elapsedMs(audioStartMs, performance.now())
 
       if (map) {
         cancelFreeCameraAnimation()
@@ -903,6 +926,12 @@ export default function Home() {
       }
 
       setSelectedAudioMarker(marker)
+
+      soundMeta.tapHandlerSyncMs = elapsedMs(handlerStartMs, performance.now())
+      // Runs after React's synchronous flush of this tap (see handleSplashEnter).
+      queueMicrotask(() => {
+        soundMeta.tapRenderSyncMs = elapsedMs(handlerStartMs, performance.now())
+      })
     },
     [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, primeLoop, transitionToTrack, unlockAudio],
   )
