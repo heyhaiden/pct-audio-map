@@ -182,7 +182,6 @@ export function PCTMap({
   const [initialAnimationDone, setInitialAnimationDone] = useState(false)
   const [introPhase, setIntroPhase] = useState<"waiting" | "overview" | "flying" | "done">("waiting")
   const [mapboxError, setMapboxError] = useState<string | null>(null)
-  const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
   const [trailData, setTrailData] = useState<GeoJSON.Feature<GeoJSON.LineString> | null>(null)
   const [debugMode] = useState(false)
   const [, setTilesPreloaded] = useState(false)
@@ -363,9 +362,6 @@ export function PCTMap({
     enabled: initialAnimationDone && trailData !== null && !debugMode,
     snapOnEnable: skipIntro,
     resumeMiles: skipIntro ? externalMiles : undefined,
-    onProgressChange: (progress, coordinates) => {
-      setCurrentPosition(coordinates)
-    },
   })
 
   const scrollControls = useMemo(
@@ -601,18 +597,6 @@ export function PCTMap({
             },
           })
 
-          map.current.addSource("position-cursor", {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "Point",
-                coordinates: trailData.geometry.coordinates[0],
-              },
-            },
-          })
-
           // Marker pins are a layer like any other, created here rather than
           // from a React effect — an effect can only run after onMapLoad below,
           // by which point tile prefetching keeps isStyleLoaded() false and the
@@ -751,22 +735,6 @@ export function PCTMap({
     }, 250 - sinceLast)
     return () => clearTimeout(timer)
   }, [externalMiles, currentMiles, mapLoaded])
-
-  useEffect(() => {
-    if (!isMapAlive(map.current) || !mapLoaded || !currentPosition) return
-
-    const source = map.current.getSource("position-cursor") as mapboxgl.GeoJSONSource | undefined
-    if (source) {
-      source.setData({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "Point",
-          coordinates: currentPosition,
-        },
-      })
-    }
-  }, [currentPosition, mapLoaded])
 
   useEffect(() => {
     if (initialAnimationDone && onScrollControlReady && !scrollControlReadyCalledRef.current) {
