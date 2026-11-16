@@ -16,6 +16,7 @@ import {
   sampleTrailAtProgress,
   altitudeAndPitchForProgress,
   shouldDecimateCameraWrites,
+  shouldPublishTrailUi,
   type CameraPathPoint,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
@@ -229,7 +230,6 @@ export function useTrailScroll({
 
     let animationFrame: number
     let lastUiPublishMs = 0
-    let lastPublishedMiles = -1
     let lastScrollTop = typeof window !== "undefined" ? window.scrollY : 0
     let lastScrollChangeMs = 0
     let frameIndex = 0
@@ -277,9 +277,8 @@ export function useTrailScroll({
 
       // Keep the free-camera loop at full rate, but don't React-re-render UI every frame
       const now = frameTime
-      if (now - lastUiPublishMs > 100 || Math.abs(miles - lastPublishedMiles) >= 0.5) {
+      if (shouldPublishTrailUi(now, lastUiPublishMs)) {
         lastUiPublishMs = now
-        lastPublishedMiles = miles
         setScrollProgress(phase)
         setCurrentMiles(miles)
         onProgressChangeRef.current?.(phase, [trail.lng, trail.lat])
