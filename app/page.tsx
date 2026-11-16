@@ -8,6 +8,7 @@ import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
 import { SplashScreen } from "@/components/splash/splash-screen"
+import { HomeIntro } from "@/components/seo/home-intro"
 import { MobileChapterOverlay } from "@/components/mobile/mobile-chapter-overlay"
 import { AboutSocial } from "@/components/navigation/about-social"
 import { ScrollHint } from "@/components/scroll/scroll-hint"
@@ -1000,8 +1001,13 @@ export default function Home() {
     }
   }, [selectedAudioMarker, isNodeCameraBusy])
 
+  // The server only ever renders this branch, so it carries the crawler copy.
   if (navMode === "boot") {
-    return <main className="relative min-h-screen bg-[#151310]" />
+    return (
+      <main className="relative min-h-screen bg-[#151310]">
+        <HomeIntro />
+      </main>
+    )
   }
 
   return (
