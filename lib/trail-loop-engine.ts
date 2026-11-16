@@ -20,6 +20,8 @@ type TrailLoopEvent =
   | { type: "playing"; id: string }
   | { type: "stopped" }
   | { type: "error"; id: string; message: string }
+  /** A tap tried to start Web Audio and the context still isn't running. */
+  | { type: "blocked" }
 
 export interface TrailLoopEngine {
   unlock: () => Promise<void>
@@ -32,9 +34,13 @@ export interface TrailLoopEngine {
   setMuted: (muted: boolean) => void
   suspend: () => Promise<void>
   on: (fn: (event: TrailLoopEvent) => void) => () => void
+  /** Web Audio context state, or null before the first tap builds it. */
+  contextState: () => AudioContextState | null
 }
 
 const DEFAULT_FADE_MS = 900
+/** How long a tap gets to bring the context to "running" before we call it blocked. */
+const BLOCKED_CHECK_MS = 1500
 const FAILED_INCOMING_FADE_MS = 1400
 const COMPRESSED_CACHE_MAX = 6
 const MANIFEST_URL = "/audio/manifest.json"
@@ -111,23 +117,41 @@ export function createTrailLoopEngine(options: {
     applyMasterGain()
   }
 
+  // resume() rejects with InvalidStateError when the OS won't start the audio
+  // device (seen in the iOS Facebook in-app browser). Treat that as "still
+  // suspended" — the next tap retries — instead of an unhandled rejection.
+  const resumeContext = (ctx: AudioContext) => ctx.resume().catch(() => {})
+
+  // Gesture paths only. resume() can also hang without settling, so check the
+  // state after a beat instead of trusting the promise. Resumes from
+  // visibilitychange skip this: they can fail for harmless reasons.
+  let blockedCheck: ReturnType<typeof setTimeout> | null = null
+  const resumeFromGesture = (ctx: AudioContext) => {
+    if (blockedCheck) clearTimeout(blockedCheck)
+    blockedCheck = setTimeout(() => {
+      blockedCheck = null
+      if (context === ctx && ctx.state !== "running") emit({ type: "blocked" })
+    }, BLOCKED_CHECK_MS)
+    return resumeContext(ctx)
+  }
+
   const unlock = async () => {
     ensureGraph()
     if (context && context.state === "suspended") {
-      await context.resume()
+      await resumeFromGesture(context)
     }
   }
 
   const resume = async () => {
     if (lockElement) void lockElement.play().catch(() => {})
     if (!context) return
-    if (context.state === "suspended") await context.resume()
+    if (context.state === "suspended") await resumeContext(context)
   }
 
   const suspend = async () => {
     lockElement?.pause()
     if (!context) return
-    if (context.state === "running") await context.suspend()
+    if (context.state === "running") await context.suspend().catch(() => {})
   }
 
   const cancelFade = () => {
@@ -355,7 +379,7 @@ export function createTrailLoopEngine(options: {
   const prime = (audioUrl: string) => {
     armMediaPlaybackSession()
     ensureGraph()
-    if (context?.state === "suspended") void context.resume()
+    if (context?.state === "suspended") void resumeFromGesture(context)
     if (!shouldLockPlaybackWithHtmlAudio()) return
 
     const sources = resolveLoopSources(audioUrl, { blobBase })
@@ -534,6 +558,7 @@ export function createTrailLoopEngine(options: {
         listeners.delete(fn)
       }
     },
+    contextState: () => context?.state ?? null,
   }
 }
 

@@ -54,6 +54,7 @@ import {
 } from "@/lib/map-session"
 import { adjacentPlayable, canAdvanceToWip, chapterGateAfterMarker, hasMarkerAudio } from "@/lib/marker-navigation"
 import type { AudioMarker } from "@/types/map"
+import { SoundBlockedPrompt } from "@/components/audio/sound-blocked-prompt"
 
 /**
  * Code-split the map so mapbox-gl (~250KB gz) isn't in the initial bundle. The
@@ -112,10 +113,20 @@ export default function Home() {
     setMuted,
     fadeOutAndStop,
     unlockAudio,
+    retryAudio,
+    audioBlocked,
+    dismissAudioBlocked,
     resumeAudio,
     suspendAudio,
     prefetchLoop,
   } = useAudioPlayer()
+  // Once dismissed, stay quiet for the visit; every pin tap would re-trigger it.
+  const [soundPromptDismissed, setSoundPromptDismissed] = useState(false)
+  const handleDismissSoundPrompt = useCallback(() => {
+    posthog.capture("sound_blocked_dismissed")
+    setSoundPromptDismissed(true)
+    dismissAudioBlocked()
+  }, [dismissAudioBlocked])
 
   // 'boot' avoids SSR/client mismatch while we read resume intent from sessionStorage.
   const [navMode, setNavMode] = useState<"boot" | "fresh" | "resume">("boot")
@@ -1005,6 +1016,12 @@ export default function Home() {
       )}
 
       <WipScreen isVisible={showWip} onRestart={handleRestart} onDismiss={handleDismissWip} />
+
+      <SoundBlockedPrompt
+        isVisible={audioBlocked && !soundPromptDismissed}
+        onRetry={retryAudio}
+        onDismiss={handleDismissSoundPrompt}
+      />
 
       <CompletionScreen
         isVisible={showCompletion}
