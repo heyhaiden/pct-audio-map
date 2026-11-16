@@ -96,6 +96,37 @@ export function shouldPreventTouchStartCallout(target: HoldCalloutNode | EventTa
   return true
 }
 
+type ScrollTargetNode = {
+  scrollHeight: number
+  clientHeight: number
+  parentElement: ScrollTargetNode | null
+}
+
+/**
+ * True when the touch started inside something that scrolls on its own (an
+ * overlay card, the menu), so the journey scroll should leave it alone.
+ * `overflowYOf` reads computed style, which forces a style recalculation, so
+ * callers should ask once per stroke, not once per touchmove.
+ */
+export function isNativeScrollTarget<Node extends ScrollTargetNode>(
+  target: Node | null,
+  root: unknown,
+  overflowYOf: (node: Node) => string,
+): boolean {
+  let node: Node | null = target
+  while (node && node !== root) {
+    const overflowY = overflowYOf(node)
+    if (
+      (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") &&
+      node.scrollHeight > node.clientHeight + 1
+    ) {
+      return true
+    }
+    node = node.parentElement as Node | null
+  }
+  return false
+}
+
 export function clearNativeTextSelection(
   selection: { rangeCount: number; removeAllRanges: () => void } | null = globalThis.getSelection?.() ?? null,
 ) {
