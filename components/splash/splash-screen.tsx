@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Headphones } from "lucide-react"
 import { SiteHeader } from "@/components/navigation/site-header"
 import { SPLASH_SCROLL_LOCK_CLASS } from "@/lib/splash-scroll-lock"
+import { SPLASH_UNLOCK_SETTLE_MS, splashFillDurationMs } from "@/lib/splash-button-fill"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -81,7 +82,7 @@ function BeginJourneyButton({
       if (ready && target >= 1) {
         fillRef.current = 1
         setFill(1)
-        const settle = window.setTimeout(() => setUnlocked(true), 180)
+        const settle = window.setTimeout(() => setUnlocked(true), SPLASH_UNLOCK_SETTLE_MS)
         return () => clearTimeout(settle)
       }
       return
@@ -90,8 +91,8 @@ function BeginJourneyButton({
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
 
     const start = performance.now()
-    // Cached / instant ready: longer, more graceful sweep. Incremental warm: snappier.
-    const duration = ready && from < 0.7 ? 900 : ready ? 450 : 320
+    // A ready map shouldn't wait on the bar: see lib/splash-button-fill.ts.
+    const duration = splashFillDurationMs({ ready, from })
     let settleTimer: number | undefined
 
     const tick = (now: number) => {
@@ -107,7 +108,7 @@ function BeginJourneyButton({
       }
 
       if (ready) {
-        settleTimer = window.setTimeout(() => setUnlocked(true), 160)
+        settleTimer = window.setTimeout(() => setUnlocked(true), SPLASH_UNLOCK_SETTLE_MS)
       }
     }
 
