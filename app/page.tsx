@@ -43,6 +43,8 @@ import {
 } from "@/lib/chapter-timeline-visibility"
 import { areOpeningMapPinsLocked, resolveChapterOverlayOpacity } from "@/lib/chapter-overlay-visibility"
 import { shouldRearmWipNotice } from "@/lib/wip-notice"
+import { clipsToPrewarm, shouldPrewarmClips } from "@/lib/clip-prewarm"
+import { MARKER_MILES } from "@/lib/marker-miles"
 import { chapterIndexForMiles, scrollTopForMiles } from "@/lib/chapter-scroll-gate"
 import {
   clearMapSession,
@@ -921,6 +923,30 @@ export default function Home() {
     posthog.capture("wip_reached", { via: "player_next", mile: WIP_MILE })
     setShowWip(true)
   }
+
+  // Before any pin is open, download the clips nearest to where the listener
+  // has stopped, so the first tap doesn't wait on the network. Waits for the
+  // position to hold still: a fast scroll passes pins nobody will tap.
+  const canPrewarmClips = journeyStarted && introComplete && !showSplash && !selectedAudioMarker
+  useEffect(() => {
+    if (!canPrewarmClips) return
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string }
+    }).connection
+    if (!shouldPrewarmClips(connection)) return
+
+    const timer = window.setTimeout(() => {
+      prefetchLoop(
+        ...clipsToPrewarm({
+          markers: audioMarkers,
+          markerMiles: MARKER_MILES,
+          activeChapters: ACTIVE_CHAPTERS,
+          currentMiles,
+        }),
+      )
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [canPrewarmClips, currentMiles, prefetchLoop])
 
   // Warm next/prev recordings only while a pin is open — not the full catalog.
   useEffect(() => {
