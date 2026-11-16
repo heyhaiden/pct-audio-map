@@ -128,3 +128,33 @@ Base style layers were hidden at runtime through the live map, with no code chan
 Hiding one layer type does nothing; hiding all three reaches 58 fps. The cost is not additive, so a partial trim has to be tested subset by subset. The pixel-ratio run came out slower than baseline, which makes no physical sense on its own and is a single run on a desktop GPU; treat it as inconclusive.
 
 A Chrome DevTools MCP trace of the cold load on the same profile gave LCP 1,449 ms (TTFB 166 ms, render delay 1,284 ms) and CLS 0.00, in line with the harness.
+
+## Desktop viewport trace (2026-11-16)
+
+1920x1080 at DPR 1, fine pointer (the app's desktop map profile), mouse and wheel input, 4x CPU throttle, no network throttle. Build: `dev` with PRs #58, #60 to #65 stacked. One profiled run and one timed run, so these are single readings, not medians.
+
+| Measure | Desktop | Mobile baseline |
+| --- | --- | --- |
+| Wheel scroll frame rate | 20 to 25 fps | 47.5 fps |
+| Scroll frame time p50 / p95 | 50 / 67 ms | 17 / 34 ms |
+| Mapbox `_render` share of main thread during scroll | 78% | 58% |
+| Main-thread idle during scroll | 0.9% | 5.7% |
+| Intro frame rate | 33 fps | 59.6 fps |
+| Camera move between recordings | 24 to 29 fps | 54.6 fps |
+| Marker click interaction | 64 ms (2 delay, 19 processing, 44 presentation) | 72 ms |
+| "Begin Journey" click interaction | 88 and 216 ms, 77 and 194 ms of it presentation | 88 ms |
+| Longest frame after a marker click | 67 to 100 ms | 34 ms |
+
+Per rendered frame, Mapbox costs about 43 ms of main-thread time on desktop against about 13 ms on mobile at the same throttle. The style and layer count are the same (71 layers); the desktop view covers more tiles, and each tile is drawn once per layer.
+
+That matches the field data for desktop map taps: almost no processing and a long presentation delay. A click waits for the next frame, and on desktop that frame is slow. On a machine slower than the lab's, 100 ms frames at 4x throttle become the 300 to 600 ms waits PostHog recorded.
+
+Scroll experiments, one run each from mile 0:
+
+| Variant | Frame rate | Frame time p50 | Frames over 33 ms |
+| --- | --- | --- | --- |
+| Control | 25.3 fps | 34 ms | 62% |
+| Fog range pulled in from [1.5, 10] to [1, 6] | 26.2 fps | 34 ms | 61% |
+| All 57 base vector layers hidden | 47.3 fps | 17 ms | 10% |
+
+Fog range does not help. The base style layers are the cost on desktop, as on mobile, and the gain from removing them is larger here.
