@@ -55,6 +55,7 @@ import {
 } from "@/lib/map-session"
 import { adjacentPlayable, canAdvanceToWip, chapterGateAfterMarker, hasMarkerAudio } from "@/lib/marker-navigation"
 import type { AudioMarker } from "@/types/map"
+import type { Map as MapboxMap } from "mapbox-gl"
 import { SoundBlockedPrompt } from "@/components/audio/sound-blocked-prompt"
 
 /**
@@ -134,7 +135,7 @@ export default function Home() {
   const [resumeSession, setResumeSession] = useState<MapSessionState | null>(null)
   const isResuming = navMode === "resume"
 
-  const [map, setMap] = useState<any>(null)
+  const [map, setMap] = useState<MapboxMap | null>(null)
   const [selectedAudioMarker, setSelectedAudioMarker] = useState<AudioMarker | null>(null)
   const [currentMiles, setCurrentMiles] = useState(0)
   const [totalMiles, setTotalMiles] = useState(2650)
@@ -203,7 +204,6 @@ export default function Home() {
     setNavMode("fresh")
     setShowSplash(true)
     // Intentionally once on mount — resume intent is consumed and must not re-run.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Restore trail scroll before the camera loop arms, otherwise it publishes mile 0.

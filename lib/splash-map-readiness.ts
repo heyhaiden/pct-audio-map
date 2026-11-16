@@ -21,6 +21,7 @@ export function shouldUnlockSplash(options: {
   return options.overviewSceneReady
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
 function hasFeatures(map: any, method: string, ...args: unknown[]): boolean {
   const query = map?.[method]
   if (typeof query !== "function") return true
@@ -37,6 +38,7 @@ function hasFeatures(map: any, method: string, ...args: unknown[]): boolean {
  * SoCal markers sit south of the pitched overview frustum — requiring them on
  * screen would stall the splash until timeout.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
 export function isOverviewSceneReady(map: any): boolean {
   if (!isMapAlive(map)) return false
   if (!map.getSource?.(TRAIL_SOURCE_ID) || !map.getLayer?.(TRAIL_LINE_LAYER_ID)) {
@@ -62,6 +64,7 @@ export function isOverviewSceneReady(map: any): boolean {
   return true
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
 function waitForIdle(map: any, timeoutMs: number): Promise<void> {
   return new Promise((resolve) => {
     if (!isMapAlive(map)) {
@@ -89,6 +92,7 @@ function waitForIdle(map: any, timeoutMs: number): Promise<void> {
  * live camera — jumping to Campo (marker 1) was visible through the glass scrim.
  */
 export async function waitForOverviewScene(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
   map: any,
   stillWaiting: () => boolean,
   options?: {

@@ -1,5 +1,7 @@
 "use client"
 
+import type { Map as MapboxMap } from "mapbox-gl"
+
 import { useEffect, useState, useRef, useCallback } from "react"
 import { geoFractionForTrailMile } from "@/lib/trail-mile-calibration"
 import mapboxgl from "mapbox-gl"
@@ -30,7 +32,8 @@ import {
 import { isTrailCameraSettling } from "@/lib/inverted-touch-scroll"
 
 interface TrailScrollOptions {
-  map: any
+  /** Null until the map finishes constructing. */
+  map: MapboxMap | null
   trailCoordinates: number[][]
   enabled: boolean
   /** Jump to the railing pose instead of easing from the live GL camera. */
@@ -280,7 +283,7 @@ export function useTrailScroll({
     let lastScrollTop = typeof window !== "undefined" ? window.scrollY : 0
     let lastScrollChangeMs = 0
     let frameIndex = 0
-    let reusableCamera: any = null
+    let reusableCamera: ReturnType<MapboxMap["getFreeCameraOptions"]> | null = null
 
     const updateCamera = (frameTime: number) => {
       const currentMap = mapRef.current

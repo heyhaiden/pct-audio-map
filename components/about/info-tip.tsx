@@ -48,7 +48,7 @@ export function InfoTip({ text }: { text: string }) {
         }}
         className="-mt-3 inline-flex size-[15px] shrink-0 items-center justify-center rounded-full border border-[#ede8dc]/30 font-mono text-[10px] leading-none text-[#d4cbb8] transition-colors hover:border-[#ede8dc]/55 hover:text-[#f6f1e4] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
       >
-        <span className="sr-only">About Our Why's</span>
+        <span className="sr-only">{"About Our Why's"}</span>
         i
       </button>
       <span

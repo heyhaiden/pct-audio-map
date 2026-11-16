@@ -1,17 +1,10 @@
 import type { MetadataRoute } from "next"
 import { SITE_URL } from "@/lib/site"
 
+// No lastModified: the build time is wrong on every deploy, and Google stops
+// trusting lastmod once it proves inaccurate. changefreq/priority are ignored.
 export default function sitemap(): MetadataRoute.Sitemap {
-  const routes = [
-    { path: "/", priority: 1 },
-    { path: "/about", priority: 0.8 },
-    { path: "/library", priority: 0.8 },
-    { path: "/resources", priority: 0.6 },
-  ]
-  return routes.map(({ path, priority }) => ({
+  return ["/", "/about", "/library", "/resources"].map((path) => ({
     url: `${SITE_URL}${path}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority,
   }))
 }

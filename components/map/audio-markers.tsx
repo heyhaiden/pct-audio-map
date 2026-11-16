@@ -1,5 +1,7 @@
 "use client"
 
+import type { DataDrivenPropertyValueSpecification, GeoJSONSource, Map as MapboxMap } from "mapbox-gl"
+
 import { useEffect, useRef } from "react"
 import { audioMarkers } from "@/data/audio-markers"
 import {
@@ -16,7 +18,7 @@ import {
 import type { AudioMarker } from "@/types/map"
 
 interface AudioMarkersProps {
-  map: any
+  map: MapboxMap
   onMarkerClick: (marker: AudioMarker) => void
   /** Same-turn as the tap: start media playback before fetch/decode. */
   onMarkerPrime?: (marker: AudioMarker) => void
@@ -54,7 +56,7 @@ export function AudioMarkers({
 
     const applyMarkerData = () => {
       try {
-        map.getSource?.(AUDIO_MARKER_SOURCE_ID)?.setData(chapterCollection())
+        (map.getSource?.(AUDIO_MARKER_SOURCE_ID) as GeoJSONSource | undefined)?.setData(chapterCollection())
         map.setLayoutProperty?.(
           AUDIO_MARKER_LAYER_ID,
           "icon-size",
@@ -68,7 +70,9 @@ export function AudioMarkers({
     applyMarkerData()
     // A style reload rebuilds the layer empty; refill it once that lands.
     map.on("style.load", applyMarkerData)
-    return () => map.off?.("style.load", applyMarkerData)
+    return () => {
+      map.off?.("style.load", applyMarkerData)
+    }
   }, [map])
 
   useEffect(() => {
@@ -79,7 +83,7 @@ export function AudioMarkers({
     previousActiveRef.current = toId
     activeMarkerIdRef.current = toId
 
-    const applySize = (value: unknown) => {
+    const applySize = (value: DataDrivenPropertyValueSpecification<number>) => {
       try {
         map.setLayoutProperty?.(AUDIO_MARKER_LAYER_ID, "icon-size", value)
       } catch {

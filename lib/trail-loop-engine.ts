@@ -8,7 +8,7 @@ import {
   type LoopManifest,
   type NormalizedClip,
 } from "@/lib/audio-loop-manifest"
-import { resolveLoopSources } from "@/lib/audio-loop-sources"
+import { resolveLoopSources, type LoopSources } from "@/lib/audio-loop-sources"
 import {
   armMediaPlaybackSession,
   shouldLockPlaybackWithHtmlAudio,
@@ -389,7 +389,6 @@ export function createTrailLoopEngine(options: {
       const audio = new Audio()
       audio.crossOrigin = "anonymous"
       audio.loop = true
-      audio.playsInline = true
       audio.preload = "auto"
       audio.setAttribute("playsinline", "true")
       lockElement = audio

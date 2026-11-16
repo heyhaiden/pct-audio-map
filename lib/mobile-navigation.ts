@@ -24,7 +24,10 @@ export function visibleMobileNavItems(
 
 /** Site pages listed on map overlays, same order as the hamburger (Home omitted). */
 export function overlaySiteNavItems() {
-  return MOBILE_NAV_ITEMS.filter((item) => item.id !== "home")
+  return MOBILE_NAV_ITEMS.filter(
+    (item): item is (typeof MOBILE_NAV_ITEMS)[number] & { id: Exclude<MobileNavigationPage, "home"> } =>
+      item.id !== "home",
+  )
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Image from "next/image"
 import { pageMetadata } from "@/lib/site"
 import { Mail } from "lucide-react"
 import { FieldNotesCard } from "@/components/about/field-notes-card"
@@ -199,7 +200,7 @@ export default function AboutPage() {
                 className="flex items-center gap-3 opacity-60 transition-opacity hover:opacity-100"
               >
                 <span className="font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">Maps by</span>
-                <img src="/logos/mapbox.svg" alt="Mapbox" width={90} height={20} className="h-5 w-auto" />
+                <Image src="/logos/mapbox.svg" alt="Mapbox" width={90} height={20} className="h-5 w-auto" />
               </a>
               <a
                 href="https://native-land.ca"
@@ -208,7 +209,7 @@ export default function AboutPage() {
                 className="flex items-center gap-3 opacity-60 transition-opacity hover:opacity-100"
               >
                 <span className="font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">Homelands from</span>
-                <img src="/logos/native-land.svg" alt="" width={18} height={25} className="h-6 w-auto" />
+                <Image src="/logos/native-land.svg" alt="" width={18} height={25} className="h-6 w-auto" />
                 <span className="pct-display text-sm text-[#ede8dc]">Native Land Digital</span>
               </a>
             </div>

@@ -1,3 +1,4 @@
+import type { Map as MapboxMap } from "mapbox-gl"
 import along from "@turf/along"
 import { geoFractionForTrailMile } from "@/lib/trail-mile-calibration"
 import posthog from "posthog-js"
@@ -112,7 +113,7 @@ function posesAlongMiles(
   return poses
 }
 
-function waitForIdle(map: any, timeoutMs = 450): Promise<void> {
+function waitForIdle(map: MapboxMap, timeoutMs = 450): Promise<void> {
   return new Promise((resolve) => {
     if (!isMapAlive(map)) {
       resolve()
@@ -174,7 +175,7 @@ function sleep(ms: number): Promise<void> {
  * animation is currently in flight).
  */
 async function preloadPoses(
-  map: any,
+  map: MapboxMap,
   poses: FreeCameraPose[],
   canPreload: () => boolean,
   overrides?: { zoom?: number; pitch?: number; bearing?: number },
@@ -210,7 +211,7 @@ export type PrefetchController = {
  * the bird's-eye overview while the splash is visible.
  */
 export function startPathTilePrefetch(options: {
-  map: any
+  map: MapboxMap
   trailCoordinates: number[][]
   /** Reuse the scroll rail when it has already been built. */
   getCameraPath?: () => CameraPathPoint[] | null

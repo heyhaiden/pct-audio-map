@@ -1,3 +1,9 @@
+import type {
+  ExpressionSpecification,
+  GeoJSONSource,
+  Map as MapboxMap,
+  SymbolLayerSpecification,
+} from "mapbox-gl"
 import { trailLabels } from "@/data/trail-labels"
 
 // Paint/layout values are copied from the Studio style
@@ -36,11 +42,11 @@ function labelCollection() {
   }
 }
 
-const kindFilter = (...kinds: string[]) => ["match", ["get", "kind"], kinds, true, false]
+const kindFilter = (...kinds: string[]): ExpressionSpecification => ["match", ["get", "kind"], kinds, true, false]
 
-const sizedIcon = (icon: string) => ["step", ["zoom"], `${icon}-11`, 14, `${icon}-15`]
+const sizedIcon = (icon: string): ExpressionSpecification => ["step", ["zoom"], `${icon}-11`, 14, `${icon}-15`]
 
-const iconLabelLayout = {
+const iconLabelLayout: SymbolLayerSpecification["layout"] = {
   "text-field": ["get", "name"],
   "text-offset": [0, 0.65],
   "text-anchor": "top",
@@ -48,7 +54,7 @@ const iconLabelLayout = {
   "symbol-sort-key": ["get", "sortKey"],
 }
 
-function layerSpecs() {
+function layerSpecs(): Array<Omit<SymbolLayerSpecification, "type" | "source">> {
   return [
     {
       id: ROAD_LAYER_ID,
@@ -175,10 +181,10 @@ function layerSpecs() {
 }
 
 /** Idempotent; call on map load and again after any `style.load`. */
-export function installTrailLabelLayers(map: any): void {
+export function installTrailLabelLayers(map: MapboxMap): void {
   if (!map || map._removed) return
 
-  const source = map.getSource(TRAIL_LABEL_SOURCE_ID)
+  const source = map.getSource(TRAIL_LABEL_SOURCE_ID) as GeoJSONSource | undefined
   if (source) {
     source.setData?.(labelCollection())
   } else {

@@ -1,3 +1,7 @@
+import type { Map as MapboxMap } from "mapbox-gl"
+
+/** mapbox-gl doesn't export the class; take it from the method that returns it. */
+type FreeCameraOptions = ReturnType<MapboxMap["getFreeCameraOptions"]>
 import {
   easeInOutCubic,
   interpolatePose,
@@ -10,19 +14,24 @@ import {
  * of the mapbox-gl bundle so the library can be code-split behind the map.
  */
 function mercatorFrom(
-  camera: any,
+  camera: FreeCameraOptions,
   lng: number,
   lat: number,
   altitude: number,
-): unknown | null {
+): FreeCameraOptions["position"] | null {
   const Ctor = camera?.position?.constructor as
-    | { fromLngLat(lngLat: { lng: number; lat: number }, altitude: number): unknown }
+    | {
+        fromLngLat(
+          lngLat: { lng: number; lat: number },
+          altitude: number,
+        ): FreeCameraOptions["position"]
+      }
     | undefined
   if (!Ctor?.fromLngLat) return null
   return Ctor.fromLngLat({ lng, lat }, altitude)
 }
 
-export function readFreeCameraPose(map: any): FreeCameraPose | null {
+export function readFreeCameraPose(map: MapboxMap): FreeCameraPose | null {
   if (!map || typeof map.getFreeCameraOptions !== "function") return null
 
   try {
@@ -41,7 +50,7 @@ export function readFreeCameraPose(map: any): FreeCameraPose | null {
   }
 }
 
-export function applyFreeCameraPose(map: any, pose: FreeCameraPose): void {
+export function applyFreeCameraPose(map: MapboxMap, pose: FreeCameraPose): void {
   if (!map || typeof map.getFreeCameraOptions !== "function") return
 
   const camera = map.getFreeCameraOptions()
@@ -66,7 +75,7 @@ export function cancelFreeCameraAnimation(): void {
  * Returns a promise that resolves when the animation finishes (or is cancelled).
  */
 export function animateFreeCamera(
-  map: any,
+  map: MapboxMap,
   from: FreeCameraPose,
   to: FreeCameraPose,
   durationMs: number,
