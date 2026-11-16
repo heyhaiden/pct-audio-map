@@ -336,7 +336,6 @@ export function PCTMap({
 
     loadTrailData().then((feature) => {
       if (active) {
-        console.log("[v0] Loaded trail data with", feature.geometry.coordinates.length, "points")
         onTrailheadProgressRef.current?.(0.08)
         setTrailData(feature)
       }

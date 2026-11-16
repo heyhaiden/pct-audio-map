@@ -70,7 +70,7 @@ Started as a [v0](https://v0.app) prototype; about a year and 250+ commits later
 - **Camera rewrite (Jul 2026).** Replaced `flyTo` with a hand-written free camera: position, altitude, pitch and heading computed for any mile ([`lib/railing-camera.ts`](lib/railing-camera.ts)). One owner of the camera at a time; pins moved to Mapbox symbol layers, which ended the jitter.
 - **No blank terrain (Aug 2026).** Terrain is pre-loaded under the splash screen and ~100 miles ahead as you scroll ([`lib/tile-prefetch.ts`](lib/tile-prefetch.ts)). The camera stops redrawing once it settles, so the map idles. Phones get lighter GPU settings and their own framing.
 - **Real recordings (Sep 2026).** A CSV ingest script (`pnpm ingest:audio`) turns a spreadsheet into map pins, looking up each spot's homelands from the Native Land API.
-- **Gapless audio (Oct 2026).** `<audio loop>` left a gap at the seam, and Blob's 10 GB/month cap risked taking the site down. Recordings now ship as Opus from the static CDN and loop sample-accurately through Web Audio, with at most three clips in memory. [Plan](docs/plans/2026-10-01-gapless-trail-loops.md).
+- **Gapless audio (Oct 2026).** `<audio loop>` left a gap at the seam, and Blob's 10 GB/month cap risked taking the site down. Recordings now ship as Opus from the static CDN and loop sample-accurately through Web Audio, with at most three clips in memory.
 
 ## Why it matters
 
