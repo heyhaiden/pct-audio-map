@@ -34,7 +34,7 @@ import { introOpacity } from "@/hooks/use-chapter-intro"
 import { useViewportLayout } from "@/hooks/use-viewport-layout"
 import { useInvertedTouchScroll } from "@/hooks/use-inverted-touch-scroll"
 import { useInvertedWheelScroll } from "@/hooks/use-inverted-wheel-scroll"
-import { useAudioPlayer } from "@/hooks/use-audio-player"
+import { useAudioPlayer, type AudioPlayingInfo } from "@/hooks/use-audio-player"
 import { shouldRenderTrailScrollSpacer } from "@/lib/splash-scroll-lock"
 import {
   resolveChapterTimelineCollapsed,
@@ -54,6 +54,15 @@ import {
   type MapSessionState,
 } from "@/lib/map-session"
 import { adjacentPlayable, canAdvanceToWip, chapterGateAfterMarker, hasMarkerAudio } from "@/lib/marker-navigation"
+import { clipIdFromAudioUrl } from "@/lib/audio-clip-id"
+import { isTrailPrepCached } from "@/lib/trail-prep-cache"
+import {
+  createFirstSoundTracker,
+  elapsedMs,
+  perfDeviceType,
+  resolveMapReadyStart,
+  type NavigationKind,
+} from "@/lib/perf-metrics"
 import type { AudioMarker } from "@/types/map"
 import type { Map as MapboxMap } from "mapbox-gl"
 import { SoundBlockedPrompt } from "@/components/audio/sound-blocked-prompt"
@@ -92,6 +101,25 @@ const ACTIVE_CHAPTERS = new Set([
   "oregon-cascades",
 ])
 
+type NavigationSource = "map_marker" | "player_previous" | "player_next" | "chapter_transition"
+
+/** False until the homepage has mounted once in this document (map_ready_ms). */
+let homeMountedInDocument = false
+
+/** Pathname the document itself was loaded on, not the current client route. */
+function documentLoadPath(): string | null {
+  try {
+    const entry = performance.getEntriesByType("navigation")[0]
+    return entry ? new URL(entry.name).pathname : null
+  } catch {
+    return null
+  }
+}
+
+function currentPerfDeviceType() {
+  return perfDeviceType(window.matchMedia("(max-width: 768px), (pointer: coarse)").matches)
+}
+
 type ScrollControls = {
   pauseScrollAnimation: () => void
   resumeScrollAnimation: () => void
@@ -105,6 +133,36 @@ type ScrollControls = {
 
 export default function Home() {
   const { useDesktopChapterOverlay } = useViewportLayout()
+
+  // first_sound_ms: marker tap until the engine starts the clip.
+  const firstSoundRef = useRef(
+    createFirstSoundTracker<{
+      markerId: string
+      chapterId: string
+      navigationSource: NavigationSource
+      /** Main-thread cost of the tap itself; filled in as the tap is handled. */
+      tapAudioSyncMs: number | null
+      tapHandlerSyncMs: number | null
+      tapRenderSyncMs: number | null
+    }>(),
+  )
+  const handleAudioPlaying = useCallback((info: AudioPlayingInfo) => {
+    const measured = firstSoundRef.current.resolve(info.clipId, performance.now())
+    if (!measured) return
+    posthog.capture("first_sound_ms", {
+      first_sound_ms: measured.firstSoundMs,
+      marker_id: measured.meta.markerId,
+      chapter_id: measured.meta.chapterId,
+      navigation_source: measured.meta.navigationSource,
+      device_type: currentPerfDeviceType(),
+      tap_audio_sync_ms: measured.meta.tapAudioSyncMs,
+      tap_handler_sync_ms: measured.meta.tapHandlerSyncMs,
+      tap_render_sync_ms: measured.meta.tapRenderSyncMs,
+      cache_state: info.cacheState,
+      first_play: info.firstPlay,
+      audio_context_state: info.contextState,
+    })
+  }, [])
 
   const {
     transitionToTrack,
@@ -121,7 +179,7 @@ export default function Home() {
     resumeAudio,
     suspendAudio,
     prefetchLoop,
-  } = useAudioPlayer()
+  } = useAudioPlayer({ onPlaying: handleAudioPlaying })
   // Once dismissed, stay quiet for the visit; every pin tap would re-trigger it.
   const [soundPromptDismissed, setSoundPromptDismissed] = useState(false)
   const handleDismissSoundPrompt = useCallback(() => {
@@ -175,6 +233,15 @@ export default function Home() {
   const wipDismissedRef = useRef(wipDismissed)
   currentMilesRef.current = currentMiles
   wipDismissedRef.current = wipDismissed
+  // map_ready_ms: navigation start until "Begin Journey" unlocks.
+  const mapReadyClockRef = useRef<{
+    startMs: number
+    navigation: NavigationKind
+    trailPrepCached: boolean
+    tabWasHidden: boolean
+    trailheadReadyAtMs: number | null
+    sent: boolean
+  } | null>(null)
 
   useLayoutEffect(() => {
     if (navInitializedRef.current) return
@@ -182,6 +249,19 @@ export default function Home() {
 
     // We're on the map now, however we got here — retire the from-map marker.
     clearNavigatedFromMap()
+
+    mapReadyClockRef.current = {
+      ...resolveMapReadyStart({
+        documentPath: documentLoadPath(),
+        firstMountInDocument: !homeMountedInDocument,
+        mountedAtMs: performance.now(),
+      }),
+      trailPrepCached: isTrailPrepCached(),
+      tabWasHidden: document.visibilityState === "hidden",
+      trailheadReadyAtMs: null,
+      sent: false,
+    }
+    homeMountedInDocument = true
 
     const session = consumeResumeIntent() ? getMapSession() : null
     if (session) {
@@ -302,8 +382,32 @@ export default function Home() {
   }, [])
 
   const handleTrailheadReady = useCallback(() => {
+    const clock = mapReadyClockRef.current
+    if (clock && clock.trailheadReadyAtMs == null) clock.trailheadReadyAtMs = performance.now()
     setTrailheadProgress(1)
     setTrailheadReady(true)
+  }, [])
+
+  // The button unlocks a beat after the trailhead is ready (its fill sweep has
+  // to finish), so both moments are reported.
+  const handleSplashUnlocked = useCallback(() => {
+    const clock = mapReadyClockRef.current
+    if (!clock || clock.sent) return
+    clock.sent = true
+    const mapReadyMs = elapsedMs(clock.startMs, performance.now())
+    if (mapReadyMs == null) return
+    posthog.capture("map_ready_ms", {
+      map_ready_ms: mapReadyMs,
+      trailhead_ready_ms:
+        clock.trailheadReadyAtMs == null
+          ? null
+          : elapsedMs(clock.startMs, clock.trailheadReadyAtMs),
+      navigation: clock.navigation,
+      device_type: currentPerfDeviceType(),
+      trail_prep_cached: clock.trailPrepCached,
+      // A backgrounded tab throttles timers and rendering; filter these out.
+      tab_was_hidden: clock.tabWasHidden,
+    })
   }, [])
 
   const handleTrailheadProgress = useCallback((progress: number) => {
@@ -311,8 +415,10 @@ export default function Home() {
   }, [])
 
   const handleSplashEnter = useCallback(() => {
-    posthog.capture("journey_started")
+    // Timing only: which part of this tap holds the main thread (INP).
+    const handlerStartMs = performance.now()
     void unlockAudio()
+    const audioUnlockSyncMs = elapsedMs(handlerStartMs, performance.now())
     clearMapSession()
 
     // Don't call requestFullscreen here — on Android it collapses browser chrome
@@ -331,6 +437,17 @@ export default function Home() {
 
     // Starts intro: map cancels warm, jumps to overview, then calls onOverviewReady
     setJourneyStarted(true)
+
+    const handlerSyncMs = elapsedMs(handlerStartMs, performance.now())
+    // React flushes a tap's state updates in a microtask queued before this
+    // one, so this runs once the synchronous render and commit are done.
+    queueMicrotask(() => {
+      posthog.capture("journey_started", {
+        audio_unlock_sync_ms: audioUnlockSyncMs,
+        handler_sync_ms: handlerSyncMs,
+        render_sync_ms: elapsedMs(handlerStartMs, performance.now()),
+      })
+    })
   }, [unlockAudio])
 
   const handleOverviewReady = useCallback(() => {
@@ -753,9 +870,26 @@ export default function Home() {
       marker: AudioMarker,
       cameraDurationMs: number,
       audioFadeMs?: number,
-      navigation_source: "map_marker" | "player_previous" | "player_next" | "chapter_transition" = "map_marker",
+      navigation_source: NavigationSource = "map_marker",
+      tapAtMs: number = performance.now(),
     ) => {
       if (!ACTIVE_CHAPTERS.has(marker.chapter)) return
+
+      const handlerStartMs = performance.now()
+      const soundMeta = {
+        markerId: marker.id,
+        chapterId: marker.chapter,
+        navigationSource: navigation_source,
+        tapAudioSyncMs: null as number | null,
+        tapHandlerSyncMs: null as number | null,
+        tapRenderSyncMs: null as number | null,
+      }
+      const clipId = marker.audioUrl ? clipIdFromAudioUrl(marker.audioUrl) : null
+      if (clipId) {
+        firstSoundRef.current.begin({ clipId, tapAtMs, meta: soundMeta })
+      } else {
+        firstSoundRef.current.clear()
+      }
 
       posthog.capture("map_recording_opened", {
         marker_id: marker.id,
@@ -764,6 +898,7 @@ export default function Home() {
         navigation_source,
       })
       markDirectNavigation()
+      const audioStartMs = performance.now()
       if (marker.audioUrl) primeLoop(marker.audioUrl)
       void unlockAudio()
       const fadeMs = audioFadeMs ?? cameraDurationMs
@@ -781,6 +916,7 @@ export default function Home() {
       } else {
         fadeOutAndStop(fadeMs)
       }
+      soundMeta.tapAudioSyncMs = elapsedMs(audioStartMs, performance.now())
 
       if (map) {
         cancelFreeCameraAnimation()
@@ -790,6 +926,12 @@ export default function Home() {
       }
 
       setSelectedAudioMarker(marker)
+
+      soundMeta.tapHandlerSyncMs = elapsedMs(handlerStartMs, performance.now())
+      // Runs after React's synchronous flush of this tap (see handleSplashEnter).
+      queueMicrotask(() => {
+        soundMeta.tapRenderSyncMs = elapsedMs(handlerStartMs, performance.now())
+      })
     },
     [fadeOutAndStop, flyToMarkerPunchIn, map, markDirectNavigation, primeLoop, transitionToTrack, unlockAudio],
   )
@@ -840,9 +982,9 @@ export default function Home() {
     setIsNodeCameraBusy(false)
   }
 
-  const handleAudioMarkerClick = (marker: AudioMarker) => {
+  const handleAudioMarkerClick = (marker: AudioMarker, tapAtMs: number) => {
     if (mapPinsLocked) return
-    activateNode(marker, 2400, undefined, "map_marker")
+    activateNode(marker, 2400, undefined, "map_marker", tapAtMs)
   }
 
   const { previous: previousPlayable, next: nextPlayable } = selectedAudioMarker
@@ -929,6 +1071,9 @@ export default function Home() {
 
   useEffect(() => {
     const onVis = () => {
+      if (document.hidden && mapReadyClockRef.current) {
+        mapReadyClockRef.current.tabWasHidden = true
+      }
       if (document.hidden) void suspendAudio()
       else void resumeAudio()
     }
@@ -1017,6 +1162,7 @@ export default function Home() {
           onEnter={handleSplashEnter}
           trailheadReady={trailheadReady}
           trailheadProgress={trailheadProgress}
+          onUnlocked={handleSplashUnlocked}
           revealMap={revealMap}
         />
       )}

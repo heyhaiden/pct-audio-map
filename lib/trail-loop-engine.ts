@@ -13,11 +13,16 @@ import {
   armMediaPlaybackSession,
   shouldLockPlaybackWithHtmlAudio,
 } from "@/lib/media-playback-session"
+import { resolveClipCacheState, type ClipCacheState } from "@/lib/perf-metrics"
 import { orphanedDecks } from "@/lib/trail-loop-decks"
 
 type TrailLoopEvent =
   | { type: "loading"; id: string }
-  | { type: "playing"; id: string }
+  /**
+   * `cacheState` is where the clip stood when the play request started;
+   * `firstPlay` marks the request that also ran the one-time format probe.
+   */
+  | { type: "playing"; id: string; cacheState: ClipCacheState; firstPlay: boolean }
   | { type: "stopped" }
   | { type: "error"; id: string; message: string }
   /** A tap tried to start Web Audio and the context still isn't running. */
@@ -424,6 +429,16 @@ export function createTrailLoopEngine(options: {
       return
     }
 
+    // Measurement only (first_sound_ms): snapshot the caches before this
+    // request touches them.
+    const firstPlay = format === null
+    const cacheUrl = format === "mp3" ? sources.mp3Url : sources.opusUrl
+    const cacheState = resolveClipCacheState({
+      decoded: decoded.has(sources.clipId),
+      compressed: compressed.has(cacheUrl),
+      inflight: inflight.has(cacheUrl),
+    })
+
     pinned = new Set([sources.clipId, ...pinned].slice(0, keepDecoded))
     emit({ type: "loading", id: sources.clipId })
 
@@ -461,7 +476,7 @@ export function createTrailLoopEngine(options: {
 
       disconnectOrphans([outgoing, incoming])
       active = incoming
-      emit({ type: "playing", id: sources.clipId })
+      emit({ type: "playing", id: sources.clipId, cacheState, firstPlay })
 
       await fadeGains(
         token,
