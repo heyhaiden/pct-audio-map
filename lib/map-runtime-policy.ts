@@ -1,3 +1,5 @@
+import type { Map as MapboxMap } from "mapbox-gl"
+
 export type MapPrefetchPolicy = {
   warmFullRoute: boolean
   trailheadSamples: number
@@ -21,6 +23,7 @@ export function getMapPrefetchPolicy(reducedGpu: boolean): MapPrefetchPolicy {
       }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
 export function isFatalMapboxError(event: any, mapLoaded: boolean): boolean {
   if (mapLoaded) return false
 
@@ -48,10 +51,12 @@ export function isFatalMapboxError(event: any, mapLoaded: boolean): boolean {
  * `preloadOnly` against a dead map throws inside `_preloadTiles`
  * (`tileZoom` / `projection` / style `get`).
  */
-export function isMapAlive(map: any): boolean {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
+export function isMapAlive(map: any): map is MapboxMap {
   return !!map && !map._removed && !!map.style
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
 function getSourceCaches(map: any): any[] {
   const style = map?.style
   if (!style) return []
@@ -72,6 +77,7 @@ function getSourceCaches(map: any): any[] {
  * Unloaded sources retry `_preloadTiles` on a later `data` event, outside our
  * try/catch, so the caches must already have transforms before the first call.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- probes Mapbox internals on maps that may be torn down; tests pass partial fakes
 export function isMapReadyForPreload(map: any): boolean {
   if (!isMapAlive(map) || map.transform?.tileZoom == null) return false
   const caches = getSourceCaches(map)

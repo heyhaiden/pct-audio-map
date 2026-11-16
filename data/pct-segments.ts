@@ -167,7 +167,7 @@ export const pctSegments: PCTChapter[] = [
 ]
 
 // Detailed PCT trail coordinates with elevation data
-export const pctTrailGeometry = {
+export const pctTrailGeometry: GeoJSON.Feature<GeoJSON.LineString, { name: string; length: number; states: string[] }> = {
   type: "Feature",
   properties: {
     name: "Pacific Crest Trail",

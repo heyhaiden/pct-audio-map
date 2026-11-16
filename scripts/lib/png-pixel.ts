@@ -14,7 +14,6 @@ export function readPngPixel(
 
   let offset = 8
   let width = 0
-  let height = 0
   let bitDepth = 0
   let colorType = 0
   const idatChunks: Buffer[] = []
@@ -27,7 +26,6 @@ export function readPngPixel(
 
     if (type === "IHDR") {
       width = buffer.readUInt32BE(dataStart)
-      height = buffer.readUInt32BE(dataStart + 4)
       bitDepth = buffer[dataStart + 8]
       colorType = buffer[dataStart + 9]
     } else if (type === "IDAT") {

@@ -2,7 +2,7 @@ type TrailResponse = {
   ok: boolean
   status?: number
   statusText?: string
-  json: () => Promise<any>
+  json: () => Promise<unknown>
 }
 
 /**
@@ -39,8 +39,15 @@ export function createTrailDataLoader<T>(
             )
           }
 
-          const data = await response.json()
-          const feature = data?.type === "FeatureCollection" ? data.features?.[0] : data
+          const data = (await response.json()) as {
+            type?: string
+            features?: unknown[]
+            geometry?: { coordinates?: unknown[] }
+          } | null
+          const feature = (data?.type === "FeatureCollection" ? data.features?.[0] : data) as
+            | { geometry?: { coordinates?: unknown[] } }
+            | null
+            | undefined
           if (!feature?.geometry?.coordinates?.length) {
             throw new Error("Trail data response did not contain a usable line")
           }
