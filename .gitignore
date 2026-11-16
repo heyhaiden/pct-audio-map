@@ -31,3 +31,8 @@ next-env.d.ts
 !/content/audio/.gitkeep
 .env.local
 .DS_Store
+
+# local tool config (Claude Code, PostHog wizard)
+.claude/
+.posthog*
+posthog-*-report.md
