@@ -520,6 +520,8 @@ export function createTrailLoopEngine(options: {
   }
 
   const prefetch = (audioUrls: string[]) => {
+    // The first play also needs the manifest; fetch it alongside the bytes.
+    if (audioUrls.length > 0) void loadManifest()
     const nextPinned = new Set(pinned)
     for (const audioUrl of audioUrls) {
       const sources = resolveLoopSources(audioUrl, { blobBase })
