@@ -24,6 +24,10 @@ if (posthogKey && posthogHost) {
     defaults: "2025-05-24",
     capture_exceptions: true,
     before_send: dropInjectedScriptErrors,
+    // By default the recorder/loader scripts go in before the first
+    // `body > script`, which is our JSON-LD tag, and React then hydrates the
+    // wrong element. Appending to <head> keeps them out of React's way.
+    external_scripts_inject_target: "head",
     debug: process.env.NODE_ENV === "development",
   })
 } else if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
