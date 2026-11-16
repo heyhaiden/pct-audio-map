@@ -5,6 +5,7 @@ import { applyJourneyScrollDelta } from "@/lib/chapter-scroll-gate"
 import {
   applyTouchDelta,
   clearNativeTextSelection,
+  isNativeScrollTarget,
   isTrailCameraSettling,
   noteTrailTouchEnd,
   noteTrailTouchMove,
@@ -29,6 +30,8 @@ export function useInvertedTouchScroll(enabled: boolean) {
   const inertiaRafRef = useRef(0)
   const preventedCalloutRef = useRef(false)
   const consumeStrokeRef = useRef(false)
+  /** Answered on a stroke's first move, then reused until the next touchstart. */
+  const nativeScrollStrokeRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return
@@ -43,20 +46,17 @@ export function useInvertedTouchScroll(enabled: boolean) {
     const isLocked = () =>
       document.body.style.overflow === "hidden" || document.body.style.touchAction === "none"
 
-    const isNativeScrollTarget = (target: EventTarget | null) => {
-      let node = target instanceof Element ? target : null
-      while (node && node !== document.documentElement) {
-        const style = window.getComputedStyle(node)
-        const oy = style.overflowY
-        if (
-          (oy === "auto" || oy === "scroll" || oy === "overlay") &&
-          node.scrollHeight > node.clientHeight + 1
-        ) {
-          return true
-        }
-        node = node.parentElement
+    // A touch keeps its target for the whole stroke, so one answer covers it.
+    // Asking on every touchmove forced a style recalculation each time.
+    const strokeStartedOnNativeScroller = (target: EventTarget | null) => {
+      if (nativeScrollStrokeRef.current === null) {
+        nativeScrollStrokeRef.current = isNativeScrollTarget(
+          target instanceof Element ? target : null,
+          document.documentElement,
+          (node) => window.getComputedStyle(node).overflowY,
+        )
       }
-      return false
+      return nativeScrollStrokeRef.current
     }
 
     const onTouchStart = (e: TouchEvent) => {
@@ -64,6 +64,7 @@ export function useInvertedTouchScroll(enabled: boolean) {
       cancelInertia()
       velocityRef.current = 0
       consumeStrokeRef.current = false
+      nativeScrollStrokeRef.current = null
       noteTrailTouchStart()
       clearNativeTextSelection()
       preventedCalloutRef.current = false
@@ -106,7 +107,7 @@ export function useInvertedTouchScroll(enabled: boolean) {
       }
 
       if (e.touches.length !== 1 || lastYRef.current === null) return
-      if (isNativeScrollTarget(e.target)) return
+      if (strokeStartedOnNativeScroller(e.target)) return
 
       const y = e.touches[0].clientY
       const now = performance.now()
