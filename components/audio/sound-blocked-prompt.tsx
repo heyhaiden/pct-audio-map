@@ -92,7 +92,7 @@ export function SoundBlockedPrompt({ isVisible, onRetry, onDismiss }: SoundBlock
       role="dialog"
       aria-modal="false"
       aria-labelledby="sound-blocked-title"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex justify-center px-4 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-[80] flex justify-center px-4 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
     >
       <div className="pct-glass-panel pointer-events-auto relative w-full max-w-[26rem] px-6 pb-5 pt-6 text-center">
         <button
