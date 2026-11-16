@@ -108,6 +108,7 @@ export default function Home() {
 
   const {
     transitionToTrack,
+    warmAudio,
     primeLoop,
     isPlaying: isAudioPlaying,
     error: audioError,
@@ -262,6 +263,19 @@ export default function Home() {
       isOverlayBlockingScroll || Boolean(selectedAudioMarker) || isNodeCameraBusy
     scrollControlRef.current?.setBlocked(shouldBlock)
   }, [scrollControlsReady, isOverlayBlockingScroll, selectedAudioMarker, isNodeCameraBusy])
+
+  // Open the audio device while the splash is still loading the map, so the
+  // "Begin Journey" tap only has to resume it. PostHog INP put 190-280 ms of
+  // processing in that tap on iOS and about 350 ms on Windows.
+  useEffect(() => {
+    if (navMode !== "fresh") return
+    if (typeof requestIdleCallback === "function") {
+      const idle = requestIdleCallback(() => warmAudio(), { timeout: 2000 })
+      return () => cancelIdleCallback(idle)
+    }
+    const timer = window.setTimeout(warmAudio, 1000)
+    return () => window.clearTimeout(timer)
+  }, [navMode, warmAudio])
 
   // Reset the manual overlay dismissal when we move to a different chapter.
   useEffect(() => {

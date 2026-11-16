@@ -24,6 +24,11 @@ type TrailLoopEvent =
   | { type: "blocked" }
 
 export interface TrailLoopEngine {
+  /**
+   * Build the audio graph ahead of the first tap, off the tap's own handler.
+   * The context stays suspended; `unlock` in a gesture still starts it.
+   */
+  warm: () => void
   unlock: () => Promise<void>
   resume: () => Promise<void>
   /** Same-turn as the pin tap: start HTMLAudio so iOS keeps the media session. */
@@ -133,6 +138,17 @@ export function createTrailLoopEngine(options: {
       if (context === ctx && ctx.state !== "running") emit({ type: "blocked" })
     }, BLOCKED_CHECK_MS)
     return resumeContext(ctx)
+  }
+
+  // Constructing an AudioContext opens the audio device, which is synchronous
+  // and slow on iOS and Windows. Doing it before the tap leaves the tap with
+  // only the asynchronous resume().
+  const warm = () => {
+    try {
+      ensureGraph()
+    } catch {
+      // No Web Audio here; unlock() reports that on the tap as before.
+    }
   }
 
   const unlock = async () => {
@@ -540,6 +556,7 @@ export function createTrailLoopEngine(options: {
   }
 
   return {
+    warm,
     unlock,
     resume,
     prime,
