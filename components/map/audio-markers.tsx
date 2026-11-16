@@ -19,7 +19,8 @@ import type { AudioMarker } from "@/types/map"
 
 interface AudioMarkersProps {
   map: MapboxMap
-  onMarkerClick: (marker: AudioMarker) => void
+  /** `tapAtMs` is the click's `event.timeStamp` (performance.now() timeline). */
+  onMarkerClick: (marker: AudioMarker, tapAtMs: number) => void
   /** Same-turn as the tap: start media playback before fetch/decode. */
   onMarkerPrime?: (marker: AudioMarker) => void
   activeMarkerId?: string | null
@@ -150,7 +151,7 @@ export function AudioMarkers({
 
     const onCanvasClick = (event: MouseEvent) => {
       const marker = markerAtEvent(event)
-      if (marker) onMarkerClickRef.current(marker)
+      if (marker) onMarkerClickRef.current(marker, event.timeStamp)
     }
 
     canvas.addEventListener("pointerdown", onCanvasPointerDown)

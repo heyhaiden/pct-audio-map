@@ -11,6 +11,8 @@ interface SplashScreenProps {
   trailheadReady?: boolean
   /** 0–1 warm progress for the button loading bar. */
   trailheadProgress?: number
+  /** Fired once, when the button stops "Preparing trail…" and becomes tappable. */
+  onUnlocked?: () => void
   /**
    * When true, fade the splash away. Parent should set this only after the map
    * camera is restored to overview so the user never sees a mid-trail warm pose.
@@ -49,15 +51,23 @@ function BeginJourneyButton({
   ready,
   progress,
   onClick,
+  onUnlocked,
   className,
 }: {
   ready: boolean
   progress: number
   onClick: () => void
+  onUnlocked?: () => void
   className?: string
 }) {
   const [fill, setFill] = useState(0.04)
   const [unlocked, setUnlocked] = useState(false)
+  const onUnlockedRef = useRef(onUnlocked)
+  onUnlockedRef.current = onUnlocked
+
+  useEffect(() => {
+    if (unlocked) onUnlockedRef.current?.()
+  }, [unlocked])
   const fillRef = useRef(0.04)
   const rafRef = useRef<number | null>(null)
 
@@ -162,6 +172,7 @@ export function SplashScreen({
   onEnter,
   trailheadReady = false,
   trailheadProgress = 0,
+  onUnlocked,
   revealMap = false,
 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true)
@@ -251,6 +262,7 @@ export function SplashScreen({
               ready={trailheadReady}
               progress={trailheadProgress}
               onClick={handleEnter}
+              onUnlocked={onUnlocked}
               className="px-[38px] py-4"
             />
           </div>

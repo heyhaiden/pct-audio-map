@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createTrailLoopEngine, type TrailLoopEngine } from "@/lib/trail-loop-engine"
+import type { ClipCacheState } from "@/lib/perf-metrics"
 
 interface AudioPlayerState {
   isPlaying: boolean
@@ -23,8 +24,20 @@ export interface AudioTrack {
 
 const DEFAULT_FADE_MS = 900
 
-export function useAudioPlayer() {
+export interface AudioPlayingInfo {
+  clipId: string
+  cacheState: ClipCacheState
+  firstPlay: boolean
+  contextState: AudioContextState | null
+}
+
+export function useAudioPlayer(options: {
+  /** Fires as the engine starts a clip (the start of its fade-in). */
+  onPlaying?: (info: AudioPlayingInfo) => void
+} = {}) {
   const engineRef = useRef<TrailLoopEngine | null>(null)
+  const onPlayingRef = useRef(options.onPlaying)
+  onPlayingRef.current = options.onPlaying
   const pendingTrackRef = useRef<string | null>(null)
   const [state, setState] = useState<AudioPlayerState>({
     isPlaying: false,
@@ -66,6 +79,12 @@ export function useAudioPlayer() {
       }
 
       if (event.type === "playing") {
+        onPlayingRef.current?.({
+          clipId: event.id,
+          cacheState: event.cacheState,
+          firstPlay: event.firstPlay,
+          contextState: engine.contextState(),
+        })
         setState((previous) => ({
           ...previous,
           isPlaying: true,
