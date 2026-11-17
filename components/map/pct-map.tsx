@@ -28,6 +28,7 @@ import { installTrailLabelLayers } from "@/lib/trail-label-layer"
 import { applyBaseLabelFilters } from "@/lib/base-label-filters"
 import { installAudioMarkerLayer } from "@/lib/audio-marker-layer"
 import { waitForOverviewScene } from "@/lib/splash-map-readiness"
+import { introLandingCamera } from "@/lib/intro-landing"
 
 interface PCTMapProps {
   onMapLoad?: (map: mapboxgl.Map) => void
@@ -160,6 +161,31 @@ function getTrailheadCamera() {
   if (intro === "portrait") return TRAILHEAD_CAMERA_MOBILE
   if (intro === "landscape") return TRAILHEAD_CAMERA_LANDSCAPE
   return TRAILHEAD_CAMERA
+}
+
+/**
+ * Land the intro exactly where the scroll camera starts (its mile-0 pose), so
+ * the tiles loaded for the landing are the ones the scroll camera keeps. The
+ * fixed trailhead cameras above are the fallback if the rail isn't built yet.
+ */
+function getIntroLandingCamera(
+  map: mapboxgl.Map,
+  path: import("@/lib/railing-camera").CameraPathPoint[] | null,
+) {
+  if (!path?.length) return getTrailheadCamera()
+  const pose = computeRailingPose(path, 0)
+  let ground = 0
+  try {
+    ground = map.queryTerrainElevation([pose.lng, pose.lat]) ?? 0
+  } catch {
+    // Terrain not ready: land a few hundredths of a zoom short instead.
+  }
+  return (
+    introLandingCamera(pose, {
+      viewportHeightPx: map.getContainer().clientHeight,
+      groundElevationMeters: ground,
+    }) ?? getTrailheadCamera()
+  )
 }
 
 export function PCTMap({
@@ -834,7 +860,7 @@ export function PCTMap({
       if (!isMapAlive(map.current)) return
       setIntroPhase("flying")
 
-      const trailhead = getTrailheadCamera()
+      const trailhead = getIntroLandingCamera(map.current, getCameraPath())
       map.current.flyTo({
         center: trailhead.center,
         zoom: trailhead.zoom,
@@ -856,7 +882,7 @@ export function PCTMap({
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [introPhase, mapLoaded, debugMode, onIntroComplete, skipIntro])
+  }, [introPhase, mapLoaded, debugMode, onIntroComplete, skipIntro, getCameraPath])
 
   return (
     <div className="relative h-full w-full">
