@@ -3,7 +3,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import { BookOpen, Info, Menu, Mountain, Music, X, type LucideIcon } from "lucide-react"
+import { BookOpen, Info, Instagram, Menu, Mountain, Music, X, type LucideIcon } from "lucide-react"
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/site"
 import { useRouter } from "next/navigation"
 import { OverlayActionLabel, OverlayShell } from "@/components/overlay/overlay-shell"
 import { handleHomeNavClick } from "@/lib/home-exit"
@@ -205,6 +206,16 @@ export function MobileNavigationMenu({
                         </Link>
                       )
                     })}
+                    <a
+                      href={INSTAGRAM_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pct-link-row"
+                    >
+                      <OverlayActionLabel icon={<Instagram className="h-4 w-4" />}>
+                        @{INSTAGRAM_HANDLE}
+                      </OverlayActionLabel>
+                    </a>
                   </nav>
                 }
               />

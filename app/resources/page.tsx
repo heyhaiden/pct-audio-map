@@ -167,14 +167,6 @@ export default function ResourcesPage() {
             </div>
           </section>
         </main>
-
-        <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
-          <div className="mx-auto max-w-4xl px-6 text-center">
-            <p className="font-mono text-micro uppercase tracking-[0.14em] text-[#6b6455]">
-              Offbeat: Soundscapes of the PCT
-            </p>
-          </div>
-        </footer>
     </SitePage>
   )
 }

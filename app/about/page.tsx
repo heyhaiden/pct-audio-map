@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Image from "next/image"
 import { pageMetadata } from "@/lib/site"
 import { Mail } from "lucide-react"
 import { FieldNotesCard } from "@/components/about/field-notes-card"
@@ -189,35 +188,6 @@ export default function AboutPage() {
             </a>
           </section>
         </main>
-
-        <footer className="mt-12 border-t border-[#ed5a43]/10 py-8">
-          <div className="mx-auto max-w-4xl px-6 text-center">
-            <div className="mb-6 flex flex-col items-center justify-center gap-5 sm:flex-row sm:gap-10">
-              <a
-                href="https://www.mapbox.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 opacity-60 transition-opacity hover:opacity-100"
-              >
-                <span className="font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">Maps by</span>
-                <Image src="/logos/mapbox.svg" alt="Mapbox" width={90} height={20} className="h-5 w-auto" />
-              </a>
-              <a
-                href="https://native-land.ca"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 opacity-60 transition-opacity hover:opacity-100"
-              >
-                <span className="font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]">Homelands from</span>
-                <Image src="/logos/native-land.svg" alt="" width={18} height={25} className="h-6 w-auto" />
-                <span className="pct-display text-sm text-[#ede8dc]">Native Land Digital</span>
-              </a>
-            </div>
-            <p className="font-mono text-micro uppercase tracking-[0.14em] text-[#6b6455]">
-              Offbeat: Soundscapes of the PCT
-            </p>
-          </div>
-        </footer>
     </SitePage>
   )
 }

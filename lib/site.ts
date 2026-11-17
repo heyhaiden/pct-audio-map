@@ -9,6 +9,10 @@ export const SITE_SHORT_NAME = "Offbeat"
 export const SITE_DESCRIPTION =
   "An audio journey along the Pacific Crest Trail. Scroll a 3D map from Mexico to Canada and stop at waypoints to hear field recordings from a 2,650-mile thru-hike."
 
+export const CONTACT_EMAIL = "hello@offbeathike.com"
+export const INSTAGRAM_HANDLE = "offbeathike"
+export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}/`
+
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
