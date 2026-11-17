@@ -39,6 +39,7 @@ A quick click is the fast case, so the gate-order theory fails. Case A has 0 DEM
 
 - The disk filled once, at 01:39: `ENOSPC: no space left on device, open '.../lab/overnight/shots/terrain-selfhosted-mile400.png'`. The volume sat at 99% all night (1.4 to 3.1 GB free) and swap reached 6 GB while two browsers ran at once. No results were lost. After that, one browser at a time.
 - A usage limit stopped all work from about 01:45 to 05:30.
+- PR #68 (`dev` into `main`) shows as merged at 01:11:22 UTC by the `heyhaiden` account, minutes after this pass started. No command in this pass merged, pushed to or edited it; I noticed it only at the end. PR #64 is untouched and still open.
 - Three of my own wait commands hung and were killed (`pgrep -f` matched their own command line). No effect on results.
 - One frame-rate run (desktop, all hidden, third round) took 355 s of wall time instead of about 55 s. Its result (47.3 fps) matches the other two.
 - Unexplained: a landing-view DEM tile turns `loaded` 2.2 s after its last byte arrives, with the main thread and both workers idle.
