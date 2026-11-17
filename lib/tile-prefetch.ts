@@ -1,24 +1,16 @@
 import type { Map as MapboxMap } from "mapbox-gl"
-import along from "@turf/along"
-import { geoFractionForTrailMile } from "@/lib/trail-mile-calibration"
 import posthog from "posthog-js"
-import bearing from "@turf/bearing"
-import length from "@turf/length"
-import { lineString } from "@turf/helpers"
-import {
-  CAMERA_PATH_POINTS,
-  PCT_TOTAL_MILES,
-  computeRailingPose,
-  offsetLngLat,
-  type CameraPathPoint,
-  type FreeCameraPose,
-} from "@/lib/railing-camera"
+import type { CameraPathPoint, FreeCameraPose } from "@/lib/railing-camera"
 import { getMapPrefetchPolicy, isMapAlive, isMapReadyForPreload } from "@/lib/map-runtime-policy"
+import {
+  PREFETCH_END_MILES,
+  posesAlongMiles,
+  prefetchCameraPath,
+  preloadTargetForPose,
+} from "@/lib/prefetch-poses"
 import { createTrailheadNotifier } from "@/lib/trailhead-readiness"
 import { isResumeTrailPosition } from "@/lib/map-resume"
 
-/** Warm style + terrain out to early Oregon; content ends there for now. */
-const PREFETCH_END_MILES = 1800
 /** Gate "Begin Journey" once this corridor is warm. */
 const TRAILHEAD_WARM_MILES = 120
 /** Background preload target while splash is up (no visible camera walking). */
@@ -50,69 +42,6 @@ const DETAIL_SAMPLE_SPACING_MILES = 20
 /** Re-arm the window after this much travel from the last anchor. */
 const WINDOW_RETRIGGER_MILES = 12
 
-function buildCameraPath(trailCoordinates: number[][]): CameraPathPoint[] | null {
-  if (typeof window === "undefined" || trailCoordinates.length < 2) return null
-
-  try {
-    const line = lineString(trailCoordinates)
-    const totalLength = length(line, { units: "kilometers" })
-    const points: CameraPathPoint[] = []
-
-    for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
-      const distance =
-        geoFractionForTrailMile((i / CAMERA_PATH_POINTS) * PCT_TOTAL_MILES) * totalLength
-      const point = along(line, distance, { units: "kilometers" })
-      const coords = point.geometry.coordinates
-      const nextDistance = Math.min(distance + 16, totalLength)
-      const nextPoint = along(line, nextDistance, { units: "kilometers" })
-      const pointBearing = bearing(point, nextPoint)
-
-      points.push({
-        lng: coords[0],
-        lat: coords[1],
-        bearing: pointBearing,
-        smoothedBearing: pointBearing,
-      })
-    }
-
-    const windowSize = 8
-    for (let i = 0; i < points.length; i++) {
-      let sumX = 0
-      let sumY = 0
-      let count = 0
-      for (let j = Math.max(0, i - windowSize); j <= Math.min(points.length - 1, i + windowSize); j++) {
-        const rad = (points[j].bearing * Math.PI) / 180
-        sumX += Math.cos(rad)
-        sumY += Math.sin(rad)
-        count++
-      }
-      points[i].smoothedBearing = (((Math.atan2(sumY / count, sumX / count) * 180) / Math.PI) + 360) % 360
-    }
-
-    return points
-  } catch {
-    return null
-  }
-}
-
-function posesAlongMiles(
-  path: CameraPathPoint[],
-  startMiles: number,
-  endMiles: number,
-  count: number,
-): FreeCameraPose[] {
-  const poses: FreeCameraPose[] = []
-  const start = Math.max(0, startMiles) / PCT_TOTAL_MILES
-  const end = Math.min(PREFETCH_END_MILES, endMiles) / PCT_TOTAL_MILES
-  if (end <= start) return poses
-
-  for (let i = 0; i < count; i++) {
-    const progress = start + ((end - start) * i) / Math.max(1, count - 1)
-    poses.push(computeRailingPose(path, progress))
-  }
-  return poses
-}
-
 function waitForIdle(map: MapboxMap, timeoutMs = 450): Promise<void> {
   return new Promise((resolve) => {
     if (!isMapAlive(map)) {
@@ -137,25 +66,6 @@ function waitForIdle(map: MapboxMap, timeoutMs = 450): Promise<void> {
     map.once("idle", onIdle)
     map.triggerRepaint?.()
   })
-}
-
-/** Rough FreeCamera-altitude → standard-zoom mapping, good enough for tile coverage. */
-function approxZoomForAltitude(altitudeMeters: number): number {
-  if (altitudeMeters > 40000) return 8
-  if (altitudeMeters > 25000) return 10
-  if (altitudeMeters > 12000) return 11
-  return 12
-}
-
-/**
- * computeRailingPose() returns the camera's own position, offset backward/above
- * the ground point it's actually looking at (see railing-camera.ts's
- * computeRailingPose — same offsetLngLat call, reversed here). easeTo's `center`
- * means "ground point under view," so preloading needs this, not the raw pose.
- */
-function lookAtGroundPoint(pose: FreeCameraPose): [number, number] {
-  const groundOffsetKm = (pose.altitude * Math.tan((pose.pitch * Math.PI) / 180)) / 1000
-  return offsetLngLat(pose.lng, pose.lat, groundOffsetKm, pose.bearing)
 }
 
 function sleep(ms: number): Promise<void> {
@@ -185,13 +95,7 @@ async function preloadPoses(
   for (const pose of poses) {
     if (!canPreload() || !isMapReadyForPreload(map)) return
     try {
-      map.jumpTo({
-        center: lookAtGroundPoint(pose),
-        zoom: overrides?.zoom ?? approxZoomForAltitude(pose.altitude),
-        pitch: overrides?.pitch ?? pose.pitch,
-        bearing: overrides?.bearing ?? pose.bearing,
-        preloadOnly: true,
-      })
+      map.jumpTo({ ...preloadTargetForPose(pose, overrides), preloadOnly: true })
     } catch {
       // Background warm — never let a bad pose interrupt the pass.
       // preloadOnly can also reject asynchronously inside Mapbox when a
@@ -251,7 +155,7 @@ export function startPathTilePrefetch(options: {
   const canPreload = () => !cancelled && !isIntroFlying() && isMapAlive(map)
 
   const ensurePath = () => {
-    if (!path) path = getCameraPath?.() ?? buildCameraPath(trailCoordinates)
+    if (!path) path = getCameraPath?.() ?? prefetchCameraPath(trailCoordinates)
     return path
   }
 
