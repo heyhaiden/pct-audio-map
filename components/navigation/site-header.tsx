@@ -3,11 +3,26 @@
 import { useEffect, useLayoutEffect, useState, type MouseEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Mountain } from "lucide-react"
+import { ArrowLeft, Instagram, Mountain } from "lucide-react"
 import { MobileNavigationMenu } from "@/components/navigation/mobile-navigation-menu"
 import { handleHomeNavClick } from "@/lib/home-exit"
 import { loadFieldNotesBabylon } from "@/lib/load-field-notes-babylon"
 import { cameFromActiveMap, setResumeIntent } from "@/lib/map-session"
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/site"
+
+function InstagramLink() {
+  return (
+    <a
+      href={INSTAGRAM_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Offbeat on Instagram, @${INSTAGRAM_HANDLE}`}
+      className="grid h-9 w-9 place-items-center rounded-full text-[#9b8e7a] transition-colors hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
+    >
+      <Instagram className="h-[18px] w-[18px]" />
+    </a>
+  )
+}
 
 /**
  * Back to Map is hidden: resuming a saved trail position could leave the map
@@ -143,9 +158,12 @@ export function SiteHeader({ current, pinned = false }: SiteHeaderProps) {
               </Link>
             )
           })}
+          <span aria-hidden className="mx-1.5 h-4 w-px bg-white/10" />
+          <InstagramLink />
         </nav>
 
-        <div className="pct-site-nav-mobile md:hidden">
+        <div className="pct-site-nav-mobile flex items-center gap-1 md:hidden">
+          <InstagramLink />
           <MobileNavigationMenu source="site" current={current} />
         </div>
       </div>

@@ -4,7 +4,12 @@ import { useState, useEffect, useRef } from "react"
 import { Headphones } from "lucide-react"
 import { SiteHeader } from "@/components/navigation/site-header"
 import { SPLASH_SCROLL_LOCK_CLASS } from "@/lib/splash-scroll-lock"
-import { SPLASH_UNLOCK_SETTLE_MS, splashFillDurationMs } from "@/lib/splash-button-fill"
+import {
+  SPLASH_CREEP_TICK_MS,
+  SPLASH_UNLOCK_SETTLE_MS,
+  splashCreepProgress,
+  splashFillDurationMs,
+} from "@/lib/splash-button-fill"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -72,10 +77,24 @@ function BeginJourneyButton({
   const fillRef = useRef(0.04)
   const rafRef = useRef<number | null>(null)
 
+  // Keep the bar moving between real milestones (see splashCreepProgress).
+  // Measured from navigation start, so a remount doesn't restart it.
+  // Starts at 0 on both server and client (no hydration mismatch); the
+  // effect below catches up on the first tick.
+  const [creep, setCreep] = useState(0)
+  useEffect(() => {
+    if (ready) return
+    const tick = () => setCreep(splashCreepProgress(performance.now()))
+    tick()
+    const id = window.setInterval(tick, SPLASH_CREEP_TICK_MS)
+    return () => clearInterval(id)
+  }, [ready])
+  const shownProgress = Math.max(progress, creep)
+
   // Smoothly chase progress; when already-warmed (ready jumps to true),
   // run a short ease-out fill so the button doesn't snap unlock.
   useEffect(() => {
-    const target = ready ? 1 : Math.max(0.04, Math.min(0.97, progress))
+    const target = ready ? 1 : Math.max(0.04, Math.min(0.97, shownProgress))
     const from = fillRef.current
 
     if (Math.abs(target - from) < 0.005) {
@@ -117,7 +136,7 @@ function BeginJourneyButton({
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (settleTimer) clearTimeout(settleTimer)
     }
-  }, [ready, progress])
+  }, [ready, shownProgress])
 
   const showPreparing = !unlocked
   const label = unlocked ? "Begin Journey" : "Preparing trail…"
@@ -266,13 +285,15 @@ export function SplashScreen({
               onUnlocked={onUnlocked}
               className="px-[38px] py-4"
             />
+            {/* Under the button, not at the screen edge: this is where eyes are
+                while the bar fills, and the wait is time to put headphones on. */}
+            <p className="pct-splash-headphones mt-4 flex items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#b4aa9b]">
+              <Headphones className="h-4 w-4 shrink-0 text-[#ed5a43]" />
+              Best with headphones
+            </p>
           </div>
         </div>
 
-        <div className="pct-splash-headphones pointer-events-none absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#948a79]">
-          <Headphones className="h-4 w-4 shrink-0" />
-          Best with headphones
-        </div>
       </div>
     </div>
   )

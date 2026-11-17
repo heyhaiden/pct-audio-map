@@ -727,7 +727,7 @@ html[data-pct-layout="dock"] .pct-splash-cta button {
 }
 
 html[data-pct-layout="dock"] .pct-splash-headphones {
-  bottom: 0.65rem;
+  margin-top: 0.6rem;
 }
 
 @media (max-height: 540px) {
@@ -771,7 +771,7 @@ html[data-pct-layout="dock"] .pct-splash-headphones {
   }
 
   .pct-splash-headphones {
-    bottom: 0.65rem;
+    margin-top: 0.6rem;
   }
 }
 
@@ -1145,7 +1145,7 @@ html[data-pct-layout="dock"] .pct-site-nav-desktop {
 }
 
 html[data-pct-layout="dock"] .pct-site-nav-mobile {
-  display: block !important;
+  display: flex !important;
 }
 
 html[data-pct-layout="rail"] .pct-site-nav-mobile {
