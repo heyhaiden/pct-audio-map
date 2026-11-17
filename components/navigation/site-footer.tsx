@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { Instagram, Mail } from "lucide-react"
-import { CONTACT_EMAIL, INSTAGRAM_HANDLE, INSTAGRAM_URL, SITE_NAME } from "@/lib/site"
+import { CONTACT_EMAIL, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/site"
 
 const labelClass = "font-mono text-micro uppercase tracking-[0.14em] text-[#9b8e7a]"
 
@@ -10,11 +10,7 @@ const creditClass =
 const socialClass =
   "grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#ed5a43]/30 text-[#ed5a43] transition-colors hover:border-[#ed5a43] hover:bg-[#ed5a43] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43]"
 
-/**
- * Shared footer for About, Library and Resources, on one line: credits on the
- * left, socials on the right. The site name sits between them only on screens
- * wide enough to hold it.
- */
+/** Shared footer for About, Library and Resources, on one line: credits left, socials right. */
 export function SiteFooter() {
   return (
     <footer className="mt-12 border-t border-[#ed5a43]/10">
@@ -41,8 +37,6 @@ export function SiteFooter() {
             <span className="pct-display hidden text-sm text-[#ede8dc] sm:inline">Native Land Digital</span>
           </a>
         </div>
-
-        <p className={`${labelClass} hidden truncate text-[#6b6455] xl:block`}>{SITE_NAME}</p>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <span className={`${labelClass} hidden sm:inline`}>Follow along</span>
