@@ -22,6 +22,8 @@ export interface TrailLabel {
   /** [lng, lat] */
   coordinates: [number, number]
   kind: TrailLabelKind
+  /** Text shift in ems, [right, down]. Holds its pixel size at every zoom. */
+  offset?: [number, number]
   /** Sheet says "ok to leave out if too busy": loses label collisions first. */
   optional?: boolean
   /**
@@ -33,7 +35,10 @@ export interface TrailLabel {
 
 export const trailLabels: TrailLabel[] = [
   { name: "PCT Southern Terminus", coordinates: [-116.466988, 32.589729], kind: "poi" },
-  { name: "Campo", coordinates: [-116.473148, 32.60947], kind: "town" },
+  // Nudged north of the town centre (32.60947) and lifted, so the first
+  // recording's pin, which stands just south of it, does not cover the name.
+  // The nudge clears it at phone zoom; the lift covers the wider desktop view.
+  { name: "Campo", coordinates: [-116.473148, 32.6215], kind: "town", offset: [0, -0.9] },
   { name: "Lake Morena", coordinates: [-116.526941, 32.69664], kind: "water" },
   { name: "Mount Laguna", coordinates: [-116.41877, 32.867649], kind: "town" },
   { name: "Scissors Crossing", coordinates: [-116.470192, 33.098759], kind: "road" },

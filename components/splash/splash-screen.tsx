@@ -234,7 +234,7 @@ export function SplashScreen({
       <SiteHeader current="home" />
 
       <div className="pct-splash-body relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-8 py-11">
-        <div className="flex max-w-[30rem] flex-col items-center text-center">
+        <div className="pct-splash-stack flex max-w-[30rem] flex-col items-center text-center">
           {/* Abstract trail icon */}
           <div className="pct-splash-icon mb-8">
             <AbstractTrailIcon className="h-[88px] w-[50px]" />
@@ -252,7 +252,7 @@ export function SplashScreen({
 
           {/* Phones: one flowing paragraph (forced breaks left ragged short lines).
               Desktop keeps its three-line rhythm. */}
-          <p className="pct-splash-lede pct-display mb-6 w-full max-w-[23rem] text-pretty text-lede font-light leading-[1.45] text-[#c7beac]">
+          <p className="pct-splash-lede pct-display mb-6 w-full max-w-[23rem] text-pretty text-lede font-normal leading-[1.5] text-[#d2c9b8]">
             An audio journey along the Pacific Crest Trail.
             <br className="hidden md:inline" /> Scroll to explore. Stop at waypoints to listen.
             <br className="hidden md:inline" /> Stay as long as you like.
