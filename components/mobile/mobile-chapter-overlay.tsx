@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, type PointerEvent } from "react"
+import { useEffect, useRef, type MouseEvent, type PointerEvent } from "react"
 import { shouldDismissChapterOverlay } from "@/lib/mobile-chapter-overlay-gesture"
 import type { PCTChapter } from "@/types/map"
 
@@ -18,10 +18,27 @@ export function MobileChapterOverlay({
   onDismiss,
 }: MobileChapterOverlayProps) {
   const startYRef = useRef<number | null>(null)
+  /** A tap ended on the card; its click (or the fallback timer) dismisses. */
+  const tapPendingRef = useRef(false)
+  const fallbackTimerRef = useRef<number | null>(null)
   const isVisible = opacity > 0.01
   const romanNumerals = ["I", "II", "III", "IV", "V"]
 
+  useEffect(
+    () => () => {
+      if (fallbackTimerRef.current != null) window.clearTimeout(fallbackTimerRef.current)
+    },
+    [],
+  )
+
   if (!isVisible) return null
+
+  const dismissOnce = () => {
+    if (fallbackTimerRef.current != null) window.clearTimeout(fallbackTimerRef.current)
+    fallbackTimerRef.current = null
+    tapPendingRef.current = false
+    onDismiss()
+  }
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!event.isPrimary) return
@@ -33,7 +50,21 @@ export function MobileChapterOverlay({
     const startY = startYRef.current
     if (startY === null) return
     startYRef.current = null
-    if (shouldDismissChapterOverlay(startY, event.clientY)) onDismiss()
+    if (!shouldDismissChapterOverlay(startY, event.clientY)) return
+    // Don't unmount on pointerup: the phone's click arrives a moment later and
+    // would land on the map underneath, opening any pin there. Dismiss on the
+    // click instead, so the card absorbs it. The timer covers a click that
+    // never comes.
+    tapPendingRef.current = true
+    if (fallbackTimerRef.current != null) window.clearTimeout(fallbackTimerRef.current)
+    fallbackTimerRef.current = window.setTimeout(() => {
+      if (tapPendingRef.current) dismissOnce()
+    }, 400)
+  }
+
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation()
+    if (tapPendingRef.current) dismissOnce()
   }
 
   return (
@@ -46,6 +77,7 @@ export function MobileChapterOverlay({
       style={{ opacity }}
       onPointerDown={handlePointerDown}
       onPointerUp={finishGesture}
+      onClick={handleClick}
       onPointerCancel={() => {
         startYRef.current = null
       }}
@@ -68,7 +100,10 @@ export function MobileChapterOverlay({
 
         <button
           type="button"
-          onClick={onDismiss}
+          onClick={(event) => {
+            event.stopPropagation()
+            dismissOnce()
+          }}
           className="pct-mobile-explore-cue absolute left-1/2 -translate-x-1/2 whitespace-nowrap px-5 py-3 font-mono text-[14px] uppercase tracking-[0.18em] text-[#c7beac] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
         >
           Tap to continue
