@@ -1,6 +1,7 @@
 "use client"
 
 import { useLayoutEffect, type ReactNode } from "react"
+import { SiteFooter } from "@/components/navigation/site-footer"
 import { SiteHeader, type SiteNavPage } from "@/components/navigation/site-header"
 import { useViewportLayout } from "@/hooks/use-viewport-layout"
 import {
@@ -73,6 +74,7 @@ export function SitePage({
       <div className="relative z-10">
         <SiteHeader current={current} pinned />
         {children}
+        <SiteFooter />
       </div>
     </div>
   )
