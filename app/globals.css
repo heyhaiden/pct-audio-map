@@ -402,7 +402,8 @@
   @media (max-width: 767px) and (min-height: 640px) {
     .pct-chapter-tabs-shell {
       --pct-tab-type: 12px;
-      --pct-tab-pad: 14px;
+      /* 10px: halfway between the old 23px rail and the 40px one that felt fat. */
+      --pct-tab-pad: 10px;
       /* Re-derive here: the :root calc already resolved with the desktop values. */
       --pct-tab-thickness: calc(var(--pct-tab-type) + var(--pct-tab-pad) * 2);
       --pct-tab-thickness-selected: var(--pct-tab-thickness);
@@ -727,7 +728,7 @@ html[data-pct-layout="dock"] .pct-splash-cta button {
 }
 
 html[data-pct-layout="dock"] .pct-splash-headphones {
-  bottom: 0.65rem;
+  margin-top: 0.6rem;
 }
 
 @media (max-height: 540px) {
@@ -771,7 +772,7 @@ html[data-pct-layout="dock"] .pct-splash-headphones {
   }
 
   .pct-splash-headphones {
-    bottom: 0.65rem;
+    margin-top: 0.6rem;
   }
 }
 
@@ -1145,7 +1146,7 @@ html[data-pct-layout="dock"] .pct-site-nav-desktop {
 }
 
 html[data-pct-layout="dock"] .pct-site-nav-mobile {
-  display: block !important;
+  display: flex !important;
 }
 
 html[data-pct-layout="rail"] .pct-site-nav-mobile {

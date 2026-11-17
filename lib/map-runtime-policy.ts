@@ -16,7 +16,11 @@ export function getMapPrefetchPolicy(reducedGpu: boolean): MapPrefetchPolicy {
         windowSamples: 3,
       }
     : {
-        warmFullRoute: true,
+        // Was true. Ten seconds of the route-wide sweep on the splash left
+        // 170 MB of tile requests running after "Begin Journey", and the live
+        // camera's tiles queued behind them for about a minute
+        // (docs/perf/baseline.md, "Desktop terrain load").
+        warmFullRoute: false,
         trailheadSamples: 10,
         windowAheadMiles: 45,
         windowSamples: 8,

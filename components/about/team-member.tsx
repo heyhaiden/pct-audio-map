@@ -4,6 +4,7 @@ import { useId, type ReactNode } from "react"
 import Image from "next/image"
 import { ChevronDown, Github, Linkedin } from "lucide-react"
 import { slideContentClass, slidePanelClass, useSlidePanel } from "@/hooks/use-slide-panel"
+import { portraitSizes } from "@/lib/portrait-sizes"
 
 const socialClass =
   "pct-glass-control relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-full text-[#ada396] transition-all hover:border-[#ed5a43]/35 hover:text-[#ed5a43]"
@@ -57,7 +58,7 @@ export function TeamMember({
           src={photoSrc}
           alt={photoAlt}
           fill
-          sizes="(min-width: 768px) 15rem, 17.5rem"
+          sizes={portraitSizes(photoWidth, photoHeight)}
           className={
             photoWidth > photoHeight
               ? "absolute inset-0 h-full w-full object-cover object-[16%_center]"

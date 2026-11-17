@@ -4,15 +4,18 @@ import { useEffect, useRef } from "react"
 import { applyJourneyScrollDelta } from "@/lib/chapter-scroll-gate"
 import {
   applyTouchDelta,
+  clampGlideVelocity,
   clearNativeTextSelection,
+  createVelocityTracker,
   isNativeScrollTarget,
+  isTapGesture,
   isTrailCameraSettling,
   noteTrailTouchEnd,
   noteTrailTouchMove,
   noteTrailTouchStart,
   shouldCoastAfterRelease,
   shouldPreventTouchStartCallout,
-  stepInertiaVelocity,
+  stepGlideVelocity,
 } from "@/lib/inverted-touch-scroll"
 
 /**
@@ -25,8 +28,10 @@ import {
 export function useInvertedTouchScroll(enabled: boolean) {
   const lastYRef = useRef<number | null>(null)
   const lastTRef = useRef(0)
-  const lastXRef = useRef(0)
-  const velocityRef = useRef(0)
+  /** Where and when this stroke's finger went down, and how far it has strayed. */
+  const strokeRef = useRef<{ x: number; y: number; t: number; maxTravel: number } | null>(null)
+  const interruptedGlideRef = useRef(false)
+  const velocityRef = useRef(createVelocityTracker())
   const inertiaRafRef = useRef(0)
   const preventedCalloutRef = useRef(false)
   const consumeStrokeRef = useRef(false)
@@ -61,13 +66,15 @@ export function useInvertedTouchScroll(enabled: boolean) {
 
     const onTouchStart = (e: TouchEvent) => {
       // Any new touch (including 2-finger) must kill leftover inertia.
+      interruptedGlideRef.current = inertiaRafRef.current !== 0
       cancelInertia()
-      velocityRef.current = 0
+      velocityRef.current.reset()
       consumeStrokeRef.current = false
       nativeScrollStrokeRef.current = null
       noteTrailTouchStart()
       clearNativeTextSelection()
       preventedCalloutRef.current = false
+      strokeRef.current = null
 
       if (isLocked()) {
         lastYRef.current = null
@@ -79,9 +86,10 @@ export function useInvertedTouchScroll(enabled: boolean) {
         return
       }
 
-      lastXRef.current = e.touches[0].clientX
+      const now = performance.now()
       lastYRef.current = e.touches[0].clientY
-      lastTRef.current = performance.now()
+      lastTRef.current = now
+      strokeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: now, maxTravel: 0 }
 
       // Chrome iOS Copy/Search starts on touchstart. CSS user-select is not enough.
       if (shouldPreventTouchStartCallout(e.target)) {
@@ -96,9 +104,16 @@ export function useInvertedTouchScroll(enabled: boolean) {
       // Block pinch / two-finger zoom on the journey page.
       if (e.touches.length >= 2) {
         lastYRef.current = null
-        velocityRef.current = 0
+        strokeRef.current = null
+        velocityRef.current.reset()
         e.preventDefault()
         return
+      }
+
+      const stroke = strokeRef.current
+      if (stroke && e.touches.length === 1) {
+        const travel = Math.hypot(e.touches[0].clientX - stroke.x, e.touches[0].clientY - stroke.y)
+        if (travel > stroke.maxTravel) stroke.maxTravel = travel
       }
 
       if (consumeStrokeRef.current) {
@@ -111,7 +126,7 @@ export function useInvertedTouchScroll(enabled: boolean) {
 
       const y = e.touches[0].clientY
       const now = performance.now()
-      const { scrollDelta, velocity } = applyTouchDelta({
+      const { scrollDelta } = applyTouchDelta({
         deltaY: y - lastYRef.current,
         deltaMs: now - lastTRef.current,
       })
@@ -120,12 +135,12 @@ export function useInvertedTouchScroll(enabled: boolean) {
       if (hitGate) {
         // Rest of this stroke would keep scrolling through the new chapter and
         // eat the 20-mile mobile overlay window before the card can lock.
-        velocityRef.current = 0
+        velocityRef.current.reset()
         lastYRef.current = null
         consumeStrokeRef.current = true
         cancelInertia()
       } else {
-        velocityRef.current = velocity
+        velocityRef.current.add(scrollDelta, now)
         lastYRef.current = y
       }
       noteTrailTouchMove(now)
@@ -135,20 +150,26 @@ export function useInvertedTouchScroll(enabled: boolean) {
     }
 
     const onTouchEnd = (e: TouchEvent) => {
-      const msSinceMove = performance.now() - lastTRef.current
-      let v = velocityRef.current
-      const startY = lastYRef.current
+      const releasedAt = performance.now()
+      const msSinceMove = releasedAt - lastTRef.current
+      let v = clampGlideVelocity(velocityRef.current.velocity(releasedAt))
+      velocityRef.current.reset()
+      const stroke = strokeRef.current
+      strokeRef.current = null
       lastYRef.current = null
       noteTrailTouchEnd()
       clearNativeTextSelection()
 
       // preventDefault on touchstart suppresses the synthesized click that
-      // audio pins listen for — replay a tap that did not move.
-      if (preventedCalloutRef.current && e.changedTouches[0] && startY != null) {
+      // audio pins listen for — replay it, but only for a real tap.
+      if (preventedCalloutRef.current && e.changedTouches[0] && stroke) {
         const t = e.changedTouches[0]
-        const dx = t.clientX - lastXRef.current
-        const dy = t.clientY - startY
-        if (dx * dx + dy * dy < 100 && msSinceMove < 450) {
+        const tap = isTapGesture({
+          maxTravelPx: Math.max(stroke.maxTravel, Math.hypot(t.clientX - stroke.x, t.clientY - stroke.y)),
+          durationMs: releasedAt - stroke.t,
+          interruptedGlide: interruptedGlideRef.current,
+        })
+        if (tap) {
           const hit =
             document.elementFromPoint(t.clientX, t.clientY) ??
             (e.target instanceof Element ? e.target : null)
@@ -165,24 +186,26 @@ export function useInvertedTouchScroll(enabled: boolean) {
       }
       preventedCalloutRef.current = false
 
-      if (!shouldCoastAfterRelease(v, msSinceMove)) {
-        velocityRef.current = 0
-        return
-      }
+      if (!shouldCoastAfterRelease(v, msSinceMove)) return
 
-      const step = () => {
+      // Time-based glide: each frame moves by the speed over the elapsed time,
+      // then friction decays the speed by that same time.
+      let lastFrame = releasedAt
+      const step = (now: number) => {
         if (isLocked() || isTrailCameraSettling()) {
           cancelInertia()
           return
         }
-        v = stepInertiaVelocity(v)
-        if (v === 0) {
-          inertiaRafRef.current = 0
+        const dt = Math.min(64, Math.max(0, now - lastFrame))
+        lastFrame = now
+        const distance = v * dt
+        v = stepGlideVelocity(v, dt)
+        if (applyJourneyScrollDelta(distance)) {
+          cancelInertia()
           return
         }
-        if (applyJourneyScrollDelta(v * 16)) {
-          velocityRef.current = 0
-          cancelInertia()
+        if (v === 0) {
+          inertiaRafRef.current = 0
           return
         }
         inertiaRafRef.current = requestAnimationFrame(step)
