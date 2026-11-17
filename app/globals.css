@@ -628,8 +628,8 @@
   }
 
   .pct-splash-lede {
-    margin-bottom: 1.5rem;
-    font-size: 16px;
+    margin-bottom: 1.75rem;
+    font-size: 17px;
   }
 }
 
@@ -772,6 +772,65 @@ html[data-pct-layout="dock"] .pct-splash-headphones {
 
   .pct-splash-headphones {
     bottom: 0.65rem;
+  }
+}
+
+/* Desktop splash. The stack scales with the window instead of sitting at
+   phone sizes in the middle of a large screen, and the gaps group it into
+   three parts: the name (mark, wordmark, subtitle), the invitation, the button.
+   The second query covers short desktop windows, which otherwise fall into
+   the landscape-phone layout above; landscape phones stay under 1024px wide.
+   Each rule repeats under html[data-pct-layout] to outrank the dock rules. */
+@media (min-width: 769px) and (min-height: 640px),
+  (min-width: 1024px) and (min-height: 560px) {
+  .pct-splash-stack {
+    max-width: 40rem;
+  }
+
+  .pct-splash-icon {
+    margin-bottom: clamp(18px, 3dvh, 30px);
+  }
+
+  .pct-splash-icon svg {
+    height: clamp(56px, 9dvh, 84px);
+  }
+
+  .pct-splash-title,
+  html[data-pct-layout] .pct-splash-title {
+    margin-bottom: clamp(26px, 4.4dvh, 44px);
+    font-size: clamp(60px, min(6.6vw, 10.5dvh), 104px);
+  }
+
+  /* Quieter and tighter to the wordmark, so the two read as one lockup. */
+  .pct-splash-sub,
+  html[data-pct-layout] .pct-splash-sub {
+    margin-top: clamp(12px, 1.8dvh, 18px);
+    font-size: clamp(13px, 1.05vw, 16px);
+    letter-spacing: 0.34em;
+    /* Trailing letter-space would push the centred line left of the wordmark. */
+    margin-right: -0.34em;
+  }
+
+  .pct-splash-lede,
+  html[data-pct-layout] .pct-splash-lede {
+    max-width: 34rem;
+    max-height: 12rem;
+    margin-bottom: clamp(28px, 4.6dvh, 46px);
+    font-size: clamp(18px, min(1.45vw, 2.4dvh), 22px);
+    line-height: 1.6;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .pct-splash-cta,
+  html[data-pct-layout] .pct-splash-cta {
+    margin-top: 0;
+  }
+
+  .pct-splash-cta button,
+  html[data-pct-layout] .pct-splash-cta button {
+    padding: 1.05rem 2.75rem;
+    font-size: 15px;
   }
 }
 
