@@ -52,8 +52,8 @@
   --pct-control-border: rgba(237, 232, 220, 0.2);
 
   /* Chapter tabs: type + pad → thickness. Breakpoints in chapter-tab-layout.ts. */
-  --pct-tab-type: var(--text-label);
-  --pct-tab-pad: 8px;
+  --pct-tab-type: var(--text-nav);
+  --pct-tab-pad: 12px;
   --pct-tab-thickness: calc(var(--pct-tab-type) + var(--pct-tab-pad) * 2);
   --pct-tab-thickness-selected: calc(var(--pct-tab-thickness) + 6px);
   --pct-tabs-edge: 24px;
@@ -347,7 +347,9 @@
     justify-content: center;
     width: var(--pct-tab-thickness);
     min-height: 0;
-    padding: var(--pct-tab-pad);
+    /* Thickness comes from the width/height above; the short side pad only
+       keeps the label off the tab's ends, so it stays small to fit the name. */
+    padding: 6px var(--pct-tab-pad);
     overflow: hidden;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
     border-right: 2px solid transparent;
@@ -399,8 +401,10 @@
      Mirrors chapterTabsIsMobileRail(). */
   @media (max-width: 767px) and (min-height: 640px) {
     .pct-chapter-tabs-shell {
-      --pct-tab-type: 11px;
-      --pct-tab-pad: 6px;
+      --pct-tab-type: 12px;
+      --pct-tab-pad: 14px;
+      /* Re-derive here: the :root calc already resolved with the desktop values. */
+      --pct-tab-thickness: calc(var(--pct-tab-type) + var(--pct-tab-pad) * 2);
       --pct-tab-thickness-selected: var(--pct-tab-thickness);
       --pct-tabs-edge: 16px;
       --pct-handle-offset: var(--pct-tab-thickness);
@@ -1343,5 +1347,61 @@ html[data-pct-layout="dock"] .pct-chapter-tab--active {
   }
   100% {
     background-position: -100% 0;
+  }
+}
+
+/* Recording card: when a short viewport caps the card, the note scrolls and
+   the footer stays put instead of both being clipped. */
+.pct-map-audio-card-body {
+  max-height: inherit;
+}
+
+.pct-map-audio-card-copy {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Narrow and short: small or zoomed phones held upright, usually inside an
+   in-app browser whose chrome eats the height. They dock for height, but the
+   landscape card (46vw) is unreadable at this width and five one-line tab
+   labels do not fit. Keyed on the dock attribute because iOS height media
+   queries are unreliable (see the splash rules above). */
+@media (max-width: 560px) {
+  html[data-pct-layout="dock"] {
+    --pct-tab-thickness: 48px;
+  }
+
+  html[data-pct-layout="dock"] .pct-map-audio-card {
+    left: 0.875rem;
+    right: 0.875rem;
+    width: auto;
+    max-width: none;
+  }
+
+  /* Capped below the punch-in pin, which sits at the viewport centre. */
+  html[data-pct-layout="dock"] .pct-map-audio-card .pct-glass-panel {
+    max-height: min(
+      42dvh,
+      calc(100dvh - var(--pct-tab-thickness) - env(safe-area-inset-bottom) - 1.25rem)
+    );
+  }
+
+  html[data-pct-layout="dock"] .pct-chapter-tab {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Numeral over name, so the name gets the tab's full width. */
+  html[data-pct-layout="dock"] .pct-chapter-tab-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  html[data-pct-layout="dock"] .pct-chapter-tab-label > [aria-hidden] {
+    display: none;
   }
 }

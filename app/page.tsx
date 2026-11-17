@@ -1141,7 +1141,13 @@ export default function Home() {
   useEffect(() => {
     if (selectedAudioMarker || isNodeCameraBusy) {
       const preventScroll = (e: Event) => {
-        e.preventDefault()
+        // A capped recording card scrolls its own note; keep the page locked
+        // but let that gesture through.
+        const scroller =
+          e.target instanceof Element ? e.target.closest("[data-card-scroll]") : null
+        const cardCanScroll =
+          scroller != null && scroller.scrollHeight > scroller.clientHeight + 1
+        if (!cardCanScroll) e.preventDefault()
         e.stopPropagation()
       }
 

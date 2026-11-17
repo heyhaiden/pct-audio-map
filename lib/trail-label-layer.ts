@@ -36,6 +36,7 @@ function labelCollection() {
         kind: label.kind,
         // Lower sorts win collisions; "ok to leave out if too busy" rows go last.
         sortKey: label.optional ? 1 : 0,
+        ...(label.offset ? { offset: label.offset } : {}),
       },
       geometry: { type: "Point" as const, coordinates: label.coordinates },
     })),
@@ -168,6 +169,7 @@ function layerSpecs(): Array<Omit<SymbolLayerSpecification, "type" | "source">> 
         "text-transform": "uppercase",
         "text-letter-spacing": -0.01,
         "text-max-width": 8,
+        "text-offset": ["coalesce", ["get", "offset"], ["literal", [0, 0]]],
         "symbol-sort-key": ["get", "sortKey"],
       },
       paint: {

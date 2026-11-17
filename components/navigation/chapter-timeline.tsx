@@ -123,16 +123,16 @@ export function ChapterTimeline({
                   onClick={onToggleDrawer}
                   aria-label={hidden ? "Show chapter tabs" : "Hide chapter tabs"}
                   aria-expanded={!hidden}
-                  className={`pct-chapter-drawer-handle pointer-events-auto absolute left-full top-1/2 z-10 h-14 w-6 -translate-y-1/2 rounded-r-[5px] border-y border-r border-y-white/15 border-r-[#ed5a43]/45 text-[#b9b0a2] shadow-[2px_0_9px_rgba(0,0,0,0.34)] backdrop-blur-[4px] hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] ${
+                  className={`pct-chapter-drawer-handle pointer-events-auto absolute left-full top-1/2 z-10 h-16 w-8 -translate-y-1/2 rounded-r-[5px] border-y border-r border-y-white/15 border-r-[#ed5a43]/45 text-[#b9b0a2] shadow-[2px_0_9px_rgba(0,0,0,0.34)] backdrop-blur-[4px] hover:text-[#ed5a43] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ed5a43] ${
                     activeIndex === handleIndex
                       ? "bg-[rgba(23,21,17,0.93)]"
                       : "bg-[rgba(12,11,9,0.62)]"
                   }`}
                 >
                   {hidden ? (
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-5 w-5" />
                   ) : (
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-5 w-5" />
                   )}
                 </button>
               </div>

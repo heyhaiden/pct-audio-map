@@ -131,7 +131,10 @@ export function MobileNavigationMenu({
 
   const closeMenu = () => {
     setIsOpen(false)
-    controlRef.current?.focus()
+    // Without preventScroll the browser scrolls the page to reveal the focused
+    // control. On the map, scroll position is trail position, so that threw the
+    // visitor to the northern terminus.
+    controlRef.current?.focus({ preventScroll: true })
   }
 
   const handleNavigation = (

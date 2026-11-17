@@ -6,7 +6,7 @@ import { Pointer } from "lucide-react"
 interface ScrollHintProps {
   /** The hint is allowed to appear at all — nothing else owns the view. */
   enabled: boolean
-  /** First lull after arriving on the trail (2–3s). */
+  /** Wait after the trail unlocks before the first nudge. */
   initialDelayMs?: number
   /** Later lulls, once the user has already been nudged or has scrolled. */
   idleDelayMs?: number
@@ -21,15 +21,14 @@ const ACTIVITY_EVENTS = [
   "keydown",
 ] as const
 
-/** First pause at the trailhead — long enough to land, short enough to notice. */
-const INITIAL_DELAY_MS = 2500
+/** Shown as soon as scrolling unlocks; the gap only lets the overlay clear. */
+const INITIAL_DELAY_MS = 200
 /** Re-nudge only after a real stall, not every brief pause. */
 const IDLE_DELAY_MS = 12000
 
 /**
- * "Scroll to explore" nudge. Hidden on arrival, fades up after a short idle at
- * the start of the map, then only again after a much longer stall. Hides the
- * moment the user does anything.
+ * "Scroll to explore" nudge. Fades up as soon as the trail unlocks, then only
+ * again after a much longer stall. Hides the moment the user does anything.
  */
 export function ScrollHint({
   enabled,
