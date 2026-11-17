@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import posthog from "posthog-js"
 import { AudioMarkers } from "@/components/map/audio-markers"
 import { ChapterTimeline } from "@/components/navigation/chapter-timeline"
+import { chapterTabsIsMobileRail } from "@/lib/chapter-tab-layout"
 import { AudioPlayer } from "@/components/audio/audio-player"
 import { ChapterCard } from "@/components/chapters/chapter-card"
 import { SplashScreen } from "@/components/splash/splash-screen"
@@ -218,8 +219,12 @@ export default function Home() {
   const [scrollControlsReady, setScrollControlsReady] = useState(false)
   /** User peeked the chapter rail open while audio owns the view. */
   const [tabsUserExpanded, setTabsUserExpanded] = useState(false)
-  /** User tucked the rail while exploring (arrow). */
-  const [tabsUserCollapsed, setTabsUserCollapsed] = useState(false)
+  /** User tucked the rail while exploring (arrow). Phones start tucked: the
+   *  open rail covers the left edge of a narrow map. The server renders the
+   *  boot screen only, so reading the viewport here can't mismatch. */
+  const [tabsUserCollapsed, setTabsUserCollapsed] = useState(
+    () => typeof window !== "undefined" && chapterTabsIsMobileRail(window.innerWidth, window.innerHeight),
+  )
   const lastChapterRef = useRef(0)
   const scrollControlRef = useRef<ScrollControls | null>(null)
   const cameraAnimRef = useRef(0)
