@@ -158,3 +158,71 @@ Scroll experiments, one run each from mile 0:
 | All 57 base vector layers hidden | 47.3 fps | 17 ms | 10% |
 
 Fog range does not help. The base style layers are the cost on desktop, as on mobile, and the gain from removing them is larger here.
+
+## Desktop terrain load (2026-11-17)
+
+Why terrain is slow to appear on desktop, measured for the first time. Build: `dev` at `e52dc3e`, production build served locally.
+
+### Method
+
+- Chrome 157, headed, a fresh profile per run (cold HTTP cache, cold Mapbox tile cache, cold connections), driven over raw CDP.
+- 1440x900 at DPR 2 (canvas 2880x1800), fine pointer, no CPU throttle.
+- Network "Fast 4G": 9 Mbps down, 1.5 Mbps up, 165 ms latency, the same numbers as the mobile baseline. It is applied to the page and to each Mapbox worker, and each gets its own budget, as in DevTools. A real 9 Mbps link is shared, so it would be slower than this.
+- Case A clicks "Begin Journey" the instant it unlocks (22 to 34 ms after). Case B waits 10 s after the unlock, then clicks. Three runs each, interleaved.
+- "Fully drawn" is the first moment at or after the fly-in lands when the DEM source has no tile loading, no DEM request is on the wire, and `map.areTilesLoaded()` is true. Runs watch for 70 s after landing.
+- Per-tile timing joins three clocks: when the tile entered the DEM source cache, when its request left and finished (CDP `Network` events), and when the tile turned `loaded`.
+- The intro is fixed choreography: the fly-in lands 8.6 s after the click in every run.
+
+### Results, Fast 4G (median of 3)
+
+| Measure | A: click at unlock | B: wait 10 s, then click |
+| --- | --- | --- |
+| "Begin Journey" unlocks after navigation | 16,393 ms | 16,442 ms |
+| Click to trailhead terrain fully drawn | 25,984 ms (runs: 25,984, 26,096, 25,975) | not within 78 s in any run |
+| Of that, after the fly-in lands | 17,385 ms | more than 70 s |
+| DEM requests in flight at the click | 0 | 3 |
+| `preloadOnly` camera calls before the click | 3 | 83 |
+| `preloadOnly` camera calls after the click | 0 | 0 |
+| DEM downloaded after the click | 12 requests, 0.8 MB | 28 requests, 2.3 MB |
+| Satellite downloaded after the click | 124 requests, 4.8 MB | 471 requests, 17.0 MB |
+| Vector tiles downloaded after the click | 74 requests, 14.3 MB | 309 requests, 52.2 MB |
+| DEM tile loading after landing, waiting in Mapbox's request queue | 5.9 s | 68.7 s |
+| DEM tile loading after landing, on the wire | 2.3 s | 3.4 s |
+| DEM tile loading after landing, bytes here and nothing else outstanding | 0.01 s | 0 s |
+| Frame rate after landing | 59.9 fps | 59.4 fps |
+| Long tasks after landing | none | 518 ms in total, longest 126 ms |
+
+### Results, no network throttle (median of 3)
+
+The same two cases on this laptop's own connection, to check that the result is not an artifact of the throttle.
+
+| Measure | A: click at unlock | B: wait 10 s, then click |
+| --- | --- | --- |
+| "Begin Journey" unlocks after navigation | 6,908 ms | 7,637 ms |
+| Click to trailhead terrain fully drawn | 14,461 ms (runs: 14,461, 14,547, 12,749) | 70,148 ms (runs: 70,148, 67,997, not within 80 s) |
+| Of that, after the fly-in lands | 5,849 ms | 61,515 ms |
+| DEM requests in flight at the click | 0 | 0 |
+| `preloadOnly` camera calls before the click | 3 | 83 |
+| Downloaded after the click (DEM / satellite / vector) | 0.8 / 4.8 / 14.6 MB | 5.2 / 42.9 / 122.1 MB |
+| DEM tile loading after landing, waiting in the request queue | 0.4 s | 59.0 s |
+
+### Verdict
+
+The gate-order theory is wrong, and step 2 of the overnight plan was skipped. The theory said a quick click is the slow case because the trailhead is not warmed yet. The click-to-drawn time decided it: A is the fast case (26.0 s on Fast 4G, 14.5 s unthrottled), and B is the slow one (over 78 s, and 70.1 s). A has no DEM request in flight at the click in any of its six runs.
+
+What makes B slow is the prefetch itself. On desktop `getMapPrefetchPolicy` sets `warmFullRoute`, so once the trailhead poses are done `lib/tile-prefetch.ts` sweeps the route to mile 1800. In 10 s on the splash it makes 83 `preloadOnly` calls. Clicking "Begin Journey" stops new calls, but the tile requests already issued keep running: unthrottled, 170 MB arrives after the click against 20 MB in case A. The live camera's tiles join the back of Mapbox's request queue, and a DEM tile for the landing view waits 59 s there before its request is sent.
+
+Network wait dominates in both cases, not main-thread work. After landing in case A the page holds 59.9 fps with no long task while a DEM tile is loading for 8.3 s: 5.9 s queued behind other tile requests and 2.3 s on the wire. A profiled run put the two Mapbox workers at 9 to 10% busy during the fly-in and 1 to 2% after landing.
+
+One gap is unexplained. A landing-view DEM tile turns `loaded` a median 2.2 s after its last byte arrives, with the main thread and the workers both idle. The wait is somewhere inside Mapbox's loader.
+
+### What else the trace showed
+
+- The prefetch never restarts after "Begin Journey". The intro calls `cancel()` on the prefetch controller, and `warmAhead` returns early on a cancelled controller. All 12 timed runs made 0 `preloadOnly` calls after the click, and each of them scrolled for 12 s afterwards, to about mile 50. The rolling window that `CLAUDE.md` describes does not run after the intro.
+- The fly-in loads tiles it then discards. It lands at zoom 9.55, and within half a second the scroll rail eases to its mile-0 pose at zoom 10.85, which needs a different set of tiles. In case A 11 of the DEM tiles requested during the fly-in never finished.
+- DEM is a small share of the bytes. After the click in case A: 0.8 MB of DEM, 4.8 MB of satellite and 14.3 MB of vector tiles. After landing the vector tiles finish in 0.3 s, the DEM in 8.4 s, satellite in 17.4 s and the style's own elevation tiles in 17.5 s.
+- The style loads a second elevation tileset. Besides the app's `mapbox-terrain-dem` source, the style has its own `mapbox.terrain-rgb` source, and it is among the last sources to finish after landing.
+- Terrain cannot start early. The DEM source is added in the map's `load` handler, and `load` fires 14.8 s after navigation on Fast 4G (5.7 s unthrottled), once the style and the overview tiles are in.
+- Unlock is slow on this profile: 16.4 s on Fast 4G against 7.4 s on the mobile baseline. The desktop overview at DPR 2 covers more tiles.
+
+The traces are in `.playwright-mcp/lab/overnight/terrain-results.jsonl` (labels `step1`, `step1-nothrottle`, `step4-mapbox`), produced by `terrain.mjs` in the same folder.
