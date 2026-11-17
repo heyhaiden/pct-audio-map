@@ -116,6 +116,10 @@ export function useAudioPlayer(options: {
     })
   }, [getEngine])
 
+  const warmAudio = useCallback(() => {
+    getEngine().warm()
+  }, [getEngine])
+
   const unlockAudio = useCallback(async () => {
     await getEngine().unlock()
   }, [getEngine])
@@ -193,6 +197,7 @@ export function useAudioPlayer(options: {
     transitionToTrack,
     primeLoop,
     fadeOutAndStop,
+    warmAudio,
     unlockAudio,
     retryAudio,
     dismissAudioBlocked,
