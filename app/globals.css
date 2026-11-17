@@ -606,13 +606,27 @@
   }
 }
 
-/* Portrait phones: the body centres itself in the space left under the sticky
-   header, which lands the stack visually low. Bias it up toward the optical centre.
+/* Portrait phones: Begin Journey and the headphones line sit low, in the
+   thumb's reach, and the name and invitation centre in the space above them.
+   The stack fills the body; the two auto margins split the free space.
    Landscape uses the short-viewport rules below so the CTA stays on-screen. */
 @media (max-width: 768px) and (min-height: 640px) {
   .pct-splash-body {
     padding-top: clamp(4px, 1.5dvh, 16px);
-    padding-bottom: clamp(56px, 17dvh, 150px);
+    padding-bottom: max(1.75rem, calc(env(safe-area-inset-bottom) + 1.25rem));
+  }
+
+  .pct-splash-stack {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .pct-splash-icon {
+    margin-top: auto;
+  }
+
+  .pct-splash-cta {
+    margin-top: auto;
   }
 
   .pct-splash-icon {
@@ -628,8 +642,9 @@
     font-size: 46px;
   }
 
+  /* A taller gap under the invitation lifts the name toward the optical centre. */
   .pct-splash-lede {
-    margin-bottom: 1.75rem;
+    margin-bottom: clamp(1.75rem, 14dvh, 8rem);
     font-size: 17px;
   }
 }
