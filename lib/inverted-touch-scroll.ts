@@ -1,10 +1,13 @@
 /**
  * Finger pixels are 1:1 with document pixels, but the journey spacer is
- * 12,000vh (≈100k px). A trackpad flick already dumps thousands of pixels;
- * a phone swipe is a few hundred. Gain is 70% of the first 6x pass — still
- * faster than 1:1, without covering a chapter per flick.
+ * 12,000vh (≈100k px, about 38 px per mile on a 390x844 phone). A trackpad
+ * flick already dumps thousands of pixels; a phone swipe is a few hundred.
+ *
+ * At 4.2 a 300 px drag moved 33 miles and a quick flick about 66 (lab, phone
+ * profile), which testers called heavy. 6 with the longer glide below roughly
+ * doubles a flick; chapter gates still stop a flick at each chapter boundary.
  */
-export const TOUCH_SCROLL_GAIN = 4.2
+export const TOUCH_SCROLL_GAIN = 6
 
 export type TouchScrollSample = {
   deltaY: number
@@ -66,8 +69,14 @@ export function shouldCoastAfterRelease(velocity: number, msSinceLastMove: numbe
   return shouldStartInertia(velocity)
 }
 
+/**
+ * Per-frame velocity kept while coasting after a flick. A glide covers about
+ * 1 / (1 - friction) frames of release speed: 20 at 0.95, 29 at 0.965.
+ */
+export const INERTIA_FRICTION = 0.965
+
 /** Decay one inertia frame; returns next velocity (or 0 when stopped). */
-export function stepInertiaVelocity(velocity: number, friction = 0.95): number {
+export function stepInertiaVelocity(velocity: number, friction = INERTIA_FRICTION): number {
   const next = velocity * friction
   return Math.abs(next) < 0.02 ? 0 : next
 }

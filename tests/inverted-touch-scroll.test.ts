@@ -11,7 +11,7 @@ import {
 } from "../lib/inverted-touch-scroll.ts"
 
 test("touch gain is 70 percent of the first 6x calibration", () => {
-  assert.equal(TOUCH_SCROLL_GAIN, 4.2)
+  assert.equal(TOUCH_SCROLL_GAIN, 6)
 })
 
 test("finger down advances the trail", () => {
