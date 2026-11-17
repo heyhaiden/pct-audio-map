@@ -36,3 +36,6 @@ next-env.d.ts
 .claude/
 .posthog*
 posthog-*-report.md
+
+# self-hosted terrain prototype: tiles downloaded by scripts/terrain-tiles.ts
+/.terrain-tiles/

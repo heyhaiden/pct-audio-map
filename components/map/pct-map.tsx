@@ -28,6 +28,7 @@ import { installTrailLabelLayers } from "@/lib/trail-label-layer"
 import { applyBaseLabelFilters } from "@/lib/base-label-filters"
 import { installAudioMarkerLayer } from "@/lib/audio-marker-layer"
 import { waitForOverviewScene } from "@/lib/splash-map-readiness"
+import { resolveTerrainDemSource } from "@/lib/self-hosted-terrain"
 
 interface PCTMapProps {
   onMapLoad?: (map: mapboxgl.Map) => void
@@ -487,12 +488,11 @@ export function PCTMap({
           mapLoadedRef.current = true
           onTrailheadProgressRef.current?.(0.25)
 
-          map.current.addSource("mapbox-terrain-dem", {
-            type: "raster-dem",
-            url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-            tileSize: 512,
-            maxzoom: 14,
-          })
+          // Mapbox's DEM unless the self-hosted prototype flag holds a tile URL.
+          map.current.addSource(
+            "mapbox-terrain-dem",
+            resolveTerrainDemSource(process.env.NEXT_PUBLIC_SELF_HOSTED_DEM),
+          )
 
           map.current.setTerrain({
             source: "mapbox-terrain-dem",
