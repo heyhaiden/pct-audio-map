@@ -129,6 +129,28 @@ Hiding one layer type does nothing; hiding all three reaches 58 fps. The cost is
 
 A Chrome DevTools MCP trace of the cold load on the same profile gave LCP 1,449 ms (TTFB 166 ms, render delay 1,284 ms) and CLS 0.00, in line with the harness.
 
+## Base-layer variants, timed (2026-11-17)
+
+The four candidates in the base-layer screenshots (`.playwright-mcp/lab/shots/compare.html`, miles 105, 790 and 1460), now with frame rates. Yesterday only A and B were timed.
+
+- Steady scroll from mile 0, yesterday's `harness.js` unchanged. Layers are hidden at runtime through the live map; no app code or style changed. Trail lines, trail labels and pins stay visible in every variant.
+- Build: `dev` at `e52dc3e`, which has PRs #58 to #65 merged, so the baseline here is faster than the 47.5 fps recorded above.
+- Three runs per cell. The four variants ran back to back in each round and the order rotated between rounds, so drift on the machine lands on every variant. On mains power, battery at 100%.
+- Phone profile: 390x844 at DPR 3, touch, 4x CPU throttle, Fast 4G, mile 0 to 319. Desktop profile: 1920x1080 at DPR 1, 4x CPU throttle, no network throttle, 23 s of wheel input.
+
+| Variant | Layers hidden | Phone fps (runs) | Phone frame p95 | Phone frames over 33 ms | Desktop fps (runs) | Desktop frame p50 | Desktop frames over 33 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A. Current | 0 | 52.7 (53.4, 52.4, 52.7) | 33.6 ms | 6.1% | 25.4 (25.4, 25.2, 26.2) | 34.7 ms | 61.9% |
+| B. No base vector layers | 57 | 60.0 (60.0, 60.0, 60.0) | 18.3 ms | 0% | 47.2 (44.9, 47.2, 47.3) | 17.2 ms | 11.5% |
+| C. Base labels only (fills and lines hidden) | 35 | 60.0 (60.0, 59.8, 60.0) | 18.4 ms | 0.1% | 36.8 (37.0, 36.8, 35.7) | 32.0 ms | 28.7% |
+| D. Tints and shadows only (lines and symbols hidden) | 43 | 59.9 (59.9, 59.6, 59.9) | 18.4 ms | 0.1% | 35.6 (35.6, 35.6, 34.6) | 32.6 ms | 30.5% |
+
+On the phone profile C and D both reach the 60 fps cap, the same as hiding everything. Yesterday's single-type runs (fills, lines or symbols alone) gained nothing; hiding any two types is enough. The cap means this profile cannot rank B, C and D against each other.
+
+On desktop C and D recover about half of what B does: 11.4 and 10.2 fps of the 21.8 fps between A and B. C and D are 1.2 fps apart, about the spread of a single variant's own runs.
+
+The desktop scenario sends wheel input once per frame, so a faster variant also travels further in its 23 s (96 miles for A, 137 for B, 124 for C, 122 for D). The frame times are comparable; the terrain covered is not identical.
+
 ## Desktop viewport trace (2026-11-16)
 
 1920x1080 at DPR 1, fine pointer (the app's desktop map profile), mouse and wheel input, 4x CPU throttle, no network throttle. Build: `dev` with PRs #58, #60 to #65 stacked. One profiled run and one timed run, so these are single readings, not medians.
