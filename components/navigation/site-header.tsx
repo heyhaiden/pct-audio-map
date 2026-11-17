@@ -9,6 +9,12 @@ import { handleHomeNavClick } from "@/lib/home-exit"
 import { loadFieldNotesBabylon } from "@/lib/load-field-notes-babylon"
 import { cameFromActiveMap, setResumeIntent } from "@/lib/map-session"
 
+/**
+ * Back to Map is hidden: resuming a saved trail position could leave the map
+ * stuck on a black screen. Flip this back once the resume path is reliable.
+ */
+const BACK_TO_MAP_ENABLED = false
+
 export type SiteNavPage = "map" | "home" | "library" | "about" | "resources"
 
 const NAV_LINKS: { id: SiteNavPage; href: string; label: string }[] = [
@@ -56,7 +62,7 @@ export function SiteHeader({ current, pinned = false }: SiteHeaderProps) {
   const [animateHomeLink] = useState(() => showHomeLink && homeLinkVisibleOn === null)
 
   useLayoutEffect(() => {
-    setShowBackToMap(cameFromActiveMap())
+    setShowBackToMap(BACK_TO_MAP_ENABLED && cameFromActiveMap())
   }, [])
 
   useEffect(() => {

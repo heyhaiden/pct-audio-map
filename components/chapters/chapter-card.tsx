@@ -53,9 +53,11 @@ export function ChapterCard({
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))] pt-2 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43] md:pb-[clamp(1.5rem,5dvh,2.75rem)]"
+          className="shrink-0 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))] pt-2 whitespace-nowrap font-mono text-[14px] uppercase tracking-[0.18em] text-[#c7beac] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43] md:pb-[clamp(1.5rem,5dvh,2.75rem)]"
         >
-          Click to continue
+          {/* Short phones get this card too, and nobody clicks a phone. */}
+          <span className="[@media(pointer:coarse)]:hidden">Click</span>
+          <span className="hidden [@media(pointer:coarse)]:inline">Tap</span> to continue
         </button>
       </div>
     </div>

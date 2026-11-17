@@ -6,6 +6,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    // Vercel restores .next/cache between builds, and the restored Turbopack
+    // cache served a stale globals.css: two deployments of different commits
+    // shipped the same old stylesheet while their JS was current. Build cold
+    // until that is fixed upstream.
+    turbopackFileSystemCacheForBuild: false,
+  },
   async headers() {
     return [
       {

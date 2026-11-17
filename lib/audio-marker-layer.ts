@@ -1,3 +1,6 @@
+import type { DataDrivenPropertyValueSpecification, Map as MapboxMap } from "mapbox-gl"
+
+type IconSize = DataDrivenPropertyValueSpecification<number>
 import { audioMarkers } from "@/data/audio-markers"
 
 /** Chapters past the WIP cutoff — no pins yet. */
@@ -20,7 +23,7 @@ export function markerIconSize(
   activeMarkerId: string | null,
   activeSize = MARKER_ICON_ACTIVE_SIZE,
   restSize = MARKER_ICON_REST_SIZE,
-) {
+): IconSize {
   if (!activeMarkerId) return restSize
   return ["case", ["==", ["get", "id"], activeMarkerId], activeSize, restSize]
 }
@@ -31,7 +34,7 @@ export function markerIconSizeSwap(
   growingSize: number,
   shrinkingId: string | null,
   shrinkingSize: number,
-) {
+): IconSize {
   if (!growingId && !shrinkingId) return MARKER_ICON_REST_SIZE
   if (!shrinkingId || shrinkingId === growingId) return markerIconSize(growingId, growingSize)
   if (!growingId) return markerIconSize(shrinkingId, shrinkingSize)
@@ -124,7 +127,7 @@ export function chapterCollection() {
  * Idempotent, so it can be replayed on `style.load` (a style reload drops every
  * image, source and layer we added).
  */
-export function installAudioMarkerLayer(map: any): void {
+export function installAudioMarkerLayer(map: MapboxMap): void {
   if (!map || map._removed) return
 
   if (!map.hasImage?.(AUDIO_MARKER_IMAGE_ID)) {

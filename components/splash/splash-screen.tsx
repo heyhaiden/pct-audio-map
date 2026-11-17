@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Headphones } from "lucide-react"
 import { SiteHeader } from "@/components/navigation/site-header"
 import { SPLASH_SCROLL_LOCK_CLASS } from "@/lib/splash-scroll-lock"
+import { SPLASH_UNLOCK_SETTLE_MS, splashFillDurationMs } from "@/lib/splash-button-fill"
 
 interface SplashScreenProps {
   onEnter: () => void
@@ -11,6 +12,8 @@ interface SplashScreenProps {
   trailheadReady?: boolean
   /** 0–1 warm progress for the button loading bar. */
   trailheadProgress?: number
+  /** Fired once, when the button stops "Preparing trail…" and becomes tappable. */
+  onUnlocked?: () => void
   /**
    * When true, fade the splash away. Parent should set this only after the map
    * camera is restored to overview so the user never sees a mid-trail warm pose.
@@ -49,15 +52,23 @@ function BeginJourneyButton({
   ready,
   progress,
   onClick,
+  onUnlocked,
   className,
 }: {
   ready: boolean
   progress: number
   onClick: () => void
+  onUnlocked?: () => void
   className?: string
 }) {
   const [fill, setFill] = useState(0.04)
   const [unlocked, setUnlocked] = useState(false)
+  const onUnlockedRef = useRef(onUnlocked)
+  onUnlockedRef.current = onUnlocked
+
+  useEffect(() => {
+    if (unlocked) onUnlockedRef.current?.()
+  }, [unlocked])
   const fillRef = useRef(0.04)
   const rafRef = useRef<number | null>(null)
 
@@ -71,7 +82,7 @@ function BeginJourneyButton({
       if (ready && target >= 1) {
         fillRef.current = 1
         setFill(1)
-        const settle = window.setTimeout(() => setUnlocked(true), 180)
+        const settle = window.setTimeout(() => setUnlocked(true), SPLASH_UNLOCK_SETTLE_MS)
         return () => clearTimeout(settle)
       }
       return
@@ -80,8 +91,8 @@ function BeginJourneyButton({
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
 
     const start = performance.now()
-    // Cached / instant ready: longer, more graceful sweep. Incremental warm: snappier.
-    const duration = ready && from < 0.7 ? 900 : ready ? 450 : 320
+    // A ready map shouldn't wait on the bar: see lib/splash-button-fill.ts.
+    const duration = splashFillDurationMs({ ready, from })
     let settleTimer: number | undefined
 
     const tick = (now: number) => {
@@ -97,7 +108,7 @@ function BeginJourneyButton({
       }
 
       if (ready) {
-        settleTimer = window.setTimeout(() => setUnlocked(true), 160)
+        settleTimer = window.setTimeout(() => setUnlocked(true), SPLASH_UNLOCK_SETTLE_MS)
       }
     }
 
@@ -162,6 +173,7 @@ export function SplashScreen({
   onEnter,
   trailheadReady = false,
   trailheadProgress = 0,
+  onUnlocked,
   revealMap = false,
 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true)
@@ -222,7 +234,7 @@ export function SplashScreen({
       <SiteHeader current="home" />
 
       <div className="pct-splash-body relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-8 py-11">
-        <div className="flex max-w-[30rem] flex-col items-center text-center">
+        <div className="pct-splash-stack flex max-w-[30rem] flex-col items-center text-center">
           {/* Abstract trail icon */}
           <div className="pct-splash-icon mb-8">
             <AbstractTrailIcon className="h-[88px] w-[50px]" />
@@ -240,7 +252,7 @@ export function SplashScreen({
 
           {/* Phones: one flowing paragraph (forced breaks left ragged short lines).
               Desktop keeps its three-line rhythm. */}
-          <p className="pct-splash-lede pct-display mb-6 w-full max-w-[23rem] text-pretty text-lede font-light leading-[1.45] text-[#c7beac]">
+          <p className="pct-splash-lede pct-display mb-6 w-full max-w-[23rem] text-pretty text-lede font-normal leading-[1.5] text-[#d2c9b8]">
             An audio journey along the Pacific Crest Trail.
             <br className="hidden md:inline" /> Scroll to explore. Stop at waypoints to listen.
             <br className="hidden md:inline" /> Stay as long as you like.
@@ -251,6 +263,7 @@ export function SplashScreen({
               ready={trailheadReady}
               progress={trailheadProgress}
               onClick={handleEnter}
+              onUnlocked={onUnlocked}
               className="px-[38px] py-4"
             />
           </div>

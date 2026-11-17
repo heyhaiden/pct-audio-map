@@ -1,5 +1,7 @@
 "use client"
 
+import type { DataDrivenPropertyValueSpecification, GeoJSONSource, Map as MapboxMap } from "mapbox-gl"
+
 import { useEffect, useRef } from "react"
 import { audioMarkers } from "@/data/audio-markers"
 import {
@@ -16,8 +18,9 @@ import {
 import type { AudioMarker } from "@/types/map"
 
 interface AudioMarkersProps {
-  map: any
-  onMarkerClick: (marker: AudioMarker) => void
+  map: MapboxMap
+  /** `tapAtMs` is the click's `event.timeStamp` (performance.now() timeline). */
+  onMarkerClick: (marker: AudioMarker, tapAtMs: number) => void
   /** Same-turn as the tap: start media playback before fetch/decode. */
   onMarkerPrime?: (marker: AudioMarker) => void
   activeMarkerId?: string | null
@@ -54,7 +57,7 @@ export function AudioMarkers({
 
     const applyMarkerData = () => {
       try {
-        map.getSource?.(AUDIO_MARKER_SOURCE_ID)?.setData(chapterCollection())
+        (map.getSource?.(AUDIO_MARKER_SOURCE_ID) as GeoJSONSource | undefined)?.setData(chapterCollection())
         map.setLayoutProperty?.(
           AUDIO_MARKER_LAYER_ID,
           "icon-size",
@@ -68,7 +71,9 @@ export function AudioMarkers({
     applyMarkerData()
     // A style reload rebuilds the layer empty; refill it once that lands.
     map.on("style.load", applyMarkerData)
-    return () => map.off?.("style.load", applyMarkerData)
+    return () => {
+      map.off?.("style.load", applyMarkerData)
+    }
   }, [map])
 
   useEffect(() => {
@@ -79,7 +84,7 @@ export function AudioMarkers({
     previousActiveRef.current = toId
     activeMarkerIdRef.current = toId
 
-    const applySize = (value: unknown) => {
+    const applySize = (value: DataDrivenPropertyValueSpecification<number>) => {
       try {
         map.setLayoutProperty?.(AUDIO_MARKER_LAYER_ID, "icon-size", value)
       } catch {
@@ -146,7 +151,7 @@ export function AudioMarkers({
 
     const onCanvasClick = (event: MouseEvent) => {
       const marker = markerAtEvent(event)
-      if (marker) onMarkerClickRef.current(marker)
+      if (marker) onMarkerClickRef.current(marker, event.timeStamp)
     }
 
     canvas.addEventListener("pointerdown", onCanvasPointerDown)

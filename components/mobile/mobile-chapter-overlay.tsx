@@ -69,7 +69,7 @@ export function MobileChapterOverlay({
         <button
           type="button"
           onClick={onDismiss}
-          className="pct-mobile-explore-cue absolute left-1/2 -translate-x-1/2 px-5 py-2 font-mono text-nav uppercase tracking-[0.2em] text-[#8b8271] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
+          className="pct-mobile-explore-cue absolute left-1/2 -translate-x-1/2 whitespace-nowrap px-5 py-3 font-mono text-[14px] uppercase tracking-[0.18em] text-[#c7beac] transition hover:text-[#ed5a43] focus-visible:outline-none focus-visible:text-[#ed5a43]"
         >
           Tap to continue
         </button>

@@ -26,3 +26,27 @@ test("mobile never skips camera writes during scroll", () => {
   assert.equal(shouldDecimateCameraWrites(true, 0.03, false), true)
   assert.equal(shouldDecimateCameraWrites(false, 0.03, false), false)
 })
+
+test("scroll progress reaches React state at most once per publish interval", async () => {
+  const { TRAIL_UI_PUBLISH_INTERVAL_MS, shouldPublishTrailUi } = await import(
+    "../lib/railing-camera.ts"
+  )
+  assert.equal(TRAIL_UI_PUBLISH_INTERVAL_MS, 100)
+  // First frame always publishes.
+  assert.equal(shouldPublishTrailUi(5_000, 0), true)
+  assert.equal(shouldPublishTrailUi(5_016, 5_000), false)
+  assert.equal(shouldPublishTrailUi(5_100, 5_000), false)
+  assert.equal(shouldPublishTrailUi(5_101, 5_000), true)
+
+  // A 60 Hz loop publishes about 10 times a second however fast the trail moves.
+  let last = 0
+  let publishes = 0
+  for (let frame = 1; frame <= 60; frame++) {
+    const now = 10_000 + frame * (1000 / 60)
+    if (shouldPublishTrailUi(now, last)) {
+      last = now
+      publishes += 1
+    }
+  }
+  assert.ok(publishes >= 8 && publishes <= 10, `published ${publishes} times`)
+})

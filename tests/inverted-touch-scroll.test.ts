@@ -76,3 +76,27 @@ test("inertia decays toward zero", () => {
   }
   assert.equal(v, 0)
 })
+
+test("isNativeScrollTarget finds a scrollable ancestor and stops at the root", async () => {
+  const { isNativeScrollTarget } = await import("../lib/inverted-touch-scroll.ts")
+  type FakeNode = {
+    overflowY: string
+    scrollHeight: number
+    clientHeight: number
+    parentElement: FakeNode | null
+  }
+  const root: FakeNode = { overflowY: "auto", scrollHeight: 9000, clientHeight: 800, parentElement: null }
+  const card: FakeNode = { overflowY: "auto", scrollHeight: 600, clientHeight: 300, parentElement: root }
+  const text: FakeNode = { overflowY: "visible", scrollHeight: 20, clientHeight: 20, parentElement: card }
+  const canvas: FakeNode = { overflowY: "visible", scrollHeight: 800, clientHeight: 800, parentElement: root }
+  const fitted: FakeNode = { overflowY: "auto", scrollHeight: 300, clientHeight: 300, parentElement: root }
+  const overflowYOf = (node: FakeNode) => node.overflowY
+
+  assert.equal(isNativeScrollTarget(text, root, overflowYOf), true)
+  assert.equal(isNativeScrollTarget(canvas, root, overflowYOf), false)
+  // Scrollable by style but with nothing to scroll.
+  assert.equal(isNativeScrollTarget(fitted, root, overflowYOf), false)
+  // The root itself is the journey scroller, never a native target.
+  assert.equal(isNativeScrollTarget(root, root, overflowYOf), false)
+  assert.equal(isNativeScrollTarget(null, root, overflowYOf), false)
+})

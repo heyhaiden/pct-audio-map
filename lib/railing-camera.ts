@@ -1,5 +1,18 @@
 export const PCT_TOTAL_MILES = 2650
 export const CAMERA_PATH_POINTS = 500
+
+/** React UI (mile readout, chapter rail, overlays) hears about scroll 10 times a second. */
+export const TRAIL_UI_PUBLISH_INTERVAL_MS = 100
+
+/**
+ * Whether the scroll loop should push progress into React state this frame.
+ * Time is the only gate: an earlier "or every half mile" clause fired on every
+ * other frame at normal scroll speeds, re-rendering the page about 26 times a
+ * second while the GL camera was also trying to hit 60.
+ */
+export function shouldPublishTrailUi(nowMs: number, lastPublishMs: number): boolean {
+  return nowMs - lastPublishMs > TRAIL_UI_PUBLISH_INTERVAL_MS
+}
 const OPENING_TRANSITION_MILES = 80
 export const END_TRANSITION_MILES = 14
 export const CRUISING_ALTITUDE_METERS = 26000

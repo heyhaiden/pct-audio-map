@@ -1,3 +1,4 @@
+import type { Map as MapboxMap } from "mapbox-gl"
 import { CUSTOM_LABEL_NAMES } from "@/lib/trail-label-layer"
 
 // Declutters labels that ship with the Studio style
@@ -26,7 +27,7 @@ export const MIN_PEAK_LABEL_ELEVATION_M = 1830
 const APPLIED_MARKER = "__pct_base_label_filter__"
 
 /** Idempotent; call on map load and again after any `style.load`. */
-export function applyBaseLabelFilters(map: any): void {
+export function applyBaseLabelFilters(map: MapboxMap): void {
   if (!map || map._removed) return
 
   if (map.getLayer(AIRPORT_LAYER_ID)) {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
-import { pctSegments, pctTrailGeometry } from "@/data/pct-segments"
+import { pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
 import { useTrailScroll } from "@/hooks/use-trail-scroll"
 import {
@@ -30,7 +30,7 @@ import { installAudioMarkerLayer } from "@/lib/audio-marker-layer"
 import { waitForOverviewScene } from "@/lib/splash-map-readiness"
 
 interface PCTMapProps {
-  onMapLoad?: (map: any) => void
+  onMapLoad?: (map: mapboxgl.Map) => void
   onMilesUpdate?: (currentMiles: number, totalMiles: number) => void
   onScrollControlReady?: (controls: {
     pauseScrollAnimation: () => void
@@ -131,7 +131,7 @@ const TRAIL_FOG = {
   "star-intensity": 0,
 }
 
-const loadTrailData = createTrailDataLoader(
+const loadTrailData = createTrailDataLoader<GeoJSON.Feature<GeoJSON.LineString>>(
   () => fetch("/pct-trail.geojson"),
   pctTrailGeometry,
 )
@@ -177,15 +177,13 @@ export function PCTMap({
   currentMiles: externalMiles = 0,
 }: PCTMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<any>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [initialAnimationDone, setInitialAnimationDone] = useState(false)
   const [introPhase, setIntroPhase] = useState<"waiting" | "overview" | "flying" | "done">("waiting")
-  const [currentSegment, setCurrentSegment] = useState(0)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
-  const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null)
-  const [trailData, setTrailData] = useState<any>(null)
-  const [debugMode, setDebugMode] = useState(false)
+  const [trailData, setTrailData] = useState<GeoJSON.Feature<GeoJSON.LineString> | null>(null)
+  const [debugMode] = useState(false)
   const [, setTilesPreloaded] = useState(false)
   const prefetchRef = useRef<PrefetchController | null>(null)
   const introPhaseRef = useRef(introPhase)
@@ -348,7 +346,6 @@ export function PCTMap({
 
   const trailCoordinates = trailData?.geometry?.coordinates || []
   const {
-    scrollProgress,
     currentMiles,
     totalMiles,
     pauseScrollAnimation,
@@ -365,9 +362,6 @@ export function PCTMap({
     enabled: initialAnimationDone && trailData !== null && !debugMode,
     snapOnEnable: skipIntro,
     resumeMiles: skipIntro ? externalMiles : undefined,
-    onProgressChange: (progress, coordinates) => {
-      setCurrentPosition(coordinates)
-    },
   })
 
   const scrollControls = useMemo(
@@ -603,17 +597,6 @@ export function PCTMap({
             },
           })
 
-          map.current.addSource("position-cursor", {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              geometry: {
-                type: "Point",
-                coordinates: trailData.geometry.coordinates[0],
-              },
-            },
-          })
-
           // Marker pins are a layer like any other, created here rather than
           // from a React effect — an effect can only run after onMapLoad below,
           // by which point tile prefetching keeps isStyleLoaded() false and the
@@ -689,7 +672,7 @@ export function PCTMap({
           }
         })
 
-        mapInstance.on("error", (e: any) => {
+        mapInstance.on("error", (e: mapboxgl.ErrorEvent) => {
           if (disposed || map.current !== mapInstance) return
           const error = e?.error ?? e
           if (!isFatalMapboxError(e, mapLoadedRef.current)) {
@@ -754,22 +737,6 @@ export function PCTMap({
   }, [externalMiles, currentMiles, mapLoaded])
 
   useEffect(() => {
-    if (!isMapAlive(map.current) || !mapLoaded || !currentPosition) return
-
-    const source = map.current.getSource("position-cursor")
-    if (source) {
-      source.setData({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "Point",
-          coordinates: currentPosition,
-        },
-      })
-    }
-  }, [currentPosition, mapLoaded])
-
-  useEffect(() => {
     if (initialAnimationDone && onScrollControlReady && !scrollControlReadyCalledRef.current) {
       scrollControlReadyCalledRef.current = true
       onScrollControlReady(scrollControls)
@@ -799,24 +766,6 @@ export function PCTMap({
       map.current.doubleClickZoom.disable()
     }
   }, [debugMode, mapLoaded])
-
-  const flyToSegment = (segmentIndex: number) => {
-    if (!map.current || !mapLoaded) return
-
-    const segment = pctSegments[segmentIndex]
-    if (!segment) return
-
-    map.current.flyTo({
-      center: segment.camera.center,
-      zoom: segment.camera.zoom,
-      pitch: segment.camera.pitch,
-      bearing: segment.camera.bearing,
-      duration: segment.camera.duration,
-      essential: true,
-    })
-
-    setCurrentSegment(segmentIndex)
-  }
 
   const scrollControlReadyCalledRef = useRef(false)
 

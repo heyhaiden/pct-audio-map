@@ -4,21 +4,30 @@ import { audioMarkers } from "@/data/audio-markers"
 import { LibraryPlayer } from "@/components/audio/library-player"
 import { SitePage } from "@/components/navigation/site-page"
 import { buildAudioLibraryFolders } from "@/lib/audio-library-folders"
+import { libraryJsonLd } from "@/lib/library-structured-data"
+
+const LIBRARY_DESCRIPTION =
+  "Listen to every field recording from the Pacific Crest Trail, organized by trail section from the Mexican border northward."
 
 export const metadata: Metadata = pageMetadata({
   title: "Audio Library",
   path: "/library",
-  description:
-    "Listen to every field recording from the Pacific Crest Trail, organized by trail section from the Mexican border northward.",
+  description: LIBRARY_DESCRIPTION,
 })
 
 const libraryFolders = buildAudioLibraryFolders()
 const recordingCount = audioMarkers.filter((marker) => marker.audioUrl).length
+// Static data, no user input. Escape "<" so a description can't close the tag.
+const structuredData = JSON.stringify(libraryJsonLd(libraryFolders, LIBRARY_DESCRIPTION)).replace(
+  /</g,
+  "\\u003c",
+)
 
 export default function LibraryPage() {
   return (
     <SitePage current="library">
         <main className="pct-stagger mx-auto max-w-4xl py-12 md:px-6 md:py-20">
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData }} />
           <section className="mb-12 px-6 text-center md:mb-16 md:px-0">
             <h1 className="pct-display mb-4 text-[36px] font-normal text-[#f6f1e4] md:text-[48px]">
               Audio <span className="pct-wordmark font-wordmark uppercase text-[#ed5a43]">Library</span>

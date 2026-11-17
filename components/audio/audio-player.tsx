@@ -172,11 +172,12 @@ export function AudioPlayer({
 
         <div
           ref={measureRef}
-          className="flex min-h-0 flex-col p-[15px_16px] md:min-h-[268px] md:p-[18px]"
+          className="pct-map-audio-card-body flex min-h-0 flex-col p-[15px_16px] md:min-h-[268px] md:p-[18px]"
         >
           <div
             key={shown.id}
-            className={`min-w-0 flex-1 pr-5 text-left md:pr-0 ${swapCopy ? "pct-audio-card-copy" : ""}`}
+            data-card-scroll
+            className={`pct-map-audio-card-copy min-w-0 flex-1 pr-5 text-left md:pr-0 ${swapCopy ? "pct-audio-card-copy" : ""}`}
           >
             <AudioMarkerCardBody marker={shown} variant="map" />
           </div>

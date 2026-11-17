@@ -1,14 +1,11 @@
 "use client"
 
+import type { Map as MapboxMap } from "mapbox-gl"
+
 import { useEffect, useState, useRef, useCallback } from "react"
-import { geoFractionForTrailMile } from "@/lib/trail-mile-calibration"
 import mapboxgl from "mapbox-gl"
-import along from "@turf/along"
-import bearing from "@turf/bearing"
-import length from "@turf/length"
-import { lineString } from "@turf/helpers"
+import { buildCameraPath } from "@/lib/camera-path"
 import {
-  CAMERA_PATH_POINTS,
   PCT_TOTAL_MILES,
   cameraFollowFactors,
   computeRailingPose,
@@ -19,6 +16,7 @@ import {
   sampleTrailAtProgress,
   altitudeAndPitchForProgress,
   shouldDecimateCameraWrites,
+  shouldPublishTrailUi,
   type CameraPathPoint,
   type FreeCameraPose,
 } from "@/lib/railing-camera"
@@ -30,7 +28,8 @@ import {
 import { isTrailCameraSettling } from "@/lib/inverted-touch-scroll"
 
 interface TrailScrollOptions {
-  map: any
+  /** Null until the map finishes constructing. */
+  map: MapboxMap | null
   trailCoordinates: number[][]
   enabled: boolean
   /** Jump to the railing pose instead of easing from the live GL camera. */
@@ -217,56 +216,11 @@ export function useTrailScroll({
   useEffect(() => {
     if (!trailCoordinates || trailCoordinates.length < 2) return
 
-    const buildCameraPath = () => {
-      try {
-        const line = lineString(trailCoordinates)
-        const totalLength = length(line, { units: "kilometers" })
-
-        const points: CameraPathPoint[] = []
-
-        for (let i = 0; i <= CAMERA_PATH_POINTS; i++) {
-          const distance =
-            geoFractionForTrailMile((i / CAMERA_PATH_POINTS) * PCT_TOTAL_MILES) * totalLength
-          const point = along(line, distance, { units: "kilometers" })
-          const coords = point.geometry.coordinates
-
-          const bearingLookAheadKilometers = 16
-          const nextDistance = Math.min(distance + bearingLookAheadKilometers, totalLength)
-          const nextPoint = along(line, nextDistance, { units: "kilometers" })
-          const pointBearing = bearing(point, nextPoint)
-
-          points.push({
-            lng: coords[0],
-            lat: coords[1],
-            bearing: pointBearing,
-            smoothedBearing: pointBearing,
-          })
-        }
-
-        const windowSize = 8
-        for (let i = 0; i < points.length; i++) {
-          let sumX = 0
-          let sumY = 0
-          let count = 0
-
-          for (let j = Math.max(0, i - windowSize); j <= Math.min(points.length - 1, i + windowSize); j++) {
-            const rad = (points[j].bearing * Math.PI) / 180
-            sumX += Math.cos(rad)
-            sumY += Math.sin(rad)
-            count++
-          }
-
-          const avgBearing = (Math.atan2(sumY / count, sumX / count) * 180) / Math.PI
-          points[i].smoothedBearing = (avgBearing + 360) % 360
-        }
-
-        setCameraPath(points)
-      } catch (error) {
-        console.error("[v0] Error creating camera path:", error)
-      }
+    try {
+      setCameraPath(buildCameraPath(trailCoordinates))
+    } catch (error) {
+      console.error("[v0] Error creating camera path:", error)
     }
-
-    buildCameraPath()
   }, [trailCoordinates])
 
   useEffect(() => {
@@ -276,11 +230,10 @@ export function useTrailScroll({
 
     let animationFrame: number
     let lastUiPublishMs = 0
-    let lastPublishedMiles = -1
     let lastScrollTop = typeof window !== "undefined" ? window.scrollY : 0
     let lastScrollChangeMs = 0
     let frameIndex = 0
-    let reusableCamera: any = null
+    let reusableCamera: ReturnType<MapboxMap["getFreeCameraOptions"]> | null = null
 
     const updateCamera = (frameTime: number) => {
       const currentMap = mapRef.current
@@ -324,9 +277,8 @@ export function useTrailScroll({
 
       // Keep the free-camera loop at full rate, but don't React-re-render UI every frame
       const now = frameTime
-      if (now - lastUiPublishMs > 100 || Math.abs(miles - lastPublishedMiles) >= 0.5) {
+      if (shouldPublishTrailUi(now, lastUiPublishMs)) {
         lastUiPublishMs = now
-        lastPublishedMiles = miles
         setScrollProgress(phase)
         setCurrentMiles(miles)
         onProgressChangeRef.current?.(phase, [trail.lng, trail.lat])

@@ -21,7 +21,7 @@ test("normalizeManifest reads sample counts and ignores gainDb", () => {
     },
   })
   assert.equal(manifest["1-1"]?.sampleCount, 48000)
-  assert.equal(manifest["1-1"]?.gainDb, undefined)
+  assert.equal("gainDb" in (manifest["1-1"] ?? {}), false)
   assert.equal(manifest["1-4"]?.mp3Delay, 576)
   assert.equal(manifest["1-4"]?.mp3Padding, 384)
 })
@@ -62,7 +62,7 @@ test("the real Anna manifest covers every marker clip id", () => {
 
   for (const id of GAIN_BAKED) {
     assert.equal(raw.clips[id]?.gainDb, -1)
-    assert.equal(manifest[id]?.gainDb, undefined)
+    assert.equal("gainDb" in (manifest[id] ?? {}), false)
     assert.ok((manifest[id]?.sampleCount ?? 0) > 0)
   }
 })
