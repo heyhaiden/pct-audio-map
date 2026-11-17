@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from "react"
 import mapboxgl from "mapbox-gl"
+import posthog from "posthog-js"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { pctTrailGeometry } from "@/data/pct-segments"
 import { getMapboxToken } from "@/lib/mapbox-config"
@@ -29,6 +30,9 @@ import { applyBaseLabelFilters } from "@/lib/base-label-filters"
 import { installAudioMarkerLayer } from "@/lib/audio-marker-layer"
 import { waitForOverviewScene } from "@/lib/splash-map-readiness"
 import { introLandingCamera } from "@/lib/intro-landing"
+import { holdForLandingTerrain, preloadSourceForCamera } from "@/lib/intro-terrain-hold"
+
+const TERRAIN_SOURCE_ID = "mapbox-terrain-dem"
 
 interface PCTMapProps {
   onMapLoad?: (map: mapboxgl.Map) => void
@@ -207,6 +211,7 @@ export function PCTMap({
   const [mapLoaded, setMapLoaded] = useState(false)
   const [initialAnimationDone, setInitialAnimationDone] = useState(false)
   const [introPhase, setIntroPhase] = useState<"waiting" | "overview" | "flying" | "done">("waiting")
+  const [introHoldCaption, setIntroHoldCaption] = useState(false)
   const [mapboxError, setMapboxError] = useState<string | null>(null)
   const [trailData, setTrailData] = useState<GeoJSON.Feature<GeoJSON.LineString> | null>(null)
   const [debugMode] = useState(false)
@@ -513,7 +518,7 @@ export function PCTMap({
           mapLoadedRef.current = true
           onTrailheadProgressRef.current?.(0.25)
 
-          map.current.addSource("mapbox-terrain-dem", {
+          map.current.addSource(TERRAIN_SOURCE_ID, {
             type: "raster-dem",
             url: "mapbox://mapbox.mapbox-terrain-dem-v1",
             tileSize: 512,
@@ -521,7 +526,7 @@ export function PCTMap({
           })
 
           map.current.setTerrain({
-            source: "mapbox-terrain-dem",
+            source: TERRAIN_SOURCE_ID,
             exaggeration: 1.8,
           })
 
@@ -855,9 +860,35 @@ export function PCTMap({
     if (skipIntro) return
     if (introPhase !== "overview" || !isMapAlive(map.current) || !mapLoaded || debugMode) return
 
-    // Brief hold on overview, then crane to trailhead (always start of map)
-    const timer = setTimeout(() => {
-      if (!isMapAlive(map.current)) return
+    // Hold on the overview until the landing view's terrain has loaded (500 ms
+    // minimum, 8 s cap), then crane down to the trailhead.
+    const landing = getIntroLandingCamera(map.current, getCameraPath())
+    const preload = preloadSourceForCamera(
+      map.current,
+      TERRAIN_SOURCE_ID,
+      landing,
+      (lng, lat) => new mapboxgl.LngLat(lng, lat),
+    )
+    if (!preload) {
+      try {
+        map.current.jumpTo({ ...landing, preloadOnly: true } as mapboxgl.CameraOptions)
+      } catch {
+        // Best effort: the flight loads these tiles anyway.
+      }
+    }
+    const holdStartedAt = performance.now()
+    const hold = holdForLandingTerrain({
+      preload,
+      onSlow: () => setIntroHoldCaption(true),
+    })
+
+    void hold.promise.then((result) => {
+      setIntroHoldCaption(false)
+      if (result === "cancelled" || !isMapAlive(map.current)) return
+      posthog.capture("intro_terrain_hold", {
+        result,
+        hold_ms: Math.round(performance.now() - holdStartedAt),
+      })
       setIntroPhase("flying")
 
       const trailhead = getIntroLandingCamera(map.current, getCameraPath())
@@ -879,9 +910,12 @@ export function PCTMap({
           onIntroComplete?.()
         }, 100)
       })
-    }, 500)
+    })
 
-    return () => clearTimeout(timer)
+    return () => {
+      hold.cancel()
+      setIntroHoldCaption(false)
+    }
   }, [introPhase, mapLoaded, debugMode, onIntroComplete, skipIntro, getCameraPath])
 
   return (
@@ -904,6 +938,19 @@ export function PCTMap({
           </div>
         </div>
       )}
+
+      {/* Shown only when the overview hold runs long enough to read as a wait */}
+      <div
+        aria-hidden={!introHoldCaption}
+        className={`pointer-events-none absolute inset-x-0 bottom-[18%] flex justify-center transition-opacity duration-500 ${
+          introHoldCaption ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <div className="flex items-center gap-3 rounded-full bg-black/35 px-4 py-2 font-mono text-label uppercase tracking-[0.18em] text-white/85 backdrop-blur-sm">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ed5a43]" />
+          Descending to the trailhead…
+        </div>
+      </div>
 
       {/* Never flash this during splash→intro — hideLoading covers that path */}
       {!mapboxError && !hideLoading && (!trailData || !mapLoaded) && (
