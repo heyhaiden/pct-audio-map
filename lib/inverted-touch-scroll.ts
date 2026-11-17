@@ -30,6 +30,32 @@ export function applyTouchDelta(sample: TouchScrollSample): {
 /** Finger planted without moving this long counts as a hold, not a flick. */
 const HOLD_STILL_MS = 80
 
+/** A touch that strays further than this from where it started is a swipe. */
+export const TAP_SLOP_PX = 10
+/** A press this long or longer is a hold, not a tap. */
+export const TAP_MAX_MS = 450
+
+export type TapGesture = {
+  /** Furthest the finger got from its touchstart point, release included. */
+  maxTravelPx: number
+  /** Touchstart to release. */
+  durationMs: number
+  /** The touch landed while a glide was running (and stopped it). */
+  interruptedGlide: boolean
+}
+
+/**
+ * Whether a finished touch should replay a click (touchstart's preventDefault
+ * swallows the browser's own). Travel is measured from the touchstart point:
+ * measuring from the last move point made every quick flick read as a tap, and
+ * the fake click opened whatever pin sat under the thumb. A touch that stops a
+ * glide only stops it, as on iPhone.
+ */
+export function isTapGesture({ maxTravelPx, durationMs, interruptedGlide }: TapGesture): boolean {
+  if (interruptedGlide) return false
+  return maxTravelPx < TAP_SLOP_PX && durationMs < TAP_MAX_MS
+}
+
 let pointerDown = false
 let lastMoveAt = 0
 let stopLatch = false

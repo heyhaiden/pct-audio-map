@@ -3,7 +3,10 @@ import test from "node:test"
 import {
   TOUCH_SCROLL_GAIN,
   applyTouchDelta,
+  TAP_MAX_MS,
+  TAP_SLOP_PX,
   clearNativeTextSelection,
+  isTapGesture,
   shouldCoastAfterRelease,
   shouldPreventTouchStartCallout,
   shouldStartInertia,
@@ -150,4 +153,29 @@ test("isNativeScrollTarget finds a scrollable ancestor and stops at the root", a
   // The root itself is the journey scroller, never a native target.
   assert.equal(isNativeScrollTarget(root, root, overflowYOf), false)
   assert.equal(isNativeScrollTarget(null, root, overflowYOf), false)
+})
+
+// A quick thumb flick used to count as a tap: the old check compared the
+// release point with the last move point, which is the same spot. The fake
+// click opened any pin under the thumb and locked scrolling.
+test("a quick flick is not a tap", () => {
+  // Lab right-thumb flick: 140 px down in about 100 ms.
+  assert.equal(isTapGesture({ maxTravelPx: 140, durationMs: 100, interruptedGlide: false }), false)
+})
+
+test("a still touch is a tap", () => {
+  assert.equal(isTapGesture({ maxTravelPx: 2, durationMs: 120, interruptedGlide: false }), true)
+})
+
+test("a touch that wanders out and back is not a tap", () => {
+  // Ends near where it started, but travelled past the slop on the way.
+  assert.equal(isTapGesture({ maxTravelPx: TAP_SLOP_PX + 20, durationMs: 200, interruptedGlide: false }), false)
+})
+
+test("a long press is not a tap", () => {
+  assert.equal(isTapGesture({ maxTravelPx: 0, durationMs: TAP_MAX_MS, interruptedGlide: false }), false)
+})
+
+test("a touch that stops a glide only stops it, like iPhone scrolling", () => {
+  assert.equal(isTapGesture({ maxTravelPx: 0, durationMs: 90, interruptedGlide: true }), false)
 })

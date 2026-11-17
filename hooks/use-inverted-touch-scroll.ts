@@ -8,6 +8,7 @@ import {
   clearNativeTextSelection,
   createVelocityTracker,
   isNativeScrollTarget,
+  isTapGesture,
   isTrailCameraSettling,
   noteTrailTouchEnd,
   noteTrailTouchMove,
@@ -27,7 +28,9 @@ import {
 export function useInvertedTouchScroll(enabled: boolean) {
   const lastYRef = useRef<number | null>(null)
   const lastTRef = useRef(0)
-  const lastXRef = useRef(0)
+  /** Where and when this stroke's finger went down, and how far it has strayed. */
+  const strokeRef = useRef<{ x: number; y: number; t: number; maxTravel: number } | null>(null)
+  const interruptedGlideRef = useRef(false)
   const velocityRef = useRef(createVelocityTracker())
   const inertiaRafRef = useRef(0)
   const preventedCalloutRef = useRef(false)
@@ -63,6 +66,7 @@ export function useInvertedTouchScroll(enabled: boolean) {
 
     const onTouchStart = (e: TouchEvent) => {
       // Any new touch (including 2-finger) must kill leftover inertia.
+      interruptedGlideRef.current = inertiaRafRef.current !== 0
       cancelInertia()
       velocityRef.current.reset()
       consumeStrokeRef.current = false
@@ -70,6 +74,7 @@ export function useInvertedTouchScroll(enabled: boolean) {
       noteTrailTouchStart()
       clearNativeTextSelection()
       preventedCalloutRef.current = false
+      strokeRef.current = null
 
       if (isLocked()) {
         lastYRef.current = null
@@ -81,9 +86,10 @@ export function useInvertedTouchScroll(enabled: boolean) {
         return
       }
 
-      lastXRef.current = e.touches[0].clientX
+      const now = performance.now()
       lastYRef.current = e.touches[0].clientY
-      lastTRef.current = performance.now()
+      lastTRef.current = now
+      strokeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: now, maxTravel: 0 }
 
       // Chrome iOS Copy/Search starts on touchstart. CSS user-select is not enough.
       if (shouldPreventTouchStartCallout(e.target)) {
@@ -98,9 +104,16 @@ export function useInvertedTouchScroll(enabled: boolean) {
       // Block pinch / two-finger zoom on the journey page.
       if (e.touches.length >= 2) {
         lastYRef.current = null
+        strokeRef.current = null
         velocityRef.current.reset()
         e.preventDefault()
         return
+      }
+
+      const stroke = strokeRef.current
+      if (stroke && e.touches.length === 1) {
+        const travel = Math.hypot(e.touches[0].clientX - stroke.x, e.touches[0].clientY - stroke.y)
+        if (travel > stroke.maxTravel) stroke.maxTravel = travel
       }
 
       if (consumeStrokeRef.current) {
@@ -141,18 +154,22 @@ export function useInvertedTouchScroll(enabled: boolean) {
       const msSinceMove = releasedAt - lastTRef.current
       let v = clampGlideVelocity(velocityRef.current.velocity(releasedAt))
       velocityRef.current.reset()
-      const startY = lastYRef.current
+      const stroke = strokeRef.current
+      strokeRef.current = null
       lastYRef.current = null
       noteTrailTouchEnd()
       clearNativeTextSelection()
 
       // preventDefault on touchstart suppresses the synthesized click that
-      // audio pins listen for — replay a tap that did not move.
-      if (preventedCalloutRef.current && e.changedTouches[0] && startY != null) {
+      // audio pins listen for — replay it, but only for a real tap.
+      if (preventedCalloutRef.current && e.changedTouches[0] && stroke) {
         const t = e.changedTouches[0]
-        const dx = t.clientX - lastXRef.current
-        const dy = t.clientY - startY
-        if (dx * dx + dy * dy < 100 && msSinceMove < 450) {
+        const tap = isTapGesture({
+          maxTravelPx: Math.max(stroke.maxTravel, Math.hypot(t.clientX - stroke.x, t.clientY - stroke.y)),
+          durationMs: releasedAt - stroke.t,
+          interruptedGlide: interruptedGlideRef.current,
+        })
+        if (tap) {
           const hit =
             document.elementFromPoint(t.clientX, t.clientY) ??
             (e.target instanceof Element ? e.target : null)
