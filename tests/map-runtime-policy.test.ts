@@ -16,9 +16,9 @@ test("mobile prefetch avoids the route-wide GPU warm", () => {
   })
 })
 
-test("desktop keeps the larger prefetch window", () => {
+test("desktop keeps the larger prefetch window but skips the route-wide warm", () => {
   assert.deepEqual(getMapPrefetchPolicy(false), {
-    warmFullRoute: true,
+    warmFullRoute: false,
     trailheadSamples: 10,
     windowAheadMiles: 45,
     windowSamples: 8,
