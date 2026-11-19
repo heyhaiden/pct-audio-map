@@ -285,16 +285,15 @@ export function SplashScreen({
               onUnlocked={onUnlocked}
               className="px-[38px] py-4"
             />
-            {/* Under the button, not at the screen edge: this is where eyes are
-                while the bar fills, and the wait is time to put headphones on. */}
-            <p className="pct-splash-headphones mt-4 flex items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#b4aa9b]">
-              <Headphones className="h-4 w-4 shrink-0 text-[#ed5a43]" />
-              Best with headphones
-            </p>
           </div>
         </div>
-
       </div>
+
+      {/* Anchored to the bottom centre of the screen, under everything else. */}
+      <p className="pct-splash-headphones pointer-events-none absolute inset-x-0 bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] z-10 flex items-center justify-center gap-2.5 whitespace-nowrap font-mono text-label uppercase tracking-[0.16em] text-[#b4aa9b]">
+        <Headphones className="h-4 w-4 shrink-0 text-[#ed5a43]" />
+        Best with headphones
+      </p>
     </div>
   )
 }

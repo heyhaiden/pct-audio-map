@@ -228,8 +228,11 @@ export function MobileNavigationMenu({
                   aria-label={isOpen ? "Close menu" : "Open menu"}
                   aria-expanded={isOpen}
                   aria-controls={menuId}
-                  className={`${triggerClassName} fixed z-[120]`}
-                  style={triggerBox}
+                  // Inline position: the trigger's classes carry `relative`,
+                  // which Tailwind emits after `fixed`, so a `fixed` class lost
+                  // and the close button rendered at the bottom of the page.
+                  className={`${triggerClassName} z-[120]`}
+                  style={{ ...triggerBox, position: "fixed" }}
                 >
                   {isOpen ? (
                     <X className="h-[18px] w-[18px]" />
